@@ -1,28 +1,196 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>慎の減量管理</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0b6bff"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="慎の減量管理">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>慎の減量管理</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b6bff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="慎の減量管理">
 <style>
-:root{--b:#0b6bff;--b2:#04b4ff;--bg:#f4f7fb;--card:#fff;--ink:#142033;--muted:#66758a;--line:#dfe7f2;--good:#10a85a;--bad:#e34b4b}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:var(--ink);padding-bottom:86px}header{background:linear-gradient(135deg,var(--b),var(--b2));color:white;padding:34px 18px 28px;border-bottom-left-radius:28px;border-bottom-right-radius:28px}h1{margin:0 0 8px;font-size:25px}header p{margin:0;opacity:.95;line-height:1.55}.wrap{padding:14px}.card{background:var(--card);border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 8px 28px rgba(15,35,70,.06)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.label{font-size:13px;color:var(--muted);margin:8px 0 6px}.big{font-size:42px;font-weight:800}.unit{font-size:18px;color:var(--muted)}.good{color:var(--good);font-weight:800}.bad{color:var(--bad);font-weight:800}input,textarea,select{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px;font-size:16px;background:#fff;color:var(--ink)}textarea{min-height:74px;resize:vertical}button{border:0;border-radius:15px;padding:13px 15px;font-size:16px;font-weight:800;background:var(--b);color:#fff;width:100%}button.sub{background:#eaf1fb;color:#18304e}.check{display:flex;align-items:center;gap:8px;padding:9px 0;font-size:16px}.check input{width:28px;height:28px}.photo{width:100%;border-radius:14px;margin-top:10px;display:none;max-height:260px;object-fit:cover;border:1px solid var(--line)}.tabs{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:5}.tab{text-align:center;padding:11px 4px;color:var(--muted);font-size:13px}.tab.on{color:var(--b);font-weight:800}.page{display:none}.page.active{display:block}.muted{color:var(--muted);line-height:1.55}.item{border-top:1px solid var(--line);padding:10px 0}.status{min-height:22px;margin-top:10px;font-weight:800}.status.ok{color:var(--good)}.status.ng{color:var(--bad)}canvas{width:100%;height:260px}.small{font-size:12px;color:var(--muted)}.danger{background:#ffecec;color:#b42323}
-</style></head><body><header><h1>慎の減量管理</h1><p>6/17開始｜有酸素=35分｜ドローイン=5セット｜月曜は蕎麦OK</p></header><main class="wrap">
-<section id="home" class="page active"><div class="card"><div class="label">現在体重</div><span id="cw" class="big">--</span><span class="unit"> kg</span><div id="loss" class="good">記録を入力してください</div></div><div class="grid"><div class="card"><div class="label">体脂肪率</div><span id="cf" class="big">--</span><span class="unit"> %</span></div><div class="card"><div class="label">筋肉量</div><span id="cm" class="big">--</span><span class="unit"> kg</span></div></div><div class="card"><div class="label">今日の収支</div><span id="bal" class="big">--</span><span class="unit"> kcal</span><p class="muted">摂取カロリー − 基礎消費 − 運動消費で概算。</p></div><div class="card"><div class="label">今日の運動</div><div id="tw" class="muted">まだ記録なし</div></div><div class="card"><div class="label">予測</div><div id="forecast" class="muted">記録が増えると予測します</div></div></section>
-<section id="record" class="page"><div class="card"><div class="label">日付</div><input id="date" type="date"><p class="small">日付変更で保存済みデータを自動表示。未記入の日は空欄。</p></div><div class="card"><h3>朝の体組成</h3><div class="grid"><div><div class="label">体重kg</div><input id="weight" type="number" step="0.1"></div><div><div class="label">体脂肪率%</div><input id="fat" type="number" step="0.1"></div><div><div class="label">筋肉量kg</div><input id="muscle" type="number" step="0.1"></div><div><div class="label">睡眠</div><select id="sleep"><option value="">未入力</option><option>★★★★★</option><option>★★★★☆</option><option>★★★☆☆</option><option>★★☆☆☆</option><option>★☆☆☆☆</option></select></div></div><div class="label">体組成写真（保存しない・プレビューのみ）</div><input id="bodyPhoto" type="file" accept="image/*"><img id="bodyPreview" class="photo"></div>
-<div class="card"><h3>食事</h3><div class="label">朝</div><textarea id="breakfast" placeholder="おにぎり、プロテインなど"></textarea><div class="label">昼</div><textarea id="lunch" placeholder="かけうどん、おにぎりなど"></textarea><div class="label">夜</div><textarea id="dinner" placeholder="写真の内容など"></textarea><div class="label">間食</div><textarea id="snack" placeholder="サラダチキン、ししゃもなど"></textarea><div class="grid"><div><div class="label">摂取kcal概算</div><input id="intake" type="number" placeholder="1800"></div><div><div class="label">たんぱく質g 任意</div><input id="protein" type="number" placeholder="120"></div></div><div class="label">食事写真（撮影・写真ライブラリ両対応／保存しない）</div><input id="foodPhoto" type="file" accept="image/*"><img id="foodPreview" class="photo"></div>
-<div class="card"><h3>運動</h3><label class="check"><input id="cardio" type="checkbox">有酸素（35分）</label><div class="grid"><div><div class="label">35分超なら分数</div><input id="cardioMin" type="number" placeholder="40"></div><div><div class="label">筋トレ消費kcal</div><input id="exerciseCal" type="number" placeholder="400"></div></div><label class="check"><input id="legRaise" type="checkbox">足上げ腹筋50回</label><label class="check"><input id="plank" type="checkbox">プランク3分</label><label class="check"><input id="powerplate" type="checkbox">Power Plate 4セット</label><label class="check"><input id="drawin" type="checkbox">ドローイン5セット</label><div class="label">筋トレ内容</div><textarea id="strength" placeholder="胸25セット　1時間"></textarea></div><div class="card"><button onclick="saveRecord()">保存</button><div id="saveStatus" class="status" role="status" aria-live="polite"></div><br><button class="sub" onclick="clearForm()">入力クリア</button></div></section>
-<section id="graph" class="page"><div class="card"><h3>体重推移</h3><canvas id="chart" width="380" height="260"></canvas></div><div class="card"><h3>最近の記録</h3><div id="list"></div></div></section>
-<section id="settings" class="page"><div class="card"><h3>設定</h3><div class="label">開始体重kg</div><input id="startWeight" type="number" step="0.1" value="127.4"><div class="label">基礎＋生活消費kcal</div><input id="baseBurn" type="number" value="2800"><div class="label">目標体重kg</div><input id="goalWeight" type="number" step="0.1" value="95"><br><button onclick="saveSettings()">設定を保存</button></div><div class="card"><button class="sub" onclick="exportData()">データを書き出し</button><br><br><button class="danger" onclick="resetAll()">全データ削除</button><p class="small">データはこのiPhone/Safari内に保存。機種変更やブラウザ削除で消える可能性あり。</p></div></section></main>
-<nav class="tabs"><div class="tab on" onclick="show('home',this)">ホーム</div><div class="tab" onclick="show('record',this)">記録</div><div class="tab" onclick="show('graph',this)">グラフ</div><div class="tab" onclick="show('settings',this)">設定</div></nav>
+:root{--b:#0b6bff;--b2:#04b4ff;--bg:#f4f7fb;--card:#fff;--ink:#142033;--muted:#66758a;--line:#dfe7f2;--good:#10a85a;--bad:#e34b4b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:var(--ink);padding-bottom:86px}
+header{background:linear-gradient(135deg,var(--b),var(--b2));color:white;padding:34px 18px 28px;border-bottom-left-radius:28px;border-bottom-right-radius:28px}
+h1{margin:0 0 8px;font-size:25px}header p{margin:0;opacity:.95;line-height:1.55}.wrap{padding:14px}
+.card{background:var(--card);border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 8px 28px rgba(15,35,70,.06)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.label{font-size:13px;color:var(--muted);margin:8px 0 6px}.big{font-size:42px;font-weight:800}.unit{font-size:18px;color:var(--muted)}.good{color:var(--good);font-weight:800}.bad{color:var(--bad);font-weight:800}
+input,textarea,select{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px;font-size:16px;background:#fff;color:var(--ink)}
+textarea{min-height:74px;resize:vertical}button{border:0;border-radius:15px;padding:13px 15px;font-size:16px;font-weight:800;background:var(--b);color:#fff;width:100%}
+button.sub{background:#eaf1fb;color:#18304e}.row{display:flex;gap:10px}.row>*{flex:1}.check{display:flex;align-items:center;gap:8px;padding:9px 0;font-size:16px}.check input{width:28px;height:28px}
+.photo{width:100%;border-radius:14px;margin-top:10px;display:none;max-height:260px;object-fit:cover;border:1px solid var(--line)}
+.photoClear{display:none;margin-top:8px;background:#ffecec;color:#b42323}
+.tabs{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+.tab{text-align:center;padding:11px 4px;color:var(--muted);font-size:13px}.tab.on{color:var(--b);font-weight:800}.page{display:none}.page.active{display:block}.muted{color:var(--muted);line-height:1.55}.pill{display:inline-block;background:#eef5ff;border-radius:999px;padding:6px 10px;margin:3px 4px 3px 0;color:#28415f;font-size:13px}
+.item{border-top:1px solid var(--line);padding:10px 0}.status{min-height:22px;margin-top:10px;font-weight:800}.status.ok{color:var(--good)}.status.ng{color:var(--bad)}canvas{width:100%;height:260px}
+.small{font-size:12px;color:var(--muted)}.danger{background:#ffecec;color:#b42323}
+</style>
+</head>
+<body>
+<header>
+<h1>慎の減量管理</h1>
+<p>6/17開始｜有酸素=35分｜ドローイン=5セット｜月曜は蕎麦OK</p>
+</header>
+
+<main class="wrap">
+<section id="home" class="page active">
+  <div class="card"><div class="label">現在体重</div><span id="cw" class="big">--</span><span class="unit"> kg</span><div id="loss" class="good">記録を入力してください</div></div>
+  <div class="grid">
+    <div class="card"><div class="label">体脂肪率</div><span id="cf" class="big">--</span><span class="unit"> %</span></div>
+    <div class="card"><div class="label">筋肉量</div><span id="cm" class="big">--</span><span class="unit"> kg</span></div>
+  </div>
+  <div class="card"><div class="label">今日の収支</div><span id="bal" class="big">--</span><span class="unit"> kcal</span><p class="muted">摂取カロリー − 基礎消費 − 運動消費で概算。</p></div>
+  <div class="card"><div class="label">今日の運動</div><div id="tw" class="muted">まだ記録なし</div></div>
+  <div class="card"><div class="label">予測</div><div id="forecast" class="muted">記録が増えると予測します</div></div>
+</section>
+
+<section id="record" class="page">
+  <div class="card">
+    <div class="label">日付</div><input id="date" type="date">
+    <p class="small">日付を変えると、その日の保存済みデータを自動表示。未記入の日は空欄。</p>
+  </div>
+
+  <div class="card"><h3>朝の体組成</h3>
+    <div class="grid">
+      <div><div class="label">体重kg</div><input id="weight" type="number" step="0.1"></div>
+      <div><div class="label">体脂肪率%</div><input id="fat" type="number" step="0.1"></div>
+      <div><div class="label">筋肉量kg</div><input id="muscle" type="number" step="0.1"></div>
+      <div><div class="label">睡眠</div><select id="sleep"><option value="">未入力</option><option>★★★★★</option><option>★★★★☆</option><option>★★★☆☆</option><option>★★☆☆☆</option><option>★☆☆☆☆</option></select></div>
+    </div>
+    <div class="label">体組成写真（保存はしない・プレビューのみ）</div>
+    <input id="bodyPhoto" type="file" accept="image/*">
+    <img id="bodyPreview" class="photo">
+    <button id="bodyClear" type="button" class="sub photoClear" onclick="clearPhoto('bodyPhoto','bodyPreview','bodyClear')">体組成写真を消す</button>
+  </div>
+
+  <div class="card"><h3>食事</h3>
+    <div class="label">朝</div><textarea id="breakfast" placeholder="おにぎり、プロテインなど"></textarea>
+    <div class="label">昼</div><textarea id="lunch" placeholder="かけうどん、おにぎりなど"></textarea>
+    <div class="label">夜</div><textarea id="dinner" placeholder="写真の内容など"></textarea>
+    <div class="label">間食</div><textarea id="snack" placeholder="サラダチキン、ししゃもなど"></textarea>
+    <div class="grid">
+      <div><div class="label">摂取kcal概算</div><input id="intake" type="number" placeholder="例 1800"></div>
+      <div><div class="label">たんぱく質g 任意</div><input id="protein" type="number" placeholder="例 120"></div>
+    </div>
+    <div class="label">食事写真（撮影・写真ライブラリどちらも選択可／保存はしない）</div>
+    <input id="foodPhoto" type="file" accept="image/*">
+    <img id="foodPreview" class="photo">
+    <button id="foodClear" type="button" class="sub photoClear" onclick="clearPhoto('foodPhoto','foodPreview','foodClear')">食事写真を消す</button>
+  </div>
+
+  <div class="card"><h3>運動</h3>
+    <label class="check"><input id="cardio" type="checkbox">有酸素（35分）</label>
+    <div class="grid"><div><div class="label">35分超なら分数</div><input id="cardioMin" type="number" placeholder="40"></div><div><div class="label">筋トレ消費kcal</div><input id="exerciseCal" type="number" placeholder="400"></div></div>
+    <label class="check"><input id="legRaise" type="checkbox">足上げ腹筋50回</label>
+    <label class="check"><input id="plank" type="checkbox">プランク3分</label>
+    <label class="check"><input id="powerplate" type="checkbox">Power Plate 4セット</label>
+    <label class="check"><input id="drawin" type="checkbox">ドローイン5セット</label>
+    <div class="label">筋トレ内容</div><textarea id="strength" placeholder="胸25セット　1時間"></textarea>
+  </div>
+
+  <div class="card">
+    <button onclick="saveRecord()">保存</button>
+    <div id="saveStatus" class="status" role="status" aria-live="polite"></div>
+    <br><button class="sub" onclick="clearForm()">入力クリア</button>
+  </div>
+</section>
+
+<section id="graph" class="page">
+  <div class="card"><h3>体重推移</h3><canvas id="chart" width="380" height="260"></canvas></div>
+  <div class="card"><h3>最近の記録</h3><div id="list"></div></div>
+</section>
+
+<section id="settings" class="page">
+  <div class="card"><h3>設定</h3>
+    <div class="label">開始体重kg</div><input id="startWeight" type="number" step="0.1" value="127.4">
+    <div class="label">基礎＋生活消費kcal</div><input id="baseBurn" type="number" value="2800">
+    <div class="label">目標体重kg</div><input id="goalWeight" type="number" step="0.1" value="95">
+    <br><button onclick="saveSettings()">設定を保存</button>
+  </div>
+  <div class="card"><button class="sub" onclick="exportData()">データを書き出し</button><br><br><button class="danger" onclick="resetAll()">全データ削除</button><p class="small">データはこのiPhone/Safari内に保存。機種変更やブラウザ削除で消える可能性あり。</p></div>
+</section>
+</main>
+
+<nav class="tabs">
+  <div class="tab on" onclick="show('home',this)">ホーム</div>
+  <div class="tab" onclick="show('record',this)">記録</div>
+  <div class="tab" onclick="show('graph',this)">グラフ</div>
+  <div class="tab" onclick="show('settings',this)">設定</div>
+</nav>
+
 <script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}const $=id=>document.getElementById(id),today=()=>new Date().toISOString().slice(0,10);$('date').value=today();
-function recs(){try{let v=JSON.parse(localStorage.getItem('shinDietRecords')||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}function setRecs(x){localStorage.setItem('shinDietRecords',JSON.stringify(x))}function sets(){try{return JSON.parse(localStorage.getItem('shinDietSettings')||'{"startWeight":127.4,"baseBurn":2800,"goalWeight":95}')}catch(e){return {startWeight:127.4,baseBurn:2800,goalWeight:95}}}function setStatus(msg,ok=true){let el=$('saveStatus');if(!el)return;el.textContent=msg;el.className='status '+(ok?'ok':'ng')}function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REACHED'].includes(e.name)||e.code===22||e.code===1014))return '保存容量が足りません。写真は保存対象外ですが、過去データが大きい可能性があります。';return e&&e.message?e.message:'不明なエラーです。'}
-function fieldIds(){return ['weight','fat','muscle','sleep','breakfast','lunch','dinner','snack','intake','protein','cardioMin','exerciseCal','strength']}function checkIds(){return ['cardio','legRaise','plank','powerplate','drawin']}function loadRecordForDate(){const d=$('date').value||today(),r=recs().find(x=>x.date===d)||{};fieldIds().forEach(id=>$(id).value=r[id]??'');checkIds().forEach(id=>$(id).checked=!!r[id]);['bodyPreview','foodPreview'].forEach(id=>{$(id).removeAttribute('src');$(id).style.display='none'});setStatus(r.date?'この日の記録を読み込みました':'未記入の日です',!!r.date)}$('date').addEventListener('change',loadRecordForDate);
-function pv(input,img){input.onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{img.src=r.result;img.style.display='block'};r.readAsDataURL(f)}}pv($('bodyPhoto'),$('bodyPreview'));pv($('foodPhoto'),$('foodPreview'));
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+const $=id=>document.getElementById(id);
+const today=()=>new Date().toISOString().slice(0,10);
+$('date').value=today();
+
+function recs(){try{let v=JSON.parse(localStorage.getItem('shinDietRecords')||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
+function setRecs(x){localStorage.setItem('shinDietRecords',JSON.stringify(x))}
+function sets(){try{return JSON.parse(localStorage.getItem('shinDietSettings')||'{"startWeight":127.4,"baseBurn":2800,"goalWeight":95}')}catch(e){return {startWeight:127.4,baseBurn:2800,goalWeight:95}}}
+function setStatus(msg,ok=true){let el=$('saveStatus');if(!el)return;el.textContent=msg;el.className='status '+(ok?'ok':'ng')}
+function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REACHED'].includes(e.name)||e.code===22||e.code===1014))return '保存容量が足りません。写真は保存対象外ですが、過去データが大きい可能性があります。データを書き出して整理してください。';return e&&e.message?e.message:'不明なエラーです。'}
+
+function fieldIds(){return ['weight','fat','muscle','sleep','breakfast','lunch','dinner','snack','intake','protein','cardioMin','exerciseCal','strength']}
+function checkIds(){return ['cardio','legRaise','plank','powerplate','drawin']}
+function loadRecordForDate(){
+  const d=$('date').value||today();
+  const r=recs().find(x=>x.date===d)||{};
+  fieldIds().forEach(id=>$(id).value=r[id]??'');
+  checkIds().forEach(id=>$(id).checked=!!r[id]);
+  clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);
+  clearPhoto('foodPhoto','foodPreview','foodClear',false);
+  setStatus(r.date?'この日の記録を読み込みました':'未記入の日です',!!r.date);
+}
+$('date').addEventListener('change',loadRecordForDate);
+
+function pv(input,img,btn){input.onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{img.src=r.result;img.style.display='block';btn.style.display='block'};r.readAsDataURL(f)}}
+pv($('bodyPhoto'),$('bodyPreview'),$('bodyClear'));pv($('foodPhoto'),$('foodPreview'),$('foodClear'));
+
+function clearPhoto(inputId,previewId,buttonId,showMsg=true){
+  const input=$(inputId), img=$(previewId), btn=$(buttonId);
+  if(input) input.value='';
+  if(img){img.removeAttribute('src');img.style.display='none'}
+  if(btn) btn.style.display='none';
+  if(showMsg) setStatus('写真を消しました（保存データはそのまま）',true);
+}
+
 function exCal(){let c=0;if($('cardio').checked)c+=(+$('cardioMin').value>35?Math.round((+$('cardioMin').value/35)*320):320);if($('powerplate').checked)c+=40;if($('legRaise').checked)c+=20;if($('plank').checked)c+=20;if($('drawin').checked)c+=15;c+=(+$('exerciseCal').value||0);return c}
-function saveRecord(){try{if(!$('date').value)throw new Error('日付を入力してください。');const r={date:$('date').value};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('保存しました',true)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}}
-function clearForm(){fieldIds().forEach(id=>$(id).value='');checkIds().forEach(id=>$(id).checked=false);['bodyPreview','foodPreview'].forEach(id=>{$(id).removeAttribute('src');$(id).style.display='none'});setStatus('',true)}function saveSettings(){localStorage.setItem('shinDietSettings',JSON.stringify({startWeight:+$('startWeight').value||127.4,baseBurn:+$('baseBurn').value||2800,goalWeight:+$('goalWeight').value||95}));update();alert('保存しました')}function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart()}
-function update(){const s=sets();$('startWeight').value=s.startWeight;$('baseBurn').value=s.baseBurn;$('goalWeight').value=s.goalWeight;const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];if(last){$('cw').textContent=last.weight.toFixed(1);$('cf').textContent=last.fat??'--';$('cm').textContent=last.muscle??'--';$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+'kg'}const t=a.find(r=>r.date===today())||a.slice(-1)[0];if(t){let burn=s.baseBurn+(t.exerciseTotal||0),b=t.intake?t.intake-burn:null;$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('tw').innerHTML=[t.cardio?`有酸素 ${t.cardioMin||35}分`:'',t.legRaise?'足上げ腹筋':'',t.plank?'プランク':'',t.powerplate?'Power Plate':'',t.drawin?'ドローイン':'',t.strength||''].filter(Boolean).join(' / ')||'まだ記録なし'}forecast(last,a,s);renderList();drawChart()}
-function forecast(last,a,s){if(!last){$('forecast').textContent='記録が増えると予測します';return}let first=a.find(r=>r.weight)||last,days=Math.max(1,(new Date(last.date)-new Date(first.date))/86400000),pace=(first.weight-last.weight)/days;if(pace>0){let d=Math.round((last.weight-s.goalWeight)/pace);$('forecast').innerHTML=`現在ペース：約${pace.toFixed(2)}kg/日<br>${s.goalWeight}kg予測：約${d}日後<br>※最初は水分も落ちるので、実際はもっとゆっくり見てOK。`}else{$('forecast').textContent='記録が増えると予測します'}}function renderList(){let box=$('list');box.innerHTML=recs().slice(-14).reverse().map(r=>`<div class="item"><b>${r.date} ${r.weight?r.weight+'kg':''}</b><br><span class="muted">${[r.breakfast&&'朝:'+r.breakfast,r.lunch&&'昼:'+r.lunch,r.dinner&&'夜:'+r.dinner,r.snack&&'間食:'+r.snack,r.strength&&'筋トレ:'+r.strength].filter(Boolean).join('<br>')}</span></div>`).join('')}
+
+function saveRecord(){
+ try{
+  if(!$('date').value)throw new Error('日付を入力してください。');
+  const r={date:$('date').value};
+  fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});
+  checkIds().forEach(id=>r[id]=$(id).checked);
+  r.exerciseTotal=exCal();
+  let a=recs().filter(x=>x.date!==r.date);
+  a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));
+  setRecs(a);update();setStatus('保存しました',true);
+ }catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
+}
+function clearForm(){
+ fieldIds().forEach(id=>{if(id!=='date')$(id).value=''});
+ checkIds().forEach(id=>$(id).checked=false);
+ clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);
+ clearPhoto('foodPhoto','foodPreview','foodClear',false);
+ setStatus('',true)
+}
+function saveSettings(){localStorage.setItem('shinDietSettings',JSON.stringify({startWeight:+$('startWeight').value||127.4,baseBurn:+$('baseBurn').value||2800,goalWeight:+$('goalWeight').value||95}));update();alert('保存しました')}
+function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart()}
+function update(){
+ const s=sets();$('startWeight').value=s.startWeight;$('baseBurn').value=s.baseBurn;$('goalWeight').value=s.goalWeight;
+ const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];
+ if(last){$('cw').textContent=last.weight.toFixed(1);$('cf').textContent=last.fat??'--';$('cm').textContent=last.muscle??'--';$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+'kg'}
+ const t=a.find(r=>r.date===today())||a.slice(-1)[0];
+ if(t){let burn=s.baseBurn+(t.exerciseTotal||0),b=t.intake?t.intake-burn:null;$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('tw').innerHTML=[t.cardio?`有酸素 ${t.cardioMin||35}分`:'',t.legRaise?'足上げ腹筋':'',t.plank?'プランク':'',t.powerplate?'Power Plate':'',t.drawin?'ドローイン':'',t.strength||''].filter(Boolean).join(' / ')||'まだ記録なし'}
+ forecast(last,a,s);renderList();drawChart();
+}
+function forecast(last,a,s){if(!last){$('forecast').textContent='記録が増えると予測します';return}let first=a.find(r=>r.weight)||last;let days=Math.max(1,(new Date(last.date)-new Date(first.date))/86400000);let pace=(first.weight-last.weight)/days;if(pace>0){let d=Math.round((last.weight-s.goalWeight)/pace);$('forecast').innerHTML=`現在ペース：約${pace.toFixed(2)}kg/日<br>${s.goalWeight}kg予測：約${d}日後<br>※最初は水分も落ちるので、実際はもっとゆっくり見てOK。`}else{$('forecast').textContent='記録が増えると予測します'}}
+function renderList(){let box=$('list');box.innerHTML=recs().slice(-14).reverse().map(r=>`<div class="item"><b>${r.date} ${r.weight? r.weight+'kg':''}</b><br><span class="muted">${[r.breakfast&&'朝:'+r.breakfast,r.lunch&&'昼:'+r.lunch,r.dinner&&'夜:'+r.dinner,r.snack&&'間食:'+r.snack,r.strength&&'筋トレ:'+r.strength].filter(Boolean).join('<br>')}</span></div>`).join('')}
 function drawChart(){let c=$('chart');if(!c)return;let ctx=c.getContext('2d'),a=recs().filter(r=>r.weight).slice(-30);ctx.clearRect(0,0,c.width,c.height);if(a.length<2){ctx.fillText('2日以上入力するとグラフ表示',40,120);return}let p=30,w=c.width-p*2,h=c.height-p*2,vals=a.map(r=>r.weight),mn=Math.min(...vals)-1,mx=Math.max(...vals)+1;ctx.strokeStyle='#dfe7f2';for(let i=0;i<5;i++){let y=p+h*i/4;ctx.beginPath();ctx.moveTo(p,y);ctx.lineTo(p+w,y);ctx.stroke()}ctx.strokeStyle='#0b6bff';ctx.lineWidth=3;ctx.beginPath();a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y)});ctx.stroke();ctx.fillStyle='#0b6bff';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,4,0,7);ctx.fill()})}
-function exportData(){let b=new Blob([JSON.stringify(recs(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='shin-diet-data.json';a.click()}function resetAll(){if(confirm('全削除しますか？')){localStorage.removeItem('shinDietRecords');update()}}update();loadRecordForDate();
-</script></body></html>
+function exportData(){let b=new Blob([JSON.stringify(recs(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='shin-diet-data.json';a.click()}
+function resetAll(){if(confirm('全削除しますか？')){localStorage.removeItem('shinDietRecords');update()}}
+update();loadRecordForDate();
+</script>
+</body>
+</html>
