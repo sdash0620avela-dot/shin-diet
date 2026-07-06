@@ -1,10 +1,10 @@
 {
-  "name": "慎の減量管理",
+  "name": "慎の減量管理 v11",
   "short_name": "慎減量",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f4f7fb",
-  "theme_color": "#0b6bff",
+  "background_color": "#F2F2F7",
+  "theme_color": "#007AFF",
   "icons": [
     {
       "src": "icon.svg",
