@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>慎の減量管理 v12 実用テスト版</title>
+<title>慎の減量管理 v12.1 実用テスト版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -126,7 +126,10 @@ button.danger{background:#FFEBEA;color:var(--bad);box-shadow:none}
   border-bottom:1px solid var(--line);cursor:pointer
 }
 .check:last-of-type{border-bottom:none}
-.check input{width:22px;height:22px;accent-color:var(--accent);flex-shrink:0}
+.check input[type="checkbox"]{
+  width:22px;height:22px;flex:0 0 22px;margin:0;padding:0;
+  -webkit-appearance:checkbox;appearance:checkbox;accent-color:var(--accent)
+}
 
 /* Photo */
 .photo{width:100%;border-radius:var(--radius-sm);margin-top:10px;display:none;max-height:240px;object-fit:cover;border:1px solid var(--line)}
