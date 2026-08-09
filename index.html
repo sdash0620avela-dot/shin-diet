@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>慎の減量管理 v11</title>
+<title>慎の減量管理 v12 実用テスト版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -225,7 +225,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </head>
 <body>
 <header class="app-header">
-  <div class="version-pill">v11</div>
+  <div class="version-pill">v12 実用テスト版</div>
   <h1>慎の減量管理</h1>
   <p class="subhead">6/17開始｜有酸素35分｜ドローイン5セット｜月曜は蕎麦OK</p>
 </header>
@@ -302,6 +302,11 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <div><div class="label">筋肉量 kg</div><input id="muscle" type="number" step="0.1" inputmode="decimal" placeholder="85.0"></div>
       <div><div class="label">睡眠</div><select id="sleep"><option value="">未入力</option><option>★★★★★</option><option>★★★★☆</option><option>★★★☆☆</option><option>★★☆☆☆</option><option>★☆☆☆☆</option></select></div>
     </div>
+    <div class="grid">
+      <div><div class="label">空腹感 1〜5</div><input id="hunger" type="number" min="1" max="5" inputmode="numeric" placeholder="3"></div>
+      <div><div class="label">疲労感 1〜5</div><input id="fatigue" type="number" min="1" max="5" inputmode="numeric" placeholder="3"></div>
+    </div>
+    <div class="label">体調・痛み・便通など</div><textarea id="condition" placeholder="体調、睡眠の様子、痛み、便通など"></textarea>
     <div class="label">体組成写真（プレビューのみ・保存しません）</div>
     <input id="bodyPhoto" type="file" accept="image/*">
     <img id="bodyPreview" class="photo" alt="体組成プレビュー">
@@ -324,6 +329,9 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div class="grid">
       <div><div class="label">摂取 kcal 概算</div><input id="intake" type="number" inputmode="numeric" placeholder="1800"></div>
       <div><div class="label">たんぱく質 g</div><input id="protein" type="number" inputmode="numeric" placeholder="120"></div>
+      <div><div class="label">脂質 g</div><input id="fatG" type="number" inputmode="numeric" placeholder="50"></div>
+      <div><div class="label">炭水化物 g</div><input id="carbsG" type="number" inputmode="numeric" placeholder="220"></div>
+      <div><div class="label">水分 L</div><input id="waterL" type="number" step="0.1" inputmode="decimal" placeholder="2.0"></div>
     </div>
     <div class="label">食事写真（撮影・ライブラリ可／保存しません）</div>
     <input id="foodPhoto" type="file" accept="image/*">
@@ -338,7 +346,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <span class="chip" onclick="quickFull()">今日の定番</span>
     </div>
     <label class="check"><input id="cardio" type="checkbox">有酸素（35分）</label>
-    <div class="grid"><div><div class="label">35分超なら分数</div><input id="cardioMin" type="number" inputmode="numeric" placeholder="40"></div><div><div class="label">筋トレ消費 kcal</div><input id="exerciseCal" type="number" inputmode="numeric" placeholder="400"></div></div>
+    <div class="grid"><div><div class="label">有酸素の分数</div><input id="cardioMin" type="number" inputmode="numeric" placeholder="40"></div><div><div class="label">筋トレ消費 kcal</div><input id="exerciseCal" type="number" inputmode="numeric" placeholder="400"></div><div><div class="label">筋トレ時間 分</div><input id="workoutMinutes" type="number" inputmode="numeric" placeholder="60"></div></div>
     <label class="check"><input id="legRaise" type="checkbox">足上げ腹筋50回</label>
     <label class="check"><input id="plank" type="checkbox">プランク3分</label>
     <label class="check"><input id="powerplate" type="checkbox">Power Plate 4セット</label>
@@ -368,6 +376,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   </div>
   <div class="card">
     <button class="sub" onclick="exportData()">データを書き出し</button>
+    <div style="margin-top:12px"><label class="sub" style="display:block;text-align:center;border-radius:14px;padding:15px;font-weight:700;background:#F2F2F7;cursor:pointer">バックアップを復元<input id="importFile" type="file" accept="application/json" style="display:none" onchange="importData(event)"></label></div>
     <div style="margin-top:12px"><button class="danger" onclick="resetAll()">全データ削除</button></div>
     <p class="small" style="margin-top:14px">データはこの端末のブラウザ内に保存されます。機種変更やブラウザ削除で消える可能性があります。</p>
   </div>
@@ -384,8 +393,9 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <script>
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
 const $=id=>document.getElementById(id);
-const today=()=>new Date().toISOString().slice(0,10);
-const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10)};
+const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
+const today=()=>dateKey(new Date());
+const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
 $('date').value=today();
 
 function recs(){try{let v=JSON.parse(localStorage.getItem('shinDietRecords')||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
@@ -394,7 +404,7 @@ function sets(){try{return JSON.parse(localStorage.getItem('shinDietSettings')||
 function setStatus(msg,ok=true){let el=$('saveStatus');if(!el)return;el.textContent=msg;el.className='status '+(ok?'ok':'ng')}
 function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REACHED'].includes(e.name)||e.code===22||e.code===1014))return '保存容量が足りません。写真は保存対象外ですが、過去データが大きい可能性があります。データを書き出して整理してください。';return e&&e.message?e.message:'不明なエラーです。'}
 
-function fieldIds(){return ['weight','fat','muscle','sleep','breakfast','lunch','dinner','snack','intake','protein','cardioMin','exerciseCal','strength']}
+function fieldIds(){return ['weight','fat','muscle','sleep','hunger','fatigue','condition','breakfast','lunch','dinner','snack','intake','protein','fatG','carbsG','waterL','cardioMin','exerciseCal','workoutMinutes','strength']}
 function checkIds(){return ['cardio','legRaise','plank','powerplate','drawin']}
 function loadRecordForDate(){
   const d=$('date').value||today();
@@ -428,6 +438,8 @@ function scoreRecord(r,s){
   if(r.cardio)score+=10;if(ex>=350)score+=11;else if(ex>=200)score+=8;else if(ex>0)score+=4;
   if(r.strength&&r.strength.trim())score+=8;
   score+=sleepScore(r.sleep)-8;
+  if(+r.waterL>=2)score+=2;
+  if(+r.fatigue>=4)score-=3;
   return Math.max(0,Math.min(100,Math.round(score)));
 }
 function mealStar(r){let p=+r.protein||0,i=+r.intake||0;if(p>=120&&i>=1700&&i<=2300)return 5;if(p>=100)return 4;if(p>=70)return 3;if(p>0||i>0)return 2;return 1}
@@ -479,7 +491,7 @@ function calcStreak(a){
   const dates=new Set(a.map(r=>r.date));
   let streak=0,d=new Date();
   for(let i=0;i<365;i++){
-    const ds=d.toISOString().slice(0,10);
+    const ds=dateKey(d);
     if(dates.has(ds))streak++;else if(i>0)break;
     d.setDate(d.getDate()-1);
   }
@@ -525,7 +537,7 @@ function updateWeeklyChange(a,s){
   if(a.length<2){$('weeklyChange').textContent='記録が増えると表示します';return}
   const now=new Date(), dow=now.getDay(), monOffset=dow===0?6:dow-1;
   const mon=new Date(now);mon.setDate(now.getDate()-monOffset);
-  const monStr=mon.toISOString().slice(0,10);
+  const monStr=dateKey(mon);
   const weekRecs=a.filter(r=>r.date>=monStr&&r.weight);
   const firstWeek=weekRecs[0], lastWeek=weekRecs[weekRecs.length-1]||a.filter(r=>r.weight).slice(-1)[0];
   if(!firstWeek||!lastWeek){$('weeklyChange').textContent='今週の体重記録がまだ少ないです';return}
@@ -619,7 +631,7 @@ function renderWeekly(a,s){
  $('weekly').innerHTML=`<div class="miniReport"><div><span class="small">平均体重</span><br><b>${avg(weights).toFixed(1)} kg</b></div><div><span class="small">平均摂取</span><br><b>${intakes.length?avg(intakes).toFixed(0):'--'} kcal</b></div><div><span class="small">平均たんぱく質</span><br><b>${proteins.length?avg(proteins).toFixed(0):'--'} g</b></div><div><span class="small">筋肉維持</span><br><b>${muscleMsg}</b></div></div><p class="muted">一番良かった日：${best?best.date+'（'+scoreRecord(best,s)+'点）':'--'}<br>来週の目標：たんぱく質120g、有酸素35分、睡眠★★★★☆以上を2日増やす。<br><b>AIコメント：</b>${ai}</p>`;
 }
 
-function renderList(){let box=$('list');box.innerHTML=recs().slice(-14).reverse().map(r=>`<div class="item"><b>${r.date} ${r.weight? r.weight+' kg':''}</b><br><span class="muted">${[r.breakfast&&'朝:'+r.breakfast,r.lunch&&'昼:'+r.lunch,r.dinner&&'夜:'+r.dinner,r.snack&&'間食:'+r.snack,r.strength&&'筋トレ:'+r.strength].filter(Boolean).join('<br>')}</span></div>`).join('')}
+function renderList(){let box=$('list');box.innerHTML=recs().slice(-14).reverse().map(r=>`<div class="item"><b>${r.date} ${r.weight? r.weight+' kg':''}</b><br><span class="muted">${[r.intake&&`摂取:${r.intake}kcal / P:${r.protein||'--'}g / F:${r.fatG||'--'}g / C:${r.carbsG||'--'}g`,r.breakfast&&'朝:'+r.breakfast,r.lunch&&'昼:'+r.lunch,r.dinner&&'夜:'+r.dinner,r.snack&&'間食:'+r.snack,r.strength&&'筋トレ:'+r.strength,r.condition&&'体調:'+r.condition].filter(Boolean).join('<br>')}</span></div>`).join('')}
 
 function drawChart(){
  let c=$('chart');if(!c)return;
@@ -637,7 +649,8 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let b=new Blob([JSON.stringify(recs(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='shin-diet-data.json';a.click()}
+function exportData(){let payload={version:12,exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function importData(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result),records=Array.isArray(data)?data:data.records;if(!Array.isArray(records))throw new Error('記録データが見つかりません');if(!confirm(`${records.length}日分のバックアップを復元しますか？`))return;setRecs(records);if(data.settings)localStorage.setItem('shinDietSettings',JSON.stringify(data.settings));update();loadRecordForDate();alert('復元しました')}catch(e){alert('復元できませんでした：'+e.message)}finally{event.target.value=''}};reader.readAsText(file)}
 function resetAll(){if(confirm('全削除しますか？')){localStorage.removeItem('shinDietRecords');update()}}
 update();loadRecordForDate();
 </script>
