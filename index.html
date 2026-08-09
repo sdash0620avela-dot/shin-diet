@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>慎の減量管理 v12.2 実用テスト版</title>
+<title>慎の減量管理 v12.3 実用テスト版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -228,7 +228,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </head>
 <body>
 <header class="app-header">
-  <div class="version-pill">v12.2 実用テスト版</div>
+  <div class="version-pill">v12.3 実用テスト版</div>
   <h1>慎の減量管理</h1>
   <p class="subhead">6/17開始｜有酸素35分｜ドローイン5セット｜月曜は蕎麦OK</p>
 </header>
@@ -256,8 +256,8 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <span id="cw" class="big">--</span><span class="unit"> kg</span>
     <div id="loss" class="good" style="margin-top:6px;font-size:15px">記録を入力してください</div>
     <div class="grid" style="margin-top:14px">
-      <div><div class="label">体脂肪率</div><span id="cf" class="big" style="font-size:28px">--</span><span class="unit"> %</span></div>
-      <div><div class="label">筋肉量</div><span id="cm" class="big" style="font-size:28px">--</span><span class="unit"> kg</span></div>
+      <div><div id="cfLabel" class="label">体脂肪率</div><span id="cf" class="big" style="font-size:28px">--</span><span id="cfUnit" class="unit"> %</span></div>
+      <div><div id="cmLabel" class="label">筋肉量</div><span id="cm" class="big" style="font-size:28px">--</span><span id="cmUnit" class="unit"> kg</span></div>
     </div>
   </div>
 
@@ -301,8 +301,8 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div class="section-head"><div class="section-icon">⚖️</div><h3>朝の体組成</h3></div>
     <div class="grid">
       <div><div class="label">体重 kg</div><input id="weight" type="number" step="0.1" inputmode="decimal" placeholder="127.0"></div>
-      <div><div class="label">体脂肪率 %</div><input id="fat" type="number" step="0.1" inputmode="decimal" placeholder="30.0"></div>
-      <div><div class="label">筋肉量 kg</div><input id="muscle" type="number" step="0.1" inputmode="decimal" placeholder="85.0"></div>
+      <div><div class="label">体脂肪データ</div><select id="fatType"><option value="fatPercent">体脂肪率（%）</option><option value="fatMass">体脂肪量（kg）</option></select><input id="fat" type="number" step="0.1" inputmode="decimal" placeholder="30.0" style="margin-top:8px"></div>
+      <div><div class="label">筋肉データ</div><select id="muscleType"><option value="muscleMass">筋肉量（kg）</option><option value="skeletalMuscleMass">骨格筋量（kg）</option></select><input id="muscle" type="number" step="0.1" inputmode="decimal" placeholder="85.0" style="margin-top:8px"></div>
       <div><div class="label">睡眠</div><select id="sleep"><option value="">未入力</option><option>★★★★★</option><option>★★★★☆</option><option>★★★☆☆</option><option>★★☆☆☆</option><option>★☆☆☆☆</option></select></div>
     </div>
     <div class="grid">
@@ -407,12 +407,18 @@ function sets(){try{return JSON.parse(localStorage.getItem('shinDietSettings')||
 function setStatus(msg,ok=true){let el=$('saveStatus');if(!el)return;el.textContent=msg;el.className='status '+(ok?'ok':'ng')}
 function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REACHED'].includes(e.name)||e.code===22||e.code===1014))return '保存容量が足りません。写真は保存対象外ですが、過去データが大きい可能性があります。データを書き出して整理してください。';return e&&e.message?e.message:'不明なエラーです。'}
 
-function fieldIds(){return ['weight','fat','muscle','sleep','hunger','fatigue','condition','breakfast','lunch','dinner','snack','intake','protein','fatG','carbsG','waterL','cardioMin','exerciseCal','workoutMinutes','strength']}
+function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','sleep','hunger','fatigue','condition','breakfast','lunch','dinner','snack','intake','protein','fatG','carbsG','waterL','cardioMin','exerciseCal','workoutMinutes','strength']}
 function checkIds(){return ['cardio','legRaise','plank','powerplate','drawin']}
+function fatTypeOf(r){return r&&r.fatType==='fatMass'?'fatMass':'fatPercent'}
+function muscleTypeOf(r){return r&&r.muscleType==='skeletalMuscleMass'?'skeletalMuscleMass':'muscleMass'}
+function fatMeta(r){return fatTypeOf(r)==='fatMass'?{label:'体脂肪量',unit:'kg'}:{label:'体脂肪率',unit:'%'}}
+function muscleMeta(r){return muscleTypeOf(r)==='skeletalMuscleMass'?{label:'骨格筋量',unit:'kg'}:{label:'筋肉量',unit:'kg'}}
 function loadRecordForDate(){
   const d=$('date').value||today();
   const r=recs().find(x=>x.date===d)||{};
   fieldIds().forEach(id=>$(id).value=r[id]??'');
+  if(!r.fatType)$('fatType').value='fatPercent';
+  if(!r.muscleType)$('muscleType').value='muscleMass';
   checkIds().forEach(id=>$(id).checked=!!r[id]);
   clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);
   clearPhoto('foodPhoto','foodPreview','foodClear',false);
@@ -458,7 +464,9 @@ function coachText(r,s,last,prev){
   let balance=bal===null?'摂取カロリー未入力なので収支は未判定。':bal< -900?'収支はかなり大きなマイナス。落ちますが、疲労と筋肉量低下には注意。':bal<0?'収支はマイナスで減量向きです。':bal<300?'ほぼ維持ライン。夜の脂質を控えれば減量側に寄せられます。':'収支はプラス気味。外食や脂質の量を少しだけ調整。';
   let exercise=rest?'今日は休養日として記録されています。運動は0分。身体を回復させる日です。':effectiveExercise(r)>=350?'運動量は十分。脂肪を動かす刺激として良いです。':effectiveExercise(r)>0?'運動は入っています。軽めでも継続できているのが大事。':'今日は運動0分です。';
   let sleep=r.sleep?`睡眠は${r.sleep}。${sleepStar(r)>=4?'回復も良いです。':sleepStar(r)>=3?'最低限は取れています。':'回復不足なので無理しすぎ注意。'}`:'睡眠未入力。睡眠を入れるとAI評価が安定します。';
-  let muscle='筋肉量は記録されています。';if(prev&&prev.muscle&&r.muscle)muscle=r.muscle>=prev.muscle?'筋肉量は前回比で維持。ここが一番良いポイントです。':'筋肉量が少し落ちています。今日はたんぱく質と睡眠を優先。';
+  const mm=muscleMeta(r),prevMuscle=prevRecord(recs(),r,'muscle');
+  let muscle=r.muscle?`${mm.label}は記録されています。`:`${mm.label}は未入力です。`;
+  if(prevMuscle&&prevMuscle.muscle&&r.muscle&&muscleTypeOf(prevMuscle)===muscleTypeOf(r))muscle=r.muscle>=prevMuscle.muscle?`${mm.label}は前回比で維持。ここが一番良いポイントです。`:`${mm.label}が少し落ちています。今日はたんぱく質と睡眠を優先。`;
   let tomorrow=rest?'今日はしっかり休んで、明日は体調を見て通常メニューへ戻せばOKです。':sleepStar(r)<=2?'明日は休養寄りか、有酸素だけで十分です。':(r.strength&&r.strength.includes('背'))?'明日は胸・肩・脚のどれか、または軽い有酸素がおすすめ。':'明日は肩トレか有酸素35分がおすすめです。';
   let fatHint=''; if((r.dinner||'').includes('軟骨')||(r.dinner||'').includes('カルビ')||(r.dinner||'').includes('揚げ'))fatHint='<div class="hint">脂質メモ：夜に脂質が多い日は、翌日の昼を蕎麦・魚・サラダチキン寄りにすると戻しやすいです。</div>';
   const ringPct=score+'%';
@@ -563,14 +571,14 @@ function diaryText(r,s,last,prev){
 function saveRecord(){
  try{if(!$('date').value)throw new Error('日付を入力してください。');const r={date:$('date').value};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);if(isRestDay(r)){checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('保存しました ✓',true)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
 }
-function clearForm(){fieldIds().forEach(id=>$(id).value='');checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);clearPhoto('foodPhoto','foodPreview','foodClear',false);setStatus('',true)}
+function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);clearPhoto('foodPhoto','foodPreview','foodClear',false);setStatus('',true)}
 function saveSettings(){localStorage.setItem('shinDietSettings',JSON.stringify({startWeight:+$('startWeight').value||127.4,baseBurn:+$('baseBurn').value||2800,goalWeight:+$('goalWeight').value||95}));update();alert('保存しました')}
 function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home')drawForecastChart()}
 
 function update(){
  const s=sets();$('startWeight').value=s.startWeight;$('baseBurn').value=s.baseBurn;$('goalWeight').value=s.goalWeight;
  const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];
- if(last){$('cw').textContent=(+last.weight).toFixed(1);$('cf').textContent=last.fat??'--';$('cm').textContent=last.muscle??'--';$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+' kg';$('loss').className=(last.weight-s.startWeight)<0?'good':'warn'}
+ if(last){const fm=fatMeta(last),mm=muscleMeta(last);$('cw').textContent=(+last.weight).toFixed(1);$('cf').textContent=last.fat??'--';$('cfLabel').textContent=fm.label;$('cfUnit').textContent=' '+fm.unit;$('cm').textContent=last.muscle??'--';$('cmLabel').textContent=mm.label;$('cmUnit').textContent=' '+mm.unit;$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+' kg';$('loss').className=(last.weight-s.startWeight)<0?'good':'warn'}
  const t=a.find(r=>r.date===today())||a.slice(-1)[0];const prev=t?prevRecord(a,t,'weight'):null;
  if(t){let rest=isRestDay(t),burn=s.baseBurn+effectiveExercise(t),b=t.intake?t.intake-burn:null;$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('tw').innerHTML=rest?'休養日 · 運動0分':[t.cardio?`有酸素 ${t.cardioMin||35}分`:'',t.legRaise?'足上げ腹筋':'',t.plank?'プランク':'',t.powerplate?'Power Plate':'',t.drawin?'ドローイン':'',t.strength||''].filter(Boolean).join(' · ')||'まだ記録なし';$('coach').innerHTML=coachText(t,s,last,prev);$('diary').innerHTML=diaryText(t,s,last,prev)}
  updateStatTiles(a,s,t,prev);
@@ -629,13 +637,14 @@ function drawForecastChart(){
 
 function renderWeekly(a,s){
  let recent=a.slice(-7);if(!recent.length){$('weekly').textContent='記録が増えると表示します';return}
- let weights=recent.filter(r=>r.weight).map(r=>+r.weight), intakes=recent.filter(r=>r.intake).map(r=>+r.intake), proteins=recent.filter(r=>r.protein).map(r=>+r.protein), exs=recent.map(r=>r.exerciseTotal||0), muscles=recent.filter(r=>r.muscle).map(r=>+r.muscle);
+ const latestMuscle=recent.filter(r=>r.muscle).slice(-1)[0],latestMuscleType=latestMuscle?muscleTypeOf(latestMuscle):null;
+ let weights=recent.filter(r=>r.weight).map(r=>+r.weight), intakes=recent.filter(r=>r.intake).map(r=>+r.intake), proteins=recent.filter(r=>r.protein).map(r=>+r.protein), exs=recent.map(r=>r.exerciseTotal||0), muscles=recent.filter(r=>r.muscle&&muscleTypeOf(r)===latestMuscleType).map(r=>+r.muscle);
  let avg=x=>x.length?(x.reduce((p,c)=>p+c,0)/x.length):0;let best=recent.slice().sort((x,y)=>scoreRecord(y,s)-scoreRecord(x,s))[0];let muscleMsg=muscles.length>=2?(muscles[muscles.length-1]>=muscles[0]?'維持できています':'少し低下傾向'):'記録待ち';
  let ai=avg(proteins)>=110&&avg(exs)>=250?'今週は減量の質がかなり良いです。睡眠をもう少し整えるとさらに強いです。':'来週はたんぱく質120g前後と有酸素35分を軸にすると安定します。';
- $('weekly').innerHTML=`<div class="miniReport"><div><span class="small">平均体重</span><br><b>${avg(weights).toFixed(1)} kg</b></div><div><span class="small">平均摂取</span><br><b>${intakes.length?avg(intakes).toFixed(0):'--'} kcal</b></div><div><span class="small">平均たんぱく質</span><br><b>${proteins.length?avg(proteins).toFixed(0):'--'} g</b></div><div><span class="small">筋肉維持</span><br><b>${muscleMsg}</b></div></div><p class="muted">一番良かった日：${best?best.date+'（'+scoreRecord(best,s)+'点）':'--'}<br>来週の目標：たんぱく質120g、有酸素35分、睡眠★★★★☆以上を2日増やす。<br><b>AIコメント：</b>${ai}</p>`;
+ $('weekly').innerHTML=`<div class="miniReport"><div><span class="small">平均体重</span><br><b>${avg(weights).toFixed(1)} kg</b></div><div><span class="small">平均摂取</span><br><b>${intakes.length?avg(intakes).toFixed(0):'--'} kcal</b></div><div><span class="small">平均たんぱく質</span><br><b>${proteins.length?avg(proteins).toFixed(0):'--'} g</b></div><div><span class="small">${latestMuscle?muscleMeta(latestMuscle).label:'筋肉'}維持</span><br><b>${muscleMsg}</b></div></div><p class="muted">一番良かった日：${best?best.date+'（'+scoreRecord(best,s)+'点）':'--'}<br>来週の目標：たんぱく質120g、有酸素35分、睡眠★★★★☆以上を2日増やす。<br><b>AIコメント：</b>${ai}</p>`;
 }
 
-function renderList(){let box=$('list');box.innerHTML=recs().slice(-14).reverse().map(r=>`<div class="item"><b>${r.date} ${r.weight? r.weight+' kg':''}</b><br><span class="muted">${[r.intake&&`摂取:${r.intake}kcal / P:${r.protein||'--'}g / F:${r.fatG||'--'}g / C:${r.carbsG||'--'}g`,r.breakfast&&'朝:'+r.breakfast,r.lunch&&'昼:'+r.lunch,r.dinner&&'夜:'+r.dinner,r.snack&&'間食:'+r.snack,r.strength&&'筋トレ:'+r.strength,r.condition&&'体調:'+r.condition].filter(Boolean).join('<br>')}</span></div>`).join('')}
+function renderList(){let box=$('list');box.innerHTML=recs().slice(-14).reverse().map(r=>`<div class="item"><b>${r.date} ${r.weight? r.weight+' kg':''}</b><br><span class="muted">${[r.fat&&`${fatMeta(r).label}:${r.fat}${fatMeta(r).unit}`,r.muscle&&`${muscleMeta(r).label}:${r.muscle}kg`,r.intake&&`摂取:${r.intake}kcal / P:${r.protein||'--'}g / F:${r.fatG||'--'}g / C:${r.carbsG||'--'}g`,r.breakfast&&'朝:'+r.breakfast,r.lunch&&'昼:'+r.lunch,r.dinner&&'夜:'+r.dinner,r.snack&&'間食:'+r.snack,r.strength&&'筋トレ:'+r.strength,r.condition&&'体調:'+r.condition].filter(Boolean).join('<br>')}</span></div>`).join('')}
 
 function drawChart(){
  let c=$('chart');if(!c)return;
@@ -653,7 +662,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:12,exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:12.3,exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function importData(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result),records=Array.isArray(data)?data:data.records;if(!Array.isArray(records))throw new Error('記録データが見つかりません');if(!confirm(`${records.length}日分のバックアップを復元しますか？`))return;setRecs(records);if(data.settings)localStorage.setItem('shinDietSettings',JSON.stringify(data.settings));update();loadRecordForDate();alert('復元しました')}catch(e){alert('復元できませんでした：'+e.message)}finally{event.target.value=''}};reader.readAsText(file)}
 function resetAll(){if(confirm('全削除しますか？')){localStorage.removeItem('shinDietRecords');update()}}
 update();loadRecordForDate();
