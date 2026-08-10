@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>慎の減量管理 v12.4 実用テスト版</title>
+<title>慎の減量管理 v13.0 実用テスト版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -228,7 +228,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </head>
 <body>
 <header class="app-header">
-  <div class="version-pill">v12.4 実用テスト版</div>
+  <div class="version-pill">v13.0 実用テスト版</div>
   <h1>慎の減量管理</h1>
   <p class="subhead">6/17開始｜有酸素35分｜ドローイン5セット｜月曜は蕎麦OK</p>
 </header>
@@ -325,21 +325,16 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <span class="chip" onclick="$('intake').value=1800">1800kcal</span>
       <span class="chip" onclick="$('protein').value=120">120g P</span>
     </div>
-    <div class="label">朝</div><textarea id="breakfast" placeholder="おにぎり、プロテインなど"></textarea>
-    <div class="label">昼</div><textarea id="lunch" placeholder="かけうどん、おにぎりなど"></textarea>
-    <div class="label">夜</div><textarea id="dinner" placeholder="写真の内容など"></textarea>
-    <div class="label">間食</div><textarea id="snack" placeholder="サラダチキン、ししゃもなど"></textarea>
+    <div id="mealEntries"></div>
+    <button type="button" class="sub" onclick="calculateMealTotals()">4食の合計を反映</button>
+    <p class="small" style="margin-top:10px">各食の数値を入力すると、下の1日合計へ自動反映します。「AI推定」は次工程の写真解析結果を区別して保存するための項目です。</p>
     <div class="grid">
-      <div><div class="label">摂取 kcal 概算</div><input id="intake" type="number" inputmode="numeric" placeholder="1800"></div>
-      <div><div class="label">たんぱく質 g</div><input id="protein" type="number" inputmode="numeric" placeholder="120"></div>
-      <div><div class="label">脂質 g</div><input id="fatG" type="number" inputmode="numeric" placeholder="50"></div>
-      <div><div class="label">炭水化物 g</div><input id="carbsG" type="number" inputmode="numeric" placeholder="220"></div>
+      <div><div class="label">1日合計 kcal</div><input id="intake" type="number" inputmode="numeric" placeholder="1800"></div>
+      <div><div class="label">1日合計 P g</div><input id="protein" type="number" step="0.1" inputmode="decimal" placeholder="120"></div>
+      <div><div class="label">1日合計 F g</div><input id="fatG" type="number" step="0.1" inputmode="decimal" placeholder="50"></div>
+      <div><div class="label">1日合計 C g</div><input id="carbsG" type="number" step="0.1" inputmode="decimal" placeholder="220"></div>
       <div><div class="label">水分 L</div><input id="waterL" type="number" step="0.1" inputmode="decimal" placeholder="2.0"></div>
     </div>
-    <div class="label">食事写真（撮影・ライブラリ可／保存しません）</div>
-    <input id="foodPhoto" type="file" accept="image/*">
-    <img id="foodPreview" class="photo" alt="食事プレビュー">
-    <button id="foodClear" type="button" class="sub photoClear" onclick="clearPhoto('foodPhoto','foodPreview','foodClear')">食事写真を消す</button>
   </div>
 
   <div class="card">
@@ -408,7 +403,10 @@ function sets(){try{return JSON.parse(localStorage.getItem('shinDietSettings')||
 function setStatus(msg,ok=true){let el=$('saveStatus');if(!el)return;el.textContent=msg;el.className='status '+(ok?'ok':'ng')}
 function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REACHED'].includes(e.name)||e.code===22||e.code===1014))return '保存容量が足りません。写真は保存対象外ですが、過去データが大きい可能性があります。データを書き出して整理してください。';return e&&e.message?e.message:'不明なエラーです。'}
 
-function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','sleep','hunger','fatigue','condition','breakfast','lunch','dinner','snack','intake','protein','fatG','carbsG','waterL','cardioMin','exerciseCal','workoutMinutes','strength']}
+const mealTypes=[['breakfast','朝食'],['lunch','昼食'],['dinner','夕食'],['snack','間食']];
+const mealSuffixes=['Source','Kcal','Protein','Fat','Carbs'];
+function mealFieldIds(){return mealTypes.flatMap(([id])=>[id,...mealSuffixes.map(s=>id+s)])}
+function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioMin','exerciseCal','workoutMinutes','strength']}
 function checkIds(){return ['cardio','legRaise','plank','powerplate','drawin']}
 function fatTypeOf(r){return r&&r.fatType==='fatMass'?'fatMass':'fatPercent'}
 function muscleTypeOf(r){return r&&r.muscleType==='skeletalMuscleMass'?'skeletalMuscleMass':'muscleMass'}
@@ -420,20 +418,35 @@ function loadRecordForDate(){
   fieldIds().forEach(id=>$(id).value=r[id]??'');
   if(!r.fatType)$('fatType').value='fatPercent';
   if(!r.muscleType)$('muscleType').value='muscleMass';
+  mealTypes.forEach(([id])=>{if(!r[id+'Source'])$(id+'Source').value='manual'});
   checkIds().forEach(id=>$(id).checked=!!r[id]);
   $('restDay').checked=!!r.restDay||isRestDay(r);
   clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);
-  clearPhoto('foodPhoto','foodPreview','foodClear',false);
+  mealTypes.forEach(([id])=>clearPhoto(id+'Photo',id+'Preview',id+'Clear',false));
   setStatus(r.date?'この日の記録を読み込みました':'未記入の日です',!!r.date);
 }
 $('date').addEventListener('change',loadRecordForDate);
 
 function fillMeal(id,text){const el=$(id);if(el)el.value=text}
+function renderMealEntries(){
+  $('mealEntries').innerHTML=mealTypes.map(([id,label])=>`<div class="item" style="margin-bottom:12px"><div class="label"><b>${label}</b></div><textarea id="${id}" placeholder="食べた内容"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option></select></div><div><div class="label">kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label">P g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">F g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">C g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div><div class="label">${label}写真（端末には保存しません）</div><input id="${id}Photo" type="file" accept="image/*"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button></div>`).join('');
+  mealTypes.forEach(([id])=>{pv($(id+'Photo'),$(id+'Preview'),$(id+'Clear'));mealSuffixes.slice(1).forEach(s=>$(id+s).addEventListener('input',calculateMealTotals))});
+}
+function mealNumbersEntered(){return mealTypes.some(([id])=>mealSuffixes.slice(1).some(s=>hasValue($(id+s).value)))}
+function calculateMealTotals(){
+  if(!mealNumbersEntered())return;
+  const sum=s=>mealTypes.reduce((n,[id])=>n+(+$(id+s).value||0),0);
+  $('intake').value=Math.round(sum('Kcal'));
+  $('protein').value=+sum('Protein').toFixed(1);
+  $('fatG').value=+sum('Fat').toFixed(1);
+  $('carbsG').value=+sum('Carbs').toFixed(1);
+}
 function quickCardio(){$('cardio').checked=true;if(!$('cardioMin').value)$('cardioMin').value=35}
 function quickFull(){quickCardio();$('drawin').checked=true;$('legRaise').checked=true;$('plank').checked=true}
 
 function pv(input,img,btn){input.onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{img.src=r.result;img.style.display='block';btn.style.display='block'};r.readAsDataURL(f)}}
-pv($('bodyPhoto'),$('bodyPreview'),$('bodyClear'));pv($('foodPhoto'),$('foodPreview'),$('foodClear'));
+renderMealEntries();
+pv($('bodyPhoto'),$('bodyPreview'),$('bodyClear'));
 function clearPhoto(inputId,previewId,buttonId,showMsg=true){const input=$(inputId),img=$(previewId),btn=$(buttonId);if(input)input.value='';if(img){img.removeAttribute('src');img.style.display='none'}if(btn)btn.style.display='none';if(showMsg)setStatus('写真を消しました（保存データはそのまま）',true)}
 function exCal(){let c=0;if($('cardio').checked)c+=(+$('cardioMin').value>35?Math.round((+$('cardioMin').value/35)*320):320);if($('powerplate').checked)c+=40;if($('legRaise').checked)c+=20;if($('plank').checked)c+=20;if($('drawin').checked)c+=15;c+=(+$('exerciseCal').value||0);return c}
 function sleepScore(s){return s==='★★★★★'?20:s==='★★★★☆'?16:s==='★★★☆☆'?11:s==='★★☆☆☆'?6:s==='★☆☆☆☆'?2:8}
@@ -578,9 +591,9 @@ function diaryText(r,s,last,prev){
 }
 
 function saveRecord(){
- try{if(!$('date').value)throw new Error('日付を入力してください。');const r={date:$('date').value,restDay:$('restDay').checked};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('保存しました ✓',true)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
+ try{if(!$('date').value)throw new Error('日付を入力してください。');calculateMealTotals();const r={date:$('date').value,restDay:$('restDay').checked};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('保存しました ✓',true)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
 }
-function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);clearPhoto('foodPhoto','foodPreview','foodClear',false);setStatus('',true)}
+function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);setStatus('',true)}
 function saveSettings(){localStorage.setItem('shinDietSettings',JSON.stringify({startWeight:+$('startWeight').value||127.4,baseBurn:+$('baseBurn').value||2800,goalWeight:+$('goalWeight').value||95}));update();alert('保存しました')}
 function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home')drawForecastChart()}
 
@@ -671,7 +684,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:12.4,exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:13,exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function importData(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result),records=Array.isArray(data)?data:data.records;if(!Array.isArray(records))throw new Error('記録データが見つかりません');if(!confirm(`${records.length}日分のバックアップを復元しますか？`))return;setRecs(records);if(data.settings)localStorage.setItem('shinDietSettings',JSON.stringify(data.settings));update();loadRecordForDate();alert('復元しました')}catch(e){alert('復元できませんでした：'+e.message)}finally{event.target.value=''}};reader.readAsText(file)}
 function resetAll(){if(confirm('全削除しますか？')){localStorage.removeItem('shinDietRecords');update()}}
 update();loadRecordForDate();
