@@ -1,0 +1,4 @@
+name = "shin-diet-photo-analysis"
+main = "api/analyze-meal.js"
+compatibility_date = "2026-08-10"
+workers_dev = true

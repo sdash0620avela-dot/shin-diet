@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>慎の減量管理 v13.0.1 実用テスト版</title>
+<title>慎の減量管理 v13.1 実用テスト版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -134,6 +134,9 @@ button.danger{background:#FFEBEA;color:var(--bad);box-shadow:none}
 /* Photo */
 .photo{width:100%;border-radius:var(--radius-sm);margin-top:10px;display:none;max-height:240px;object-fit:cover;border:1px solid var(--line)}
 .photoClear{display:none;margin-top:10px}
+.analyzeBtn{margin-top:10px;background:linear-gradient(135deg,#5856D6,#007AFF)}
+.analyzeBtn:disabled{opacity:.55;cursor:wait}
+.analysisStatus{min-height:20px;margin-top:8px;font-size:13px;line-height:1.5;color:var(--muted)}
 
 /* Section in record */
 .section-head{
@@ -228,7 +231,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </head>
 <body>
 <header class="app-header">
-  <div class="version-pill">v13.0.1 実用テスト版</div>
+  <div class="version-pill">v13.1 実用テスト版</div>
   <h1>慎の減量管理</h1>
   <p class="subhead">6/17開始｜有酸素35分｜ドローイン5セット｜月曜は蕎麦OK</p>
 </header>
@@ -327,7 +330,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     </div>
     <div id="mealEntries"></div>
     <button type="button" class="sub" onclick="calculateMealTotals()">4食の合計を反映</button>
-    <p class="small" style="margin-top:10px">各食の数値を入力すると、下の1日合計へ自動反映します。「AI推定」は次工程の写真解析結果を区別して保存するための項目です。</p>
+    <p class="small" style="margin-top:10px">基本は写真を選んで「AIで解析」。料理名とkcal・P・F・Cの推定値が入り、違う部分だけ直して保存できます。写真自体は保存しません。</p>
     <div class="grid">
       <div><div class="label">1日合計 kcal</div><input id="intake" type="number" inputmode="numeric" placeholder="1800"></div>
       <div><div class="label">1日合計 P g</div><input id="protein" type="number" step="0.1" inputmode="decimal" placeholder="120"></div>
@@ -400,6 +403,7 @@ $('date').value=today();
 function recs(){try{let v=JSON.parse(localStorage.getItem('shinDietRecords')||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
 function setRecs(x){localStorage.setItem('shinDietRecords',JSON.stringify(x))}
 function sets(){try{return JSON.parse(localStorage.getItem('shinDietSettings')||'{"startWeight":127.4,"baseBurn":2800,"goalWeight":95}')}catch(e){return {startWeight:127.4,baseBurn:2800,goalWeight:95}}}
+const MEAL_ANALYSIS_API='https://shin-diet-photo-analysis.sdash0620.workers.dev/';
 function setStatus(msg,ok=true){let el=$('saveStatus');if(!el)return;el.textContent=msg;el.className='status '+(ok?'ok':'ng')}
 function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REACHED'].includes(e.name)||e.code===22||e.code===1014))return '保存容量が足りません。写真は保存対象外ですが、過去データが大きい可能性があります。データを書き出して整理してください。';return e&&e.message?e.message:'不明なエラーです。'}
 
@@ -429,7 +433,7 @@ $('date').addEventListener('change',loadRecordForDate);
 
 function fillMeal(id,text){const el=$(id);if(el)el.value=text}
 function renderMealEntries(){
-  $('mealEntries').innerHTML=mealTypes.map(([id,label])=>`<div class="item" style="margin-bottom:12px"><div class="label"><b>${label}</b></div><textarea id="${id}" placeholder="食べた内容"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option></select></div><div><div class="label">kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label">P g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">F g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">C g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div><div class="label">${label}写真（端末には保存しません）</div><input id="${id}Photo" type="file" accept="image/*"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button></div>`).join('');
+  $('mealEntries').innerHTML=mealTypes.map(([id,label])=>`<div class="item" style="margin-bottom:12px"><div class="label"><b>${label}</b></div><div class="label">${label}写真（解析後も端末には保存しません）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div class="label">AI推定結果（確認して修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option></select></div><div><div class="label">kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label">P g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">F g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">C g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div>`).join('');
   mealTypes.forEach(([id])=>{pv($(id+'Photo'),$(id+'Preview'),$(id+'Clear'));mealSuffixes.slice(1).forEach(s=>$(id+s).addEventListener('input',calculateMealTotals))});
 }
 function mealNumbersEntered(){return mealTypes.some(([id])=>mealSuffixes.slice(1).some(s=>hasValue($(id+s).value)))}
@@ -445,6 +449,30 @@ function quickCardio(){$('cardio').checked=true;if(!$('cardioMin').value)$('card
 function quickFull(){quickCardio();$('drawin').checked=true;$('legRaise').checked=true;$('plank').checked=true}
 
 function pv(input,img,btn){input.onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{img.src=r.result;img.style.display='block';btn.style.display='block'};r.readAsDataURL(f)}}
+async function imageForAnalysis(file){
+  if(!file||!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('JPEG・PNG・WebPの写真を選んでください。');
+  if(file.size>12*1024*1024)throw new Error('写真が大きすぎます。12MB以下にしてください。');
+  const bitmap=await createImageBitmap(file),max=1280,scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height));
+  const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+  canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
+  return canvas.toDataURL('image/jpeg',.82);
+}
+function applyMealAnalysis(id,result){
+  $(id).value=result.items.map(x=>`${x.name}${x.estimated_amount?'（'+x.estimated_amount+'）':''}`).join('、');
+  $(id+'Source').value='ai';$(id+'Kcal').value=Math.round(result.total.kcal);$(id+'Protein').value=result.total.protein_g;$(id+'Fat').value=result.total.fat_g;$(id+'Carbs').value=result.total.carbs_g;calculateMealTotals();
+}
+async function analyzeMeal(id,label){
+  const file=$(id+'Photo').files&&$(id+'Photo').files[0],btn=$(id+'Analyze'),status=$(id+'AnalysisStatus');
+  if(!file){status.textContent='先に写真を選んでください。';status.style.color='var(--bad)';return}
+  if(MEAL_ANALYSIS_API.includes('REPLACE_WITH_PRIVATE_API')){status.textContent='写真解析サーバーの接続前です。公開設定完了後に使えます。';status.style.color='var(--warn)';return}
+  btn.disabled=true;btn.textContent='解析中…';status.textContent='写真から料理と栄養を推定しています。';status.style.color='var(--muted)';
+  try{
+    const image=await imageForAnalysis(file),res=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image,meal_type:label})});
+    const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'解析に失敗しました。');applyMealAnalysis(id,body);
+    status.textContent=`AI推定を入力しました（確信度 ${body.confidence}）。写真だけで分からない油・調味料・量は修正してください。`;status.style.color='var(--good)';
+  }catch(e){status.textContent=e.message||'解析に失敗しました。時間を置いて再試行してください。';status.style.color='var(--bad)'}
+  finally{btn.disabled=false;btn.textContent='AIで写真を解析'}
+}
 renderMealEntries();
 pv($('bodyPhoto'),$('bodyPreview'),$('bodyClear'));
 function clearPhoto(inputId,previewId,buttonId,showMsg=true){const input=$(inputId),img=$(previewId),btn=$(buttonId);if(input)input.value='';if(img){img.removeAttribute('src');img.style.display='none'}if(btn)btn.style.display='none';if(showMsg)setStatus('写真を消しました（保存データはそのまま）',true)}
@@ -684,7 +712,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:'13.0.1',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:'13.1',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function mergeRecords(localRecords,backupRecords){
  const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
  backupRecords.filter(r=>r&&r.date).forEach(backup=>{
