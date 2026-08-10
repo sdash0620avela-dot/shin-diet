@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>慎の減量管理 v13.0 実用テスト版</title>
+<title>慎の減量管理 v13.0.1 実用テスト版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -228,7 +228,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </head>
 <body>
 <header class="app-header">
-  <div class="version-pill">v13.0 実用テスト版</div>
+  <div class="version-pill">v13.0.1 実用テスト版</div>
   <h1>慎の減量管理</h1>
   <p class="subhead">6/17開始｜有酸素35分｜ドローイン5セット｜月曜は蕎麦OK</p>
 </header>
@@ -591,7 +591,7 @@ function diaryText(r,s,last,prev){
 }
 
 function saveRecord(){
- try{if(!$('date').value)throw new Error('日付を入力してください。');calculateMealTotals();const r={date:$('date').value,restDay:$('restDay').checked};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('保存しました ✓',true)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
+ try{if(!$('date').value)throw new Error('日付を入力してください。');calculateMealTotals();const r={date:$('date').value,restDay:$('restDay').checked,updatedAt:new Date().toISOString()};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('保存しました ✓',true)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
 }
 function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);setStatus('',true)}
 function saveSettings(){localStorage.setItem('shinDietSettings',JSON.stringify({startWeight:+$('startWeight').value||127.4,baseBurn:+$('baseBurn').value||2800,goalWeight:+$('goalWeight').value||95}));update();alert('保存しました')}
@@ -684,8 +684,18 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:13,exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
-function importData(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result),records=Array.isArray(data)?data:data.records;if(!Array.isArray(records))throw new Error('記録データが見つかりません');if(!confirm(`${records.length}日分のバックアップを復元しますか？`))return;setRecs(records);if(data.settings)localStorage.setItem('shinDietSettings',JSON.stringify(data.settings));update();loadRecordForDate();alert('復元しました')}catch(e){alert('復元できませんでした：'+e.message)}finally{event.target.value=''}};reader.readAsText(file)}
+function exportData(){let payload={version:'13.0.1',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function mergeRecords(localRecords,backupRecords){
+ const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
+ backupRecords.filter(r=>r&&r.date).forEach(backup=>{
+   const local=merged.get(backup.date);
+   if(!local){merged.set(backup.date,backup);return}
+   const localTime=Date.parse(local.updatedAt||''),backupTime=Date.parse(backup.updatedAt||'');
+   if(Number.isFinite(backupTime)&&(!Number.isFinite(localTime)||backupTime>localTime))merged.set(backup.date,backup);
+ });
+ return [...merged.values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
+function importData(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result),records=Array.isArray(data)?data:data.records;if(!Array.isArray(records))throw new Error('記録データが見つかりません');const current=recs(),merged=mergeRecords(current,records),added=merged.length-current.length;if(!confirm(`${records.length}日分のバックアップを現在の記録へ統合しますか？\n同じ日付は新しい記録を優先し、現在の最新データを守ります。`))return;setRecs(merged);if(data.settings&&!localStorage.getItem('shinDietSettings'))localStorage.setItem('shinDietSettings',JSON.stringify(data.settings));update();loadRecordForDate();alert(`復元しました（新しく追加：${added}日分／合計：${merged.length}日分）`)}catch(e){alert('復元できませんでした：'+e.message)}finally{event.target.value=''}};reader.readAsText(file)}
 function resetAll(){if(confirm('全削除しますか？')){localStorage.removeItem('shinDietRecords');update()}}
 update();loadRecordForDate();
 </script>
