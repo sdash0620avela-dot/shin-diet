@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>慎の減量管理 v13.1.1 実用テスト版</title>
+<title>AI Diet v14 個人対応版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="慎の減量管理">
+<meta name="apple-mobile-web-app-title" content="AI Diet">
 <style>
 :root{
   --accent:#007AFF;--accent2:#5856D6;--accent-soft:rgba(0,122,255,.12);
@@ -182,6 +182,8 @@ button.danger{background:#FFEBEA;color:var(--bad);box-shadow:none}
 .item:first-child{border-top:none}
 .status{min-height:22px;margin-top:12px;font-weight:700;font-size:15px}
 .status.ok{color:var(--good)}.status.ng{color:var(--bad)}
+.cloud-box{padding:14px;border-radius:var(--radius-sm);background:#F8FAFF;border:1px solid rgba(0,122,255,.15);margin-top:12px}
+.cloud-state{font-weight:700;line-height:1.5}
 
 canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--radius-sm)}
 
@@ -231,9 +233,9 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </head>
 <body>
 <header class="app-header">
-  <div class="version-pill">v13.1.1 実用テスト版</div>
-  <h1>慎の減量管理</h1>
-  <p class="subhead">6/17開始｜有酸素35分｜ドローイン5セット｜月曜は蕎麦OK</p>
+  <div class="version-pill">v14 個人対応準備版</div>
+  <h1 id="appTitle">AI Diet</h1>
+  <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
 
 <main class="wrap">
@@ -322,11 +324,8 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card">
     <div class="section-head"><div class="section-icon">🍽</div><h3>食事</h3></div>
     <div class="quick-chips">
-      <span class="chip" onclick="fillMeal('breakfast','おにぎり、プロテイン')">朝セット</span>
-      <span class="chip" onclick="fillMeal('lunch','かけうどん、おにぎり')">昼セット</span>
-      <span class="chip" onclick="fillMeal('snack','サラダチキン')">間食</span>
-      <span class="chip" onclick="$('intake').value=1800">1800kcal</span>
-      <span class="chip" onclick="$('protein').value=120">120g P</span>
+      <span id="calorieGoalChip" class="chip" onclick="applyCalorieGoal()">目標kcal</span>
+      <span id="proteinGoalChip" class="chip" onclick="applyProteinGoal()">目標P</span>
     </div>
     <div id="mealEntries"></div>
     <button type="button" class="sub" onclick="calculateMealTotals()">4食の合計を反映</button>
@@ -343,11 +342,11 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card">
     <div class="section-head"><div class="section-icon">💪</div><h3>運動</h3></div>
     <div class="quick-chips">
-      <span class="chip" onclick="quickCardio()">有酸素35分</span>
+      <span id="cardioGoalChip" class="chip" onclick="quickCardio()">有酸素</span>
       <span class="chip" onclick="quickFull()">今日の定番</span>
     </div>
     <label class="check"><input id="restDay" type="checkbox">今日は休養日（運動0分）</label>
-    <label class="check"><input id="cardio" type="checkbox">有酸素（35分）</label>
+    <label class="check"><input id="cardio" type="checkbox"><span id="cardioGoalLabel">有酸素</span></label>
     <div class="grid"><div><div class="label">有酸素の分数</div><input id="cardioMin" type="number" inputmode="numeric" placeholder="40"></div><div><div class="label">筋トレ消費 kcal</div><input id="exerciseCal" type="number" inputmode="numeric" placeholder="400"></div><div><div class="label">筋トレ時間 分</div><input id="workoutMinutes" type="number" inputmode="numeric" placeholder="60"></div></div>
     <label class="check"><input id="legRaise" type="checkbox">足上げ腹筋50回</label>
     <label class="check"><input id="plank" type="checkbox">プランク3分</label>
@@ -370,17 +369,35 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </section>
 
 <section id="settings" class="page">
-  <div class="card"><h3>設定</h3>
+  <div class="card"><h3>個人設定</h3>
+    <div class="label">名前</div><input id="displayName" type="text" autocomplete="name" placeholder="名前">
+    <div class="label">開始日</div><input id="startDate" type="date">
     <div class="label">開始体重 kg</div><input id="startWeight" type="number" step="0.1" inputmode="decimal" value="127.4">
     <div class="label">基礎＋生活消費 kcal</div><input id="baseBurn" type="number" inputmode="numeric" value="2800">
     <div class="label">目標体重 kg</div><input id="goalWeight" type="number" step="0.1" inputmode="decimal" value="95">
+    <div class="label">1日の目標たんぱく質 g</div><input id="proteinGoal" type="number" step="1" inputmode="numeric" value="120">
+    <div class="label">1日の目標摂取 kcal</div><input id="calorieGoal" type="number" step="10" inputmode="numeric" value="2000">
+    <div class="label">有酸素の基準時間 分</div><input id="cardioGoal" type="number" step="1" inputmode="numeric" value="35">
     <div style="margin-top:16px"><button onclick="saveSettings()">設定を保存</button></div>
+  </div>
+  <div class="card"><h3>ログイン・クラウド保存</h3>
+    <div id="cloudState" class="cloud-state">接続準備中</div>
+    <div id="signedOutBox" class="cloud-box">
+      <div class="label">メールアドレス</div><input id="authEmail" type="email" autocomplete="email" placeholder="example@email.com">
+      <button style="margin-top:12px" onclick="sendLoginLink()">ログイン用メールを送る</button>
+      <p class="small">届いたメールのリンクを押すとログインします。初回はそのままアカウント作成になります。</p>
+    </div>
+    <div id="signedInBox" class="cloud-box" style="display:none">
+      <div id="signedInEmail" class="small"></div>
+      <button class="sub" style="margin-top:12px" onclick="syncNow()">今すぐ同期</button>
+      <button class="sub" style="margin-top:12px" onclick="signOutCloud()">ログアウト</button>
+    </div>
   </div>
   <div class="card">
     <button class="sub" onclick="exportData()">データを書き出し</button>
     <div style="margin-top:12px"><label class="sub" style="display:block;text-align:center;border-radius:14px;padding:15px;font-weight:700;background:#F2F2F7;cursor:pointer">バックアップを復元<input id="importFile" type="file" accept="application/json" style="display:none" onchange="importData(event)"></label></div>
     <div style="margin-top:12px"><button class="danger" onclick="resetAll()">全データ削除</button></div>
-    <p class="small" style="margin-top:14px">データはこの端末のブラウザ内に保存されます。機種変更やブラウザ削除で消える可能性があります。</p>
+    <p class="small" style="margin-top:14px">ログイン前は端末内保存です。ログイン後は端末内と本人専用クラウドの両方へ保存します。</p>
   </div>
 </section>
 </main>
@@ -392,6 +409,8 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="tab" onclick="show('settings',this)"><span class="tab-icon">⚙️</span>設定</div>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./supabase-config.js"></script>
 <script>
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
 const $=id=>document.getElementById(id);
@@ -400,9 +419,62 @@ const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
 $('date').value=today();
 
+const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35};
+const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35};
 function recs(){try{let v=JSON.parse(localStorage.getItem('shinDietRecords')||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
-function setRecs(x){localStorage.setItem('shinDietRecords',JSON.stringify(x))}
-function sets(){try{return JSON.parse(localStorage.getItem('shinDietSettings')||'{"startWeight":127.4,"baseBurn":2800,"goalWeight":95}')}catch(e){return {startWeight:127.4,baseBurn:2800,goalWeight:95}}}
+function setRecs(x){localStorage.setItem('shinDietRecords',JSON.stringify(x));scheduleCloudSync()}
+function sets(){
+ try{
+  const raw=localStorage.getItem('shinDietSettings'),legacy=!!raw||recs().length>0,parsed=raw?JSON.parse(raw):{};
+  return {...(legacy?LEGACY_DEFAULTS:NEW_USER_DEFAULTS),...(parsed&&typeof parsed==='object'?parsed:{})};
+ }catch(e){return recs().length?{...LEGACY_DEFAULTS}:{...NEW_USER_DEFAULTS}}
+}
+function writeSettings(s){localStorage.setItem('shinDietSettings',JSON.stringify(s));scheduleCloudSync()}
+let cloudClient=null,cloudUser=null,cloudSyncTimer=null,cloudSyncing=false;
+function cloudConfigured(){const c=window.SHIN_DIET_SUPABASE||{};return /^https:\/\/.+\.supabase\.co$/.test(c.url||'')&&!String(c.publishableKey||'').startsWith('REPLACE_')}
+function cloudMessage(message,ok=true){const el=$('cloudState');if(el){el.textContent=message;el.style.color=ok?'var(--good)':'var(--bad)'}}
+function scheduleCloudSync(){if(!cloudUser||cloudSyncing)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>syncNow(true),700)}
+async function initCloud(){
+ if(!cloudConfigured()){cloudMessage('クラウドの接続設定前です。端末内保存はそのまま使えます。',false);$('signedOutBox').style.display='none';return}
+ if(!window.supabase||!window.supabase.createClient){cloudMessage('クラウド機能の読込みに失敗しました。端末内には保存されます。',false);return}
+ const c=window.SHIN_DIET_SUPABASE;cloudClient=window.supabase.createClient(c.url,c.publishableKey);
+ cloudClient.auth.onAuthStateChange((event,session)=>{cloudUser=session&&session.user||null;renderAuthState();if(cloudUser&&(event==='SIGNED_IN'||event==='INITIAL_SESSION'))setTimeout(()=>syncNow(true),0)});
+ const {data,error}=await cloudClient.auth.getSession();if(error){cloudMessage('ログイン状態を確認できません：'+error.message,false);return}cloudUser=data.session&&data.session.user||null;renderAuthState();if(cloudUser)await syncNow(true)
+}
+function renderAuthState(){
+ $('signedOutBox').style.display=cloudUser?'none':'block';$('signedInBox').style.display=cloudUser?'block':'none';
+ $('signedInEmail').textContent=cloudUser?`ログイン中：${cloudUser.email||''}`:'';
+ cloudMessage(cloudUser?'クラウド保存：ログイン済み':'未ログイン：端末内だけに保存中',!!cloudUser)
+}
+async function sendLoginLink(){
+ if(!cloudClient){cloudMessage('クラウドの接続設定がまだ完了していません。',false);return}
+ const email=$('authEmail').value.trim();if(!email){cloudMessage('メールアドレスを入力してください。',false);return}
+ cloudMessage('ログイン用メールを送信しています。');
+ const redirectTo=location.origin+location.pathname;const {error}=await cloudClient.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}});
+ cloudMessage(error?'送信できませんでした：'+error.message:'メールを送りました。届いたリンクを押してください。',!error)
+}
+async function signOutCloud(){if(!cloudClient)return;const {error}=await cloudClient.auth.signOut();if(error)cloudMessage('ログアウトできませんでした：'+error.message,false)}
+async function syncNow(silent=false){
+ if(!cloudClient||!cloudUser||cloudSyncing)return;cloudSyncing=true;if(!silent)cloudMessage('同期中…');
+ try{
+  const uid=cloudUser.id;
+  const [profileResult,recordsResult]=await Promise.all([
+   cloudClient.from('diet_profiles').select('settings,updated_at').eq('user_id',uid).maybeSingle(),
+   cloudClient.from('diet_records').select('record_date,record,updated_at').eq('user_id',uid)
+  ]);
+  if(profileResult.error)throw profileResult.error;if(recordsResult.error)throw recordsResult.error;
+  const localSettings=sets(),cloudSettings=profileResult.data&&profileResult.data.settings;
+  const localSettingsTime=Date.parse(localSettings.updatedAt||''),cloudSettingsTime=Date.parse(cloudSettings&&cloudSettings.updatedAt||profileResult.data&&profileResult.data.updated_at||'');
+  const mergedSettings=cloudSettings&&Number.isFinite(cloudSettingsTime)&&(!Number.isFinite(localSettingsTime)||cloudSettingsTime>localSettingsTime)?{...localSettings,...cloudSettings}:localSettings;
+  localStorage.setItem('shinDietSettings',JSON.stringify(mergedSettings));
+  const cloudRecords=(recordsResult.data||[]).map(row=>({...row.record,date:row.record_date,updatedAt:row.record&&row.record.updatedAt||row.updated_at}));
+  const localRecords=recs().map(r=>r.updatedAt?r:{...r,updatedAt:new Date().toISOString()});
+  const merged=mergeRecords(localRecords,cloudRecords);localStorage.setItem('shinDietRecords',JSON.stringify(merged));
+  const profileUpsert=await cloudClient.from('diet_profiles').upsert({user_id:uid,settings:mergedSettings,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(profileUpsert.error)throw profileUpsert.error;
+  if(merged.length){const rows=merged.map(r=>({user_id:uid,record_date:r.date,record:r,updated_at:r.updatedAt||new Date().toISOString()}));const recordsUpsert=await cloudClient.from('diet_records').upsert(rows,{onConflict:'user_id,record_date'});if(recordsUpsert.error)throw recordsUpsert.error}
+  update();loadRecordForDate();cloudMessage(`クラウド保存済み（${merged.length}日分）`)
+ }catch(e){cloudMessage('クラウド同期失敗：'+(e.message||'不明なエラー'),false)}finally{cloudSyncing=false}
+}
 const MEAL_ANALYSIS_API='https://shin-diet-photo-analysis.sdash0620.workers.dev/';
 function setStatus(msg,ok=true){let el=$('saveStatus');if(!el)return;el.textContent=msg;el.className='status '+(ok?'ok':'ng')}
 function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REACHED'].includes(e.name)||e.code===22||e.code===1014))return '保存容量が足りません。写真は保存対象外ですが、過去データが大きい可能性があります。データを書き出して整理してください。';return e&&e.message?e.message:'不明なエラーです。'}
@@ -445,7 +517,9 @@ function calculateMealTotals(){
   $('fatG').value=+sum('Fat').toFixed(1);
   $('carbsG').value=+sum('Carbs').toFixed(1);
 }
-function quickCardio(){$('cardio').checked=true;if(!$('cardioMin').value)$('cardioMin').value=35}
+function quickCardio(){const min=sets().cardioGoal||35;$('cardio').checked=true;if(!$('cardioMin').value)$('cardioMin').value=min}
+function applyProteinGoal(){$('protein').value=sets().proteinGoal||120}
+function applyCalorieGoal(){$('intake').value=sets().calorieGoal||2000}
 function quickFull(){quickCardio();$('drawin').checked=true;$('legRaise').checked=true;$('plank').checked=true}
 
 function pv(input,img,btn){input.onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{img.src=r.result;img.style.display='block';btn.style.display='block'};r.readAsDataURL(f)}}
@@ -492,15 +566,17 @@ function assessmentStatus(r){const missing=[];if(!hasMealInput(r))missing.push('
 
 function scoreRecord(r,s){
   let score=38, intake=+r.intake||0, protein=+r.protein||0, rest=isRestDay(r), ex=effectiveExercise(r);
-  if(intake>=1700&&intake<=2300)score+=18;else if(intake>=1400&&intake<=2600)score+=10;else if(intake)score+=4;
-  if(protein>=120)score+=18;else if(protein>=90)score+=12;else if(protein>=60)score+=6;
+  const calorieGoal=+s.calorieGoal||2000;
+  if(intake>=calorieGoal-200&&intake<=calorieGoal+200)score+=18;else if(intake>=calorieGoal-500&&intake<=calorieGoal+500)score+=10;else if(intake)score+=4;
+  const proteinGoal=+s.proteinGoal||120;
+  if(protein>=proteinGoal)score+=18;else if(protein>=proteinGoal*.75)score+=12;else if(protein>=proteinGoal*.5)score+=6;
   if(rest)score+=10;else{if(r.cardio)score+=10;if(ex>=350)score+=11;else if(ex>=200)score+=8;else if(ex>0)score+=4;if(r.strength&&r.strength.trim())score+=8}
   score+=sleepScore(r.sleep)-8;
   if(+r.waterL>=2)score+=2;
   if(+r.fatigue>=4)score-=3;
   return Math.max(0,Math.min(100,Math.round(score)));
 }
-function mealStar(r){let p=+r.protein||0,i=+r.intake||0;if(p>=120&&i>=1700&&i<=2300)return 5;if(p>=100)return 4;if(p>=70)return 3;if(p>0||i>0)return 2;return 1}
+function mealStar(r,s){let p=+r.protein||0,i=+r.intake||0,g=+s.proteinGoal||120,c=+s.calorieGoal||2000;if(p>=g&&i>=c-200&&i<=c+200)return 5;if(p>=g*.8)return 4;if(p>=g*.55)return 3;if(p>0||i>0)return 2;return 1}
 function exerciseStar(r){if(isRestDay(r))return 5;if(!hasExerciseInput(r))return 0;let ex=effectiveExercise(r);if(ex>=400&&String(r.strength||'').trim())return 5;if(ex>=300)return 4;if(ex>0)return 3;return 2}
 function sleepStar(r){return r.sleep==='★★★★★'?5:r.sleep==='★★★★☆'?4:r.sleep==='★★★☆☆'?3:r.sleep==='★★☆☆☆'?2:r.sleep==='★☆☆☆☆'?1:2}
 
@@ -508,24 +584,25 @@ function coachText(r,s,last,prev){
   if(!r)return '<p class="muted">記録するとAIコーチが100点満点で評価します。今日の食事・運動・睡眠を入力して保存してください。</p>';
   const rest=isRestDay(r), status=assessmentStatus(r), score=scoreRecord(r,s), intake=+r.intake||0, protein=+r.protein||0, burn=s.baseBurn+effectiveExercise(r), bal=hasValue(r.intake)?intake-burn:null;
   let lead=!status.complete?`${status.missing.join('・')}が未入力のため、評価は暫定です。`:rest?'今日は計画どおりの休養日。運動0分で問題ありません。':score>=90?'今日はかなり理想的です。筋肉を残しながら脂肪を落としやすい一日。':score>=80?'今日はかなり良い流れです。あと少し整えれば90点台が狙えます。':score>=70?'今日は合格ラインです。継続としては十分価値があります。':score>=60?'今日は修正ポイントあり。でも崩れてはいません。':'今日は回復と食事の立て直しを優先したい日です。';
-  let food=protein>=120?'たんぱく質は十分。筋肉量維持にかなり向いています。':protein>=90?'たんぱく質は悪くないです。もう一品、卵・魚・サラダチキンを足すと強いです。':protein>0?'たんぱく質が少なめ。減量中でも筋肉を残すために、まず100g以上を狙いましょう。':'たんぱく質が未入力。慎さんの場合、まず120g前後を基準にしたいです。';
+  const proteinGoal=+s.proteinGoal||120,name=s.displayName||'あなた';
+  let food=protein>=proteinGoal?'たんぱく質は目標を達成。筋肉量維持にかなり向いています。':protein>=proteinGoal*.75?`たんぱく質は悪くないです。目標${proteinGoal}gまで、もう一品足すと強いです。`:protein>0?`たんぱく質が少なめ。まず目標${proteinGoal}gを意識しましょう。`:`たんぱく質が未入力。${name}さんの基準は${proteinGoal}gです。`;
   let balance=bal===null?'摂取カロリー未入力なので収支は未判定。':bal< -900?'収支はかなり大きなマイナス。落ちますが、疲労と筋肉量低下には注意。':bal<0?'収支はマイナスで減量向きです。':bal<300?'ほぼ維持ライン。夜の脂質を控えれば減量側に寄せられます。':'収支はプラス気味。外食や脂質の量を少しだけ調整。';
   let exercise=rest?'今日は休養日として記録されています。運動は0分。身体を回復させる日です。':!hasExerciseInput(r)?'運動・休養が未入力のため、運動量は判定していません。':effectiveExercise(r)>=350?'運動量は十分。脂肪を動かす刺激として良いです。':effectiveExercise(r)>0?'運動は入っています。軽めでも継続できているのが大事。':'運動内容は入力されていますが、消費量は0kcalとして記録されています。';
   let sleep=r.sleep?`睡眠は${r.sleep}。${sleepStar(r)>=4?'回復も良いです。':sleepStar(r)>=3?'最低限は取れています。':'回復不足なので無理しすぎ注意。'}`:'睡眠未入力。睡眠を入れるとAI評価が安定します。';
   const mm=muscleMeta(r),prevMuscle=prevRecord(recs(),r,'muscle');
   let muscle=r.muscle?`${mm.label}は記録されています。`:`${mm.label}は未入力です。`;
   if(prevMuscle&&prevMuscle.muscle&&r.muscle&&muscleTypeOf(prevMuscle)===muscleTypeOf(r))muscle=r.muscle>=prevMuscle.muscle?`${mm.label}は前回比で維持。ここが一番良いポイントです。`:`${mm.label}が少し落ちています。今日はたんぱく質と睡眠を優先。`;
-  let tomorrow=rest?'今日はしっかり休んで、明日は体調を見て通常メニューへ戻せばOKです。':!hasSleepInput(r)?'睡眠と体調を入力すると、明日の運動提案まで判定できます。':sleepStar(r)<=2?'明日は休養寄りか、有酸素だけで十分です。':(r.strength&&r.strength.includes('背'))?'明日は胸・肩・脚のどれか、または軽い有酸素がおすすめ。':'明日は肩トレか有酸素35分がおすすめです。';
+  let tomorrow=rest?'今日はしっかり休んで、明日は体調を見て通常メニューへ戻せばOKです。':!hasSleepInput(r)?'睡眠と体調を入力すると、明日の運動提案まで判定できます。':sleepStar(r)<=2?'明日は休養寄りか、有酸素だけで十分です。':`体調が良ければ、明日は通常メニューか有酸素${s.cardioGoal||35}分がおすすめです。`;
   let fatHint=''; if((r.dinner||'').includes('軟骨')||(r.dinner||'').includes('カルビ')||(r.dinner||'').includes('揚げ'))fatHint='<div class="hint">脂質メモ：夜に脂質が多い日は、翌日の昼を蕎麦・魚・サラダチキン寄りにすると戻しやすいです。</div>';
   const ringPct=score+'%';
   const exerciseRating=hasExerciseInput(r)?starText(exerciseStar(r)):'未判定';
-  return `<div class="score-hero"><div class="score-ring" style="--pct:${ringPct}"><span>${score}</span></div><div class="score-meta"><div class="coach-tag">${lead}</div><div class="score-sub">${status.complete?'100点満点':'暫定点'}｜${dayName(r.date)}曜日</div></div></div><div class="pill">食事 ${hasMealInput(r)?starText(mealStar(r)):'未判定'}</div><div class="pill">${rest?'休養':'運動'} ${exerciseRating}</div><div class="pill">睡眠 ${hasSleepInput(r)?starText(sleepStar(r)):'未判定'}</div><p class="coachLead">おはようございます、慎さん。</p><p class="muted">${food}<br>${balance}<br>${exercise}<br>${sleep}<br>${muscle}<br><b>${tomorrow}</b></p>${fatHint}`;
+  return `<div class="score-hero"><div class="score-ring" style="--pct:${ringPct}"><span>${score}</span></div><div class="score-meta"><div class="coach-tag">${lead}</div><div class="score-sub">${status.complete?'100点満点':'暫定点'}｜${dayName(r.date)}曜日</div></div></div><div class="pill">食事 ${hasMealInput(r)?starText(mealStar(r,s)):'未判定'}</div><div class="pill">${rest?'休養':'運動'} ${exerciseRating}</div><div class="pill">睡眠 ${hasSleepInput(r)?starText(sleepStar(r)):'未判定'}</div><p class="coachLead">おはようございます、${name}さん。</p><p class="muted">${food}<br>${balance}<br>${exercise}<br>${sleep}<br>${muscle}<br><b>${tomorrow}</b></p>${fatHint}`;
 }
 
 function motivationText(last,s){
  if(!last||!last.weight)return '<span class="muted">記録を入力すると表示します</span>';
  let lost=s.startWeight-last.weight, total=s.startWeight-s.goalWeight, remain=last.weight-s.goalWeight, rate=total>0?Math.max(0,Math.min(100,lost/total*100)):0;
- return `<div class="motivationBig">-${lost.toFixed(1)} kg</div><p class="muted">開始 ${s.startWeight.toFixed(1)}kg → 現在 ${(+last.weight).toFixed(1)}kg<br>目標 ${s.goalWeight.toFixed(1)}kgまで、あと ${Math.max(0,remain).toFixed(1)} kg</p><div class="progress"><div class="bar" style="width:${rate.toFixed(0)}%"></div></div><p class="small">目標達成率 ${rate.toFixed(0)}%｜6/17からここまで積み上がっています。</p>`;
+ return `<div class="motivationBig">-${lost.toFixed(1)} kg</div><p class="muted">開始 ${s.startWeight.toFixed(1)}kg → 現在 ${(+last.weight).toFixed(1)}kg<br>目標 ${s.goalWeight.toFixed(1)}kgまで、あと ${Math.max(0,remain).toFixed(1)} kg</p><div class="progress"><div class="bar" style="width:${rate.toFixed(0)}%"></div></div><p class="small">目標達成率 ${rate.toFixed(0)}%｜${s.startDate||'開始日未設定'}からここまで積み上がっています。</p>`;
 }
 
 function motivationMessage(a,s,last,t){
@@ -535,12 +612,11 @@ function motivationMessage(a,s,last,t){
   const msgs=[
     streak>=7?`🔥 ${streak}日連続記録！この習慣が結果を作ります。`:'',
     score>=85?'✨ 今日の評価は素晴らしい。明日も同じペースで。':'',
-    score>=70&&score<85?'💪 良い流れです。たんぱく質120gを意識するとさらに上がります。':'',
+    score>=70&&score<85?`💪 良い流れです。たんぱく質${s.proteinGoal||120}gを意識するとさらに上がります。`:'',
     score>0&&score<60?'🌱 完璧じゃなくてOK。記録を続けるだけで前に進んでいます。':'',
     (s.startWeight-last.weight)>=10?'🏆 開始から10kg超の成果。本当にすごいです。':'',
-    dayName(today())==='月'?'🍜 月曜は蕎麦OK。脂質を抑えつつ満足感も取りましょう。':'',
-    '毎日の小さな積み重ねが、95kgへの最短ルートです。',
-    '筋肉を残しながら落とす。それが慎さんのスタイルです。'
+    `毎日の小さな積み重ねが、${s.goalWeight||'目標'}kgへの最短ルートです。`,
+    `筋肉を残しながら落とす。それが${s.displayName||'あなた'}さんのスタイルです。`
   ].filter(Boolean);
   const pick=msgs[Math.floor(Date.now()/86400000)%msgs.length]||msgs[0];
   const el=$('motivationMsg');
@@ -613,7 +689,7 @@ function diaryText(r,s,last,prev){
  if(!status.complete)msg+=`${status.missing.join('・')}が未入力のため、入力済みデータだけでまとめます。<br>`;
  msg+=rest?'計画どおりの休養日です。食事と回復の流れを整える一日です。':score>=85?'かなり良い一日です。記録・食事・運動の流れが整っています。':'完璧でなくても、記録を続けている時点で前進です。';
  msg+=rest?'<br>運動は0分。今日は身体を休ませ、次のトレーニングへつなげます。':!hasExerciseInput(r)?'<br>運動・休養は未入力です。':effectiveExercise(r)>=300?`<br>${r.cardio&&String(r.strength||'').trim()?'有酸素と筋トレ':'運動'}の刺激が入り、消費量も確保できています。`:effectiveExercise(r)>0?'<br>軽めでも運動を継続できています。':'<br>運動内容はありますが、消費量は0kcalです。';
- if(!hasMealInput(r))msg+='<br>食事データは未入力です。';else if(+r.protein>=120)msg+='<br>たんぱく質は十分。筋肉量維持にかなり良いです。';else if(hasValue(r.protein))msg+='<br>次はたんぱく質をもう少し増やすと、減量の質が上がります。';else msg+='<br>たんぱく質は未入力のため判定していません。';
+ if(!hasMealInput(r))msg+='<br>食事データは未入力です。';else if(+r.protein>=(+s.proteinGoal||120))msg+='<br>たんぱく質は目標達成。筋肉量維持にかなり良いです。';else if(hasValue(r.protein))msg+=`<br>次は目標${s.proteinGoal||120}gへ近づけると、減量の質が上がります。`;else msg+='<br>たんぱく質は未入力のため判定していません。';
  if(prev&&prev.weight&&r.weight){msg+=r.weight<prev.weight?'<br>体重も前回より落ちています。焦らずこのペースでOK。':'<br>体重は前回より少し上がっていますが、水分・塩分・便通でも動くので単日で判断しなくてOK。'}
  return msg;
 }
@@ -622,11 +698,17 @@ function saveRecord(){
  try{if(!$('date').value)throw new Error('日付を入力してください。');calculateMealTotals();const r={date:$('date').value,restDay:$('restDay').checked,updatedAt:new Date().toISOString()};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('保存しました ✓',true)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
 }
 function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);setStatus('',true)}
-function saveSettings(){localStorage.setItem('shinDietSettings',JSON.stringify({startWeight:+$('startWeight').value||127.4,baseBurn:+$('baseBurn').value||2800,goalWeight:+$('goalWeight').value||95}));update();alert('保存しました')}
+function saveSettings(){
+ const s={displayName:$('displayName').value.trim(),startDate:$('startDate').value,startWeight:+$('startWeight').value||0,baseBurn:+$('baseBurn').value||0,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,updatedAt:new Date().toISOString()};
+ if(!s.displayName||!s.startDate||!s.startWeight||!s.baseBurn||!s.goalWeight) return alert('名前・開始日・開始体重・消費kcal・目標体重をすべて入力してください。');
+ writeSettings(s);update();alert('個人設定を保存しました')
+}
 function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home')drawForecastChart()}
 
 function update(){
- const s=sets();$('startWeight').value=s.startWeight;$('baseBurn').value=s.baseBurn;$('goalWeight').value=s.goalWeight;
+ const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('startWeight').value=s.startWeight||'';$('baseBurn').value=s.baseBurn||'';$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;
+ $('appTitle').textContent=s.displayName?`${s.displayName}のAI Diet`:'AI Diet';$('appSubhead').textContent=s.startDate?`${s.startDate.replaceAll('-','/')}開始｜目標P ${s.proteinGoal||120}g｜有酸素 ${s.cardioGoal||35}分`:'個人設定を入力してください';
+ $('calorieGoalChip').textContent=`${s.calorieGoal||2000}kcal`;$('proteinGoalChip').textContent=`${s.proteinGoal||120}g P`;$('cardioGoalChip').textContent=`有酸素${s.cardioGoal||35}分`;$('cardioGoalLabel').textContent=`有酸素（${s.cardioGoal||35}分）`;
  const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];
  if(last){const fm=fatMeta(last),mm=muscleMeta(last);$('cw').textContent=(+last.weight).toFixed(1);$('cf').textContent=last.fat??'--';$('cfLabel').textContent=fm.label;$('cfUnit').textContent=' '+fm.unit;$('cm').textContent=last.muscle??'--';$('cmLabel').textContent=mm.label;$('cmUnit').textContent=' '+mm.unit;$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+' kg';$('loss').className=(last.weight-s.startWeight)<0?'good':'warn'}
  const t=a.find(r=>r.date===today())||a.slice(-1)[0];const prev=t?prevRecord(a,t,'weight'):null;
@@ -642,7 +724,7 @@ function update(){
 function forecast(last,a,s){
  if(!last){$('forecast').textContent='記録が増えると予測します';return}
  let first=a.find(r=>r.weight)||last;let days=Math.max(1,(new Date(last.date)-new Date(first.date))/86400000);let pace=(first.weight-last.weight)/days;
- if(pace>0){let targets=[120,115,110,105,100,95].filter(x=>x<last.weight);let paceRank=pace>.25?'速すぎ注意':pace>.12?'良いペース':pace>.05?'ゆっくり安定':'かなり緩やか';$('forecast').innerHTML=`<p class="muted">現在ペース：約 ${pace.toFixed(2)} kg/日<br>ペース評価：<b>${paceRank}</b></p>`+targets.slice(0,4).map(t=>`<div class="forecastRow"><b>${t} kg</b><span>約 ${Math.max(1,Math.round((last.weight-t)/pace))} 日後</span></div>`).join('')+'<p class="small">※初期は水分も落ちるため、実際は少しゆっくり見てOK。</p>'}else{$('forecast').textContent='減量ペースが計算できません。記録を続けてください。'}
+ if(pace>0){let targets=[];for(let t=Math.floor((last.weight-1)/5)*5;t>s.goalWeight;t-=5)targets.push(t);targets.push(s.goalWeight);let paceRank=pace>.25?'速すぎ注意':pace>.12?'良いペース':pace>.05?'ゆっくり安定':'かなり緩やか';$('forecast').innerHTML=`<p class="muted">現在ペース：約 ${pace.toFixed(2)} kg/日<br>ペース評価：<b>${paceRank}</b></p>`+targets.slice(0,4).map(t=>`<div class="forecastRow"><b>${t} kg</b><span>約 ${Math.max(1,Math.round((last.weight-t)/pace))} 日後</span></div>`).join('')+'<p class="small">※初期は水分も落ちるため、実際は少しゆっくり見てOK。</p>'}else{$('forecast').textContent='減量ペースが計算できません。記録を続けてください。'}
 }
 
 function drawForecastChart(){
@@ -690,8 +772,8 @@ function renderWeekly(a,s){
  const latestMuscle=recent.filter(r=>r.muscle).slice(-1)[0],latestMuscleType=latestMuscle?muscleTypeOf(latestMuscle):null;
  let weights=recent.filter(r=>r.weight).map(r=>+r.weight), intakes=recent.filter(r=>r.intake).map(r=>+r.intake), proteins=recent.filter(r=>r.protein).map(r=>+r.protein), exs=recent.map(r=>r.exerciseTotal||0), muscles=recent.filter(r=>r.muscle&&muscleTypeOf(r)===latestMuscleType).map(r=>+r.muscle);
  let avg=x=>x.length?(x.reduce((p,c)=>p+c,0)/x.length):0;let complete=recent.filter(r=>assessmentStatus(r).complete),best=complete.slice().sort((x,y)=>scoreRecord(y,s)-scoreRecord(x,s))[0];let muscleMsg=muscles.length>=2?(muscles[muscles.length-1]>=muscles[0]?'維持できています':'少し低下傾向'):'記録待ち';
- let ai=avg(proteins)>=110&&avg(exs)>=250?'今週は減量の質がかなり良いです。睡眠をもう少し整えるとさらに強いです。':'来週はたんぱく質120g前後と有酸素35分を軸にすると安定します。';
- $('weekly').innerHTML=`<div class="miniReport"><div><span class="small">平均体重</span><br><b>${avg(weights).toFixed(1)} kg</b></div><div><span class="small">平均摂取</span><br><b>${intakes.length?avg(intakes).toFixed(0):'--'} kcal</b></div><div><span class="small">平均たんぱく質</span><br><b>${proteins.length?avg(proteins).toFixed(0):'--'} g</b></div><div><span class="small">${latestMuscle?muscleMeta(latestMuscle).label:'筋肉'}維持</span><br><b>${muscleMsg}</b></div></div><p class="muted">一番良かった日：${best?best.date+'（'+scoreRecord(best,s)+'点）':'--'}<br>来週の目標：たんぱく質120g、有酸素35分、睡眠★★★★☆以上を2日増やす。<br><b>AIコメント：</b>${ai}</p>`;
+ let ai=avg(proteins)>=(s.proteinGoal||120)*.9&&avg(exs)>=250?'今週は減量の質がかなり良いです。睡眠をもう少し整えるとさらに強いです。':`来週はたんぱく質${s.proteinGoal||120}g前後と有酸素${s.cardioGoal||35}分を軸にすると安定します。`;
+ $('weekly').innerHTML=`<div class="miniReport"><div><span class="small">平均体重</span><br><b>${avg(weights).toFixed(1)} kg</b></div><div><span class="small">平均摂取</span><br><b>${intakes.length?avg(intakes).toFixed(0):'--'} kcal</b></div><div><span class="small">平均たんぱく質</span><br><b>${proteins.length?avg(proteins).toFixed(0):'--'} g</b></div><div><span class="small">${latestMuscle?muscleMeta(latestMuscle).label:'筋肉'}維持</span><br><b>${muscleMsg}</b></div></div><p class="muted">一番良かった日：${best?best.date+'（'+scoreRecord(best,s)+'点）':'--'}<br>来週の目標：たんぱく質${s.proteinGoal||120}g、有酸素${s.cardioGoal||35}分、睡眠★★★★☆以上を2日増やす。<br><b>AIコメント：</b>${ai}</p>`;
 }
 
 function renderList(){let box=$('list');box.innerHTML=recs().slice(-14).reverse().map(r=>`<div class="item"><b>${r.date} ${r.weight? r.weight+' kg':''}</b><br><span class="muted">${[r.fat&&`${fatMeta(r).label}:${r.fat}${fatMeta(r).unit}`,r.muscle&&`${muscleMeta(r).label}:${r.muscle}kg`,r.intake&&`摂取:${r.intake}kcal / P:${r.protein||'--'}g / F:${r.fatG||'--'}g / C:${r.carbsG||'--'}g`,r.breakfast&&'朝:'+r.breakfast,r.lunch&&'昼:'+r.lunch,r.dinner&&'夜:'+r.dinner,r.snack&&'間食:'+r.snack,r.strength&&'筋トレ:'+r.strength,r.condition&&'体調:'+r.condition].filter(Boolean).join('<br>')}</span></div>`).join('')}
@@ -724,8 +806,12 @@ function mergeRecords(localRecords,backupRecords){
  return [...merged.values()].sort((a,b)=>a.date.localeCompare(b.date));
 }
 function importData(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result),records=Array.isArray(data)?data:data.records;if(!Array.isArray(records))throw new Error('記録データが見つかりません');const current=recs(),merged=mergeRecords(current,records),added=merged.length-current.length;if(!confirm(`${records.length}日分のバックアップを現在の記録へ統合しますか？\n同じ日付は新しい記録を優先し、現在の最新データを守ります。`))return;setRecs(merged);if(data.settings&&!localStorage.getItem('shinDietSettings'))localStorage.setItem('shinDietSettings',JSON.stringify(data.settings));update();loadRecordForDate();alert(`復元しました（新しく追加：${added}日分／合計：${merged.length}日分）`)}catch(e){alert('復元できませんでした：'+e.message)}finally{event.target.value=''}};reader.readAsText(file)}
-function resetAll(){if(confirm('全削除しますか？')){localStorage.removeItem('shinDietRecords');update()}}
-update();loadRecordForDate();
+async function resetAll(){
+ if(!confirm('すべての記録を削除しますか？ログイン中はクラウド上の記録も削除します。この操作は元に戻せません。'))return;
+ if(cloudClient&&cloudUser){const {error}=await cloudClient.from('diet_records').delete().eq('user_id',cloudUser.id);if(error)return alert('クラウドの記録を削除できなかったため中止しました：'+error.message)}
+ localStorage.removeItem('shinDietRecords');update();alert('すべての記録を削除しました')
+}
+update();loadRecordForDate();initCloud();
 </script>
 </body>
 </html>
