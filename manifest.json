@@ -1,7 +1,7 @@
 {
-  "name": "慎の減量管理 v12.3 実用テスト版",
+  "name": "慎の減量管理 v12.4 実用テスト版",
   "short_name": "慎減量",
-  "start_url": "./index.html?v=12.3",
+  "start_url": "./index.html?v=12.4",
   "display": "standalone",
   "background_color": "#F2F2F7",
   "theme_color": "#007AFF",

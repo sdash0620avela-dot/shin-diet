@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>慎の減量管理 v12.3 実用テスト版</title>
+<title>慎の減量管理 v12.4 実用テスト版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -228,7 +228,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </head>
 <body>
 <header class="app-header">
-  <div class="version-pill">v12.3 実用テスト版</div>
+  <div class="version-pill">v12.4 実用テスト版</div>
   <h1>慎の減量管理</h1>
   <p class="subhead">6/17開始｜有酸素35分｜ドローイン5セット｜月曜は蕎麦OK</p>
 </header>
@@ -348,6 +348,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <span class="chip" onclick="quickCardio()">有酸素35分</span>
       <span class="chip" onclick="quickFull()">今日の定番</span>
     </div>
+    <label class="check"><input id="restDay" type="checkbox">今日は休養日（運動0分）</label>
     <label class="check"><input id="cardio" type="checkbox">有酸素（35分）</label>
     <div class="grid"><div><div class="label">有酸素の分数</div><input id="cardioMin" type="number" inputmode="numeric" placeholder="40"></div><div><div class="label">筋トレ消費 kcal</div><input id="exerciseCal" type="number" inputmode="numeric" placeholder="400"></div><div><div class="label">筋トレ時間 分</div><input id="workoutMinutes" type="number" inputmode="numeric" placeholder="60"></div></div>
     <label class="check"><input id="legRaise" type="checkbox">足上げ腹筋50回</label>
@@ -420,6 +421,7 @@ function loadRecordForDate(){
   if(!r.fatType)$('fatType').value='fatPercent';
   if(!r.muscleType)$('muscleType').value='muscleMass';
   checkIds().forEach(id=>$(id).checked=!!r[id]);
+  $('restDay').checked=!!r.restDay||isRestDay(r);
   clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);
   clearPhoto('foodPhoto','foodPreview','foodClear',false);
   setStatus(r.date?'この日の記録を読み込みました':'未記入の日です',!!r.date);
@@ -439,8 +441,13 @@ function starText(n){return '★★★★★☆☆☆☆☆'.slice(5-n,10-n)}
 function dayName(d){return ['日','月','火','水','木','金','土'][new Date(d).getDay()]}
 function prevRecord(a,r,key){return a.filter(x=>x.date<r.date&&x[key]).slice(-1)[0]}
 function avgOf(arr,fn){const v=arr.map(fn).filter(x=>x!=null&&!isNaN(x));return v.length?v.reduce((p,c)=>p+c,0)/v.length:null}
-function isRestDay(r){return /休養日|休養|完全休養|オフ日|運動休み/.test(String(r&&r.strength||''))}
+function hasValue(v){return v!==null&&v!==undefined&&v!==''}
+function isRestDay(r){return !!(r&&r.restDay)||/休養日|休養|完全休養|オフ日|運動休み/.test(String(r&&r.strength||''))}
 function effectiveExercise(r){return isRestDay(r)?0:(+r.exerciseTotal||0)}
+function hasExerciseInput(r){return isRestDay(r)||!!(r&&(r.cardio||r.legRaise||r.plank||r.powerplate||r.drawin||+r.cardioMin>0||+r.exerciseCal>0||+r.workoutMinutes>0||String(r.strength||'').trim()))}
+function hasMealInput(r){return !!(r&&(hasValue(r.intake)||hasValue(r.protein)||r.breakfast||r.lunch||r.dinner||r.snack))}
+function hasSleepInput(r){return !!(r&&r.sleep)}
+function assessmentStatus(r){const missing=[];if(!hasMealInput(r))missing.push('食事');if(!hasExerciseInput(r))missing.push('運動・休養');if(!hasSleepInput(r))missing.push('睡眠');return {complete:missing.length===0,missing}}
 
 function scoreRecord(r,s){
   let score=38, intake=+r.intake||0, protein=+r.protein||0, rest=isRestDay(r), ex=effectiveExercise(r);
@@ -453,24 +460,25 @@ function scoreRecord(r,s){
   return Math.max(0,Math.min(100,Math.round(score)));
 }
 function mealStar(r){let p=+r.protein||0,i=+r.intake||0;if(p>=120&&i>=1700&&i<=2300)return 5;if(p>=100)return 4;if(p>=70)return 3;if(p>0||i>0)return 2;return 1}
-function exerciseStar(r){if(isRestDay(r))return 5;let ex=effectiveExercise(r);if(ex>=400&&r.strength)return 5;if(ex>=300)return 4;if(ex>0)return 3;return 2}
+function exerciseStar(r){if(isRestDay(r))return 5;if(!hasExerciseInput(r))return 0;let ex=effectiveExercise(r);if(ex>=400&&String(r.strength||'').trim())return 5;if(ex>=300)return 4;if(ex>0)return 3;return 2}
 function sleepStar(r){return r.sleep==='★★★★★'?5:r.sleep==='★★★★☆'?4:r.sleep==='★★★☆☆'?3:r.sleep==='★★☆☆☆'?2:r.sleep==='★☆☆☆☆'?1:2}
 
 function coachText(r,s,last,prev){
   if(!r)return '<p class="muted">記録するとAIコーチが100点満点で評価します。今日の食事・運動・睡眠を入力して保存してください。</p>';
-  const rest=isRestDay(r), score=scoreRecord(r,s), intake=+r.intake||0, protein=+r.protein||0, burn=s.baseBurn+effectiveExercise(r), bal=intake?intake-burn:null;
-  let lead=rest?'今日は計画どおりの休養日。運動0分で問題ありません。':score>=90?'今日はかなり理想的です。筋肉を残しながら脂肪を落としやすい一日。':score>=80?'今日はかなり良い流れです。あと少し整えれば90点台が狙えます。':score>=70?'今日は合格ラインです。継続としては十分価値があります。':score>=60?'今日は修正ポイントあり。でも崩れてはいません。':'今日は回復と食事の立て直しを優先したい日です。';
+  const rest=isRestDay(r), status=assessmentStatus(r), score=scoreRecord(r,s), intake=+r.intake||0, protein=+r.protein||0, burn=s.baseBurn+effectiveExercise(r), bal=hasValue(r.intake)?intake-burn:null;
+  let lead=!status.complete?`${status.missing.join('・')}が未入力のため、評価は暫定です。`:rest?'今日は計画どおりの休養日。運動0分で問題ありません。':score>=90?'今日はかなり理想的です。筋肉を残しながら脂肪を落としやすい一日。':score>=80?'今日はかなり良い流れです。あと少し整えれば90点台が狙えます。':score>=70?'今日は合格ラインです。継続としては十分価値があります。':score>=60?'今日は修正ポイントあり。でも崩れてはいません。':'今日は回復と食事の立て直しを優先したい日です。';
   let food=protein>=120?'たんぱく質は十分。筋肉量維持にかなり向いています。':protein>=90?'たんぱく質は悪くないです。もう一品、卵・魚・サラダチキンを足すと強いです。':protein>0?'たんぱく質が少なめ。減量中でも筋肉を残すために、まず100g以上を狙いましょう。':'たんぱく質が未入力。慎さんの場合、まず120g前後を基準にしたいです。';
   let balance=bal===null?'摂取カロリー未入力なので収支は未判定。':bal< -900?'収支はかなり大きなマイナス。落ちますが、疲労と筋肉量低下には注意。':bal<0?'収支はマイナスで減量向きです。':bal<300?'ほぼ維持ライン。夜の脂質を控えれば減量側に寄せられます。':'収支はプラス気味。外食や脂質の量を少しだけ調整。';
-  let exercise=rest?'今日は休養日として記録されています。運動は0分。身体を回復させる日です。':effectiveExercise(r)>=350?'運動量は十分。脂肪を動かす刺激として良いです。':effectiveExercise(r)>0?'運動は入っています。軽めでも継続できているのが大事。':'今日は運動0分です。';
+  let exercise=rest?'今日は休養日として記録されています。運動は0分。身体を回復させる日です。':!hasExerciseInput(r)?'運動・休養が未入力のため、運動量は判定していません。':effectiveExercise(r)>=350?'運動量は十分。脂肪を動かす刺激として良いです。':effectiveExercise(r)>0?'運動は入っています。軽めでも継続できているのが大事。':'運動内容は入力されていますが、消費量は0kcalとして記録されています。';
   let sleep=r.sleep?`睡眠は${r.sleep}。${sleepStar(r)>=4?'回復も良いです。':sleepStar(r)>=3?'最低限は取れています。':'回復不足なので無理しすぎ注意。'}`:'睡眠未入力。睡眠を入れるとAI評価が安定します。';
   const mm=muscleMeta(r),prevMuscle=prevRecord(recs(),r,'muscle');
   let muscle=r.muscle?`${mm.label}は記録されています。`:`${mm.label}は未入力です。`;
   if(prevMuscle&&prevMuscle.muscle&&r.muscle&&muscleTypeOf(prevMuscle)===muscleTypeOf(r))muscle=r.muscle>=prevMuscle.muscle?`${mm.label}は前回比で維持。ここが一番良いポイントです。`:`${mm.label}が少し落ちています。今日はたんぱく質と睡眠を優先。`;
-  let tomorrow=rest?'今日はしっかり休んで、明日は体調を見て通常メニューへ戻せばOKです。':sleepStar(r)<=2?'明日は休養寄りか、有酸素だけで十分です。':(r.strength&&r.strength.includes('背'))?'明日は胸・肩・脚のどれか、または軽い有酸素がおすすめ。':'明日は肩トレか有酸素35分がおすすめです。';
+  let tomorrow=rest?'今日はしっかり休んで、明日は体調を見て通常メニューへ戻せばOKです。':!hasSleepInput(r)?'睡眠と体調を入力すると、明日の運動提案まで判定できます。':sleepStar(r)<=2?'明日は休養寄りか、有酸素だけで十分です。':(r.strength&&r.strength.includes('背'))?'明日は胸・肩・脚のどれか、または軽い有酸素がおすすめ。':'明日は肩トレか有酸素35分がおすすめです。';
   let fatHint=''; if((r.dinner||'').includes('軟骨')||(r.dinner||'').includes('カルビ')||(r.dinner||'').includes('揚げ'))fatHint='<div class="hint">脂質メモ：夜に脂質が多い日は、翌日の昼を蕎麦・魚・サラダチキン寄りにすると戻しやすいです。</div>';
   const ringPct=score+'%';
-  return `<div class="score-hero"><div class="score-ring" style="--pct:${ringPct}"><span>${score}</span></div><div class="score-meta"><div class="coach-tag">${lead}</div><div class="score-sub">100点満点｜${dayName(r.date)}曜日</div></div></div><div class="pill">食事 ${starText(mealStar(r))}</div><div class="pill">${rest?'休養':'運動'} ${starText(exerciseStar(r))}</div><div class="pill">睡眠 ${starText(sleepStar(r))}</div><p class="coachLead">おはようございます、慎さん。</p><p class="muted">${food}<br>${balance}<br>${exercise}<br>${sleep}<br>${muscle}<br><b>${tomorrow}</b></p>${fatHint}`;
+  const exerciseRating=hasExerciseInput(r)?starText(exerciseStar(r)):'未判定';
+  return `<div class="score-hero"><div class="score-ring" style="--pct:${ringPct}"><span>${score}</span></div><div class="score-meta"><div class="coach-tag">${lead}</div><div class="score-sub">${status.complete?'100点満点':'暫定点'}｜${dayName(r.date)}曜日</div></div></div><div class="pill">食事 ${hasMealInput(r)?starText(mealStar(r)):'未判定'}</div><div class="pill">${rest?'休養':'運動'} ${exerciseRating}</div><div class="pill">睡眠 ${hasSleepInput(r)?starText(sleepStar(r)):'未判定'}</div><p class="coachLead">おはようございます、慎さん。</p><p class="muted">${food}<br>${balance}<br>${exercise}<br>${sleep}<br>${muscle}<br><b>${tomorrow}</b></p>${fatHint}`;
 }
 
 function motivationText(last,s){
@@ -481,7 +489,7 @@ function motivationText(last,s){
 
 function motivationMessage(a,s,last,t){
   if(!last||!last.weight){$('motivationMsg').style.display='none';return}
-  const score=t?scoreRecord(t,s):0;
+  const score=t&&assessmentStatus(t).complete?scoreRecord(t,s):0;
   const streak=calcStreak(a);
   const msgs=[
     streak>=7?`🔥 ${streak}日連続記録！この習慣が結果を作ります。`:'',
@@ -515,17 +523,17 @@ function updateStatTiles(a,s,t,prev){
   const yRec=a.find(r=>r.date===yesterdayStr());
   const recent7=a.slice(-7);
   const avgW=avgOf(recent7,r=>r.weight?+r.weight:null);
-  const avgS=avgOf(recent7,r=>scoreRecord(r,s));
+  const avgS=avgOf(recent7,r=>assessmentStatus(r).complete?scoreRecord(r,s):null);
   const displayRec=todayRec||t;
 
   if(displayRec){
     const sc=scoreRecord(displayRec,s);
     $('todayScore').innerHTML=sc+'<small>点</small>';
-    if(yRec&&yRec.date!==displayRec.date){
+    if(yRec&&yRec.date!==displayRec.date&&assessmentStatus(displayRec).complete&&assessmentStatus(yRec).complete){
       const diff=sc-scoreRecord(yRec,s);
       $('scoreDelta').textContent=(diff>0?'+':'')+diff+'点 vs 昨日';
       $('scoreDelta').className='delta '+(diff>0?'down':diff<0?'up':'neutral');
-    }else{$('scoreDelta').textContent='昨日の記録なし';$('scoreDelta').className='delta neutral'}
+    }else{$('scoreDelta').textContent=assessmentStatus(displayRec).complete?'比較できる昨日の評価なし':'未入力あり・暫定点';$('scoreDelta').className='delta neutral'}
   }else{$('todayScore').innerHTML='--<small>点</small>';$('scoreDelta').textContent='記録待ち';$('scoreDelta').className='delta neutral'}
 
   if(todayRec&&todayRec.weight&&yRec&&yRec.weight){
@@ -560,18 +568,19 @@ function updateWeeklyChange(a,s){
 
 function diaryText(r,s,last,prev){
  if(!r)return '今日の記録を保存すると自動生成します。';
- const rest=isRestDay(r),score=scoreRecord(r,s);let msg=`${r.date}（${dayName(r.date)}）<br>今日は${score}点。<br>`;
+ const rest=isRestDay(r),status=assessmentStatus(r),score=scoreRecord(r,s);let msg=`${r.date}（${dayName(r.date)}）<br>今日は${score}点${status.complete?'':'（暫定）'}。<br>`;
+ if(!status.complete)msg+=`${status.missing.join('・')}が未入力のため、入力済みデータだけでまとめます。<br>`;
  msg+=rest?'計画どおりの休養日です。食事と回復の流れを整える一日です。':score>=85?'かなり良い一日です。記録・食事・運動の流れが整っています。':'完璧でなくても、記録を続けている時点で前進です。';
- msg+=rest?'<br>運動は0分。今日は身体を休ませ、次のトレーニングへつなげます。':effectiveExercise(r)>=300?'<br>有酸素と筋トレの刺激が入っていて、脂肪を落としやすい状態です。':effectiveExercise(r)>0?'<br>軽めでも運動を継続できています。':'<br>今日は運動0分です。';
- if(+r.protein>=120)msg+='<br>たんぱく質は十分。筋肉量維持にかなり良いです。';else msg+='<br>次はたんぱく質をもう少し増やすと、減量の質が上がります。';
+ msg+=rest?'<br>運動は0分。今日は身体を休ませ、次のトレーニングへつなげます。':!hasExerciseInput(r)?'<br>運動・休養は未入力です。':effectiveExercise(r)>=300?`<br>${r.cardio&&String(r.strength||'').trim()?'有酸素と筋トレ':'運動'}の刺激が入り、消費量も確保できています。`:effectiveExercise(r)>0?'<br>軽めでも運動を継続できています。':'<br>運動内容はありますが、消費量は0kcalです。';
+ if(!hasMealInput(r))msg+='<br>食事データは未入力です。';else if(+r.protein>=120)msg+='<br>たんぱく質は十分。筋肉量維持にかなり良いです。';else if(hasValue(r.protein))msg+='<br>次はたんぱく質をもう少し増やすと、減量の質が上がります。';else msg+='<br>たんぱく質は未入力のため判定していません。';
  if(prev&&prev.weight&&r.weight){msg+=r.weight<prev.weight?'<br>体重も前回より落ちています。焦らずこのペースでOK。':'<br>体重は前回より少し上がっていますが、水分・塩分・便通でも動くので単日で判断しなくてOK。'}
  return msg;
 }
 
 function saveRecord(){
- try{if(!$('date').value)throw new Error('日付を入力してください。');const r={date:$('date').value};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);if(isRestDay(r)){checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('保存しました ✓',true)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
+ try{if(!$('date').value)throw new Error('日付を入力してください。');const r={date:$('date').value,restDay:$('restDay').checked};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('保存しました ✓',true)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
 }
-function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);clearPhoto('foodPhoto','foodPreview','foodClear',false);setStatus('',true)}
+function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);clearPhoto('foodPhoto','foodPreview','foodClear',false);setStatus('',true)}
 function saveSettings(){localStorage.setItem('shinDietSettings',JSON.stringify({startWeight:+$('startWeight').value||127.4,baseBurn:+$('baseBurn').value||2800,goalWeight:+$('goalWeight').value||95}));update();alert('保存しました')}
 function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home')drawForecastChart()}
 
@@ -639,7 +648,7 @@ function renderWeekly(a,s){
  let recent=a.slice(-7);if(!recent.length){$('weekly').textContent='記録が増えると表示します';return}
  const latestMuscle=recent.filter(r=>r.muscle).slice(-1)[0],latestMuscleType=latestMuscle?muscleTypeOf(latestMuscle):null;
  let weights=recent.filter(r=>r.weight).map(r=>+r.weight), intakes=recent.filter(r=>r.intake).map(r=>+r.intake), proteins=recent.filter(r=>r.protein).map(r=>+r.protein), exs=recent.map(r=>r.exerciseTotal||0), muscles=recent.filter(r=>r.muscle&&muscleTypeOf(r)===latestMuscleType).map(r=>+r.muscle);
- let avg=x=>x.length?(x.reduce((p,c)=>p+c,0)/x.length):0;let best=recent.slice().sort((x,y)=>scoreRecord(y,s)-scoreRecord(x,s))[0];let muscleMsg=muscles.length>=2?(muscles[muscles.length-1]>=muscles[0]?'維持できています':'少し低下傾向'):'記録待ち';
+ let avg=x=>x.length?(x.reduce((p,c)=>p+c,0)/x.length):0;let complete=recent.filter(r=>assessmentStatus(r).complete),best=complete.slice().sort((x,y)=>scoreRecord(y,s)-scoreRecord(x,s))[0];let muscleMsg=muscles.length>=2?(muscles[muscles.length-1]>=muscles[0]?'維持できています':'少し低下傾向'):'記録待ち';
  let ai=avg(proteins)>=110&&avg(exs)>=250?'今週は減量の質がかなり良いです。睡眠をもう少し整えるとさらに強いです。':'来週はたんぱく質120g前後と有酸素35分を軸にすると安定します。';
  $('weekly').innerHTML=`<div class="miniReport"><div><span class="small">平均体重</span><br><b>${avg(weights).toFixed(1)} kg</b></div><div><span class="small">平均摂取</span><br><b>${intakes.length?avg(intakes).toFixed(0):'--'} kcal</b></div><div><span class="small">平均たんぱく質</span><br><b>${proteins.length?avg(proteins).toFixed(0):'--'} g</b></div><div><span class="small">${latestMuscle?muscleMeta(latestMuscle).label:'筋肉'}維持</span><br><b>${muscleMsg}</b></div></div><p class="muted">一番良かった日：${best?best.date+'（'+scoreRecord(best,s)+'点）':'--'}<br>来週の目標：たんぱく質120g、有酸素35分、睡眠★★★★☆以上を2日増やす。<br><b>AIコメント：</b>${ai}</p>`;
 }
@@ -662,7 +671,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:12.3,exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:12.4,exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function importData(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result),records=Array.isArray(data)?data:data.records;if(!Array.isArray(records))throw new Error('記録データが見つかりません');if(!confirm(`${records.length}日分のバックアップを復元しますか？`))return;setRecs(records);if(data.settings)localStorage.setItem('shinDietSettings',JSON.stringify(data.settings));update();loadRecordForDate();alert('復元しました')}catch(e){alert('復元できませんでした：'+e.message)}finally{event.target.value=''}};reader.readAsText(file)}
 function resetAll(){if(confirm('全削除しますか？')){localStorage.removeItem('shinDietRecords');update()}}
 update();loadRecordForDate();
