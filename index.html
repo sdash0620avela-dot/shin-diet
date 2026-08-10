@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>慎の減量管理 v13.1 実用テスト版</title>
+<title>慎の減量管理 v13.1.1 実用テスト版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -231,7 +231,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </head>
 <body>
 <header class="app-header">
-  <div class="version-pill">v13.1 実用テスト版</div>
+  <div class="version-pill">v13.1.1 実用テスト版</div>
   <h1>慎の減量管理</h1>
   <p class="subhead">6/17開始｜有酸素35分｜ドローイン5セット｜月曜は蕎麦OK</p>
 </header>
@@ -433,7 +433,7 @@ $('date').addEventListener('change',loadRecordForDate);
 
 function fillMeal(id,text){const el=$(id);if(el)el.value=text}
 function renderMealEntries(){
-  $('mealEntries').innerHTML=mealTypes.map(([id,label])=>`<div class="item" style="margin-bottom:12px"><div class="label"><b>${label}</b></div><div class="label">${label}写真（解析後も端末には保存しません）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div class="label">AI推定結果（確認して修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option></select></div><div><div class="label">kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label">P g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">F g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">C g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div>`).join('');
+  $('mealEntries').innerHTML=mealTypes.map(([id,label])=>`<div class="item" style="margin-bottom:12px"><div class="label"><b>${label}</b></div><div class="label">${label}写真（撮影・保存済み写真・フォルダーから選択できます。解析後も端末には保存しません）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div class="label">AI推定結果（確認して修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option></select></div><div><div class="label">kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label">P g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">F g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">C g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div>`).join('');
   mealTypes.forEach(([id])=>{pv($(id+'Photo'),$(id+'Preview'),$(id+'Clear'));mealSuffixes.slice(1).forEach(s=>$(id+s).addEventListener('input',calculateMealTotals))});
 }
 function mealNumbersEntered(){return mealTypes.some(([id])=>mealSuffixes.slice(1).some(s=>hasValue($(id+s).value)))}
