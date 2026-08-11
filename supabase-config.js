@@ -1,4 +1,4 @@
 window.SHIN_DIET_SUPABASE={
-  url:'REPLACE_WITH_SUPABASE_URL',
-  publishableKey:'REPLACE_WITH_SUPABASE_PUBLISHABLE_KEY'
+  url:'https://ulorhqbotwsbhyoapixi.supabase.co',
+  publishableKey:'sb_publishable_ZQzCjvPIaKzZ6q_rGnXFiw_2df5puqb'
 };
