@@ -137,6 +137,13 @@ button.danger{background:#FFEBEA;color:var(--bad);box-shadow:none}
 .analyzeBtn{margin-top:10px;background:linear-gradient(135deg,#5856D6,#007AFF)}
 .analyzeBtn:disabled{opacity:.55;cursor:wait}
 .analysisStatus{min-height:20px;margin-top:8px;font-size:13px;line-height:1.5;color:var(--muted)}
+.portionNote{margin-top:10px;min-height:64px}
+.portionEditor{display:grid;gap:8px;margin:10px 0}
+.portionItem{padding:10px;border:1px solid var(--line);border-radius:12px;background:#FAFAFC}
+.portionItemHead{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:14px}
+.portionControls{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.portionControls button{width:auto;padding:7px 10px;margin:0;font-size:12px;box-shadow:none;background:#EEF2FF;color:var(--accent)}
+.portionControls input{width:88px;padding:7px;margin:0}
 
 /* Section in record */
 .section-head{
@@ -505,7 +512,7 @@ $('date').addEventListener('change',loadRecordForDate);
 
 function fillMeal(id,text){const el=$(id);if(el)el.value=text}
 function renderMealEntries(){
-  $('mealEntries').innerHTML=mealTypes.map(([id,label])=>`<div class="item" style="margin-bottom:12px"><div class="label"><b>${label}</b></div><div class="label">${label}写真（撮影・保存済み写真・フォルダーから選択できます。解析後も端末には保存しません）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div class="label">AI推定結果（確認して修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option></select></div><div><div class="label">kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label">P g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">F g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">C g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div>`).join('');
+  $('mealEntries').innerHTML=mealTypes.map(([id,label])=>`<div class="item" style="margin-bottom:12px"><div class="label"><b>${label}</b></div><div class="label">${label}写真（撮影・保存済み写真・フォルダーから選択できます。解析後も端末には保存しません）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><textarea id="${id}PortionNote" class="portionNote" placeholder="任意：ご飯は半分、唐揚げ3個、味噌汁は飲まない など"></textarea><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div id="${id}PortionEditor" class="portionEditor"></div><div class="label">AI推定結果（確認して修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option></select></div><div><div class="label">kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label">P g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">F g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">C g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div>`).join('');
   mealTypes.forEach(([id])=>{pv($(id+'Photo'),$(id+'Preview'),$(id+'Clear'));mealSuffixes.slice(1).forEach(s=>$(id+s).addEventListener('input',calculateMealTotals))});
 }
 function mealNumbersEntered(){return mealTypes.some(([id])=>mealSuffixes.slice(1).some(s=>hasValue($(id+s).value)))}
@@ -531,17 +538,20 @@ async function imageForAnalysis(file){
   canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
   return canvas.toDataURL('image/jpeg',.82);
 }
-function applyMealAnalysis(id,result){
-  $(id).value=result.items.map(x=>`${x.name}${x.estimated_amount?'（'+x.estimated_amount+'）':''}`).join('、');
-  $(id+'Source').value='ai';$(id+'Kcal').value=Math.round(result.total.kcal);$(id+'Protein').value=result.total.protein_g;$(id+'Fat').value=result.total.fat_g;$(id+'Carbs').value=result.total.carbs_g;calculateMealTotals();
-}
+const mealAnalysisItems={};
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function setPortion(id,index,multiplier){const item=mealAnalysisItems[id]?.[index];if(!item)return;item.multiplier=multiplier;const input=$(`${id}PortionAmount${index}`);if(input)input.value=+(item.base_amount*multiplier).toFixed(1);recalculatePortions(id)}
+function setPortionAmount(id,index,value){const item=mealAnalysisItems[id]?.[index],amount=Number(value);if(!item||!Number.isFinite(amount)||amount<0)return;item.multiplier=amount/item.base_amount;recalculatePortions(id)}
+function recalculatePortions(id){const items=mealAnalysisItems[id]||[],sum=k=>items.reduce((n,x)=>n+(+x[k]||0)*(x.multiplier??1),0);$(id).value=items.filter(x=>(x.multiplier??1)>0).map(x=>`${x.name} ${+(x.base_amount*(x.multiplier??1)).toFixed(1)}${x.unit}`).join('、');$(id+'Kcal').value=Math.round(sum('kcal'));$(id+'Protein').value=+sum('protein_g').toFixed(1);$(id+'Fat').value=+sum('fat_g').toFixed(1);$(id+'Carbs').value=+sum('carbs_g').toFixed(1);calculateMealTotals()}
+function renderPortionEditor(id,items){mealAnalysisItems[id]=(items||[]).map(x=>({...x,multiplier:1}));$(id+'PortionEditor').innerHTML=mealAnalysisItems[id].map((x,i)=>`<div class="portionItem"><div class="portionItemHead"><b>${esc(x.name)}</b><span>AI推定 ${esc(x.estimated_amount)}</span></div><div class="portionControls"><button type="button" onclick="setPortion('${id}',${i},0)">食べてない</button><button type="button" onclick="setPortion('${id}',${i},0.5)">半分</button><button type="button" onclick="setPortion('${id}',${i},1)">全部</button><input id="${id}PortionAmount${i}" type="number" min="0" step="0.1" value="${esc(x.base_amount)}" oninput="setPortionAmount('${id}',${i},this.value)"><span>${esc(x.unit)}</span></div></div>`).join('')}
+function applyMealAnalysis(id,result){renderPortionEditor(id,result.items);$(id+'Source').value='ai';recalculatePortions(id)}
 async function analyzeMeal(id,label){
   const file=$(id+'Photo').files&&$(id+'Photo').files[0],btn=$(id+'Analyze'),status=$(id+'AnalysisStatus');
   if(!file){status.textContent='先に写真を選んでください。';status.style.color='var(--bad)';return}
   if(MEAL_ANALYSIS_API.includes('REPLACE_WITH_PRIVATE_API')){status.textContent='写真解析サーバーの接続前です。公開設定完了後に使えます。';status.style.color='var(--warn)';return}
   btn.disabled=true;btn.textContent='解析中…';status.textContent='写真から料理と栄養を推定しています。';status.style.color='var(--muted)';
   try{
-    const image=await imageForAnalysis(file),res=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image,meal_type:label})});
+    const image=await imageForAnalysis(file),res=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image,meal_type:label,portion_note:$(id+'PortionNote').value.trim()})});
     const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'解析に失敗しました。');applyMealAnalysis(id,body);
     status.textContent=`AI推定を入力しました（確信度 ${body.confidence}）。写真だけで分からない油・調味料・量は修正してください。`;status.style.color='var(--good)';
   }catch(e){status.textContent=e.message||'解析に失敗しました。時間を置いて再試行してください。';status.style.color='var(--bad)'}
