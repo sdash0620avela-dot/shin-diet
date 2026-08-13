@@ -1,0 +1,8 @@
+{
+  "name": "shin-diet",
+  "private": true,
+  "version": "14.3.0",
+  "scripts": {
+    "test": "node --test"
+  }
+}
