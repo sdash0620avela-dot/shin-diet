@@ -1,4 +1,4 @@
-const CACHE='shin-diet-v14-6-easy-entry';
+const CACHE='shin-diet-v14-6-easy-entry-2';
 const APP_SHELL=['./index.html','./manifest.json','./icon.svg','./supabase-config.js'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()).then(()=>self.clients.matchAll({type:'window'})).then(clients=>clients.forEach(client=>client.postMessage({type:'APP_UPDATED',version:'14.6'})))));
