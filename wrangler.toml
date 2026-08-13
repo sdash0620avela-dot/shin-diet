@@ -2,6 +2,7 @@ name = "shin-diet-photo-analysis"
 main = "api/analyze-meal.js"
 compatibility_date = "2026-08-13"
 workers_dev = true
+compatibility_flags = [ "nodejs_compat" ]
 
 [vars]
 SUPABASE_URL = "https://ulorhqbotwsbhyoapixi.supabase.co"
@@ -9,3 +10,11 @@ SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ZQzCjvPIaKzZ6q_rGnXFiw_2df5puqb"
 
 [observability]
 enabled = true
+
+[[ratelimits]]
+name = "PHOTO_RATE_LIMITER"
+namespace_id = "14031"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60
