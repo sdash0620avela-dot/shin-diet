@@ -58,7 +58,9 @@ test('photo analysis requires the current signed-in session', () => {
   assert.match(worker, /429/);
 });
 
-test('v14.3 update notice is wired to the service worker', () => {
+test('v14.4 update notice and email OTP are wired', () => {
   assert.match(html, /id="updateNotice"/);
   assert.match(html, /APP_UPDATED/);
+  assert.match(html, /verifyOtp\(\{email,token,type:'email'\}\)/);
+  assert.match(html, /id="authOtp"/);
 });
