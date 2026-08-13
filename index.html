@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v14.7 安心保存版</title>
+<title>AI Diet v14.8 履歴編集版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -188,6 +188,8 @@ button.danger{background:#FFEBEA;color:var(--bad);box-shadow:none}
 .small{font-size:12px;color:var(--muted);line-height:1.5}
 .item{border-top:1px solid var(--line);padding:12px 0}
 .item:first-child{border-top:none}
+.item-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.item-edit{width:auto;margin:0;padding:7px 12px;font-size:13px;box-shadow:none;background:#EEF2FF;color:var(--accent)}
 .status{min-height:22px;margin-top:12px;font-weight:700;font-size:15px}
 .status.ok{color:var(--good)}.status.ng{color:var(--bad)}
 .edit-state{display:none;margin-bottom:12px;padding:11px 13px;border-radius:12px;background:#FFF7E8;color:#9A5A00;font-size:14px;font-weight:700;line-height:1.5}
@@ -949,7 +951,8 @@ function renderWeekly(a,s){
  $('weekly').innerHTML=`<div class="miniReport"><div><span class="small">平均体重</span><br><b>${avg(weights).toFixed(1)} kg</b></div><div><span class="small">平均摂取</span><br><b>${intakes.length?avg(intakes).toFixed(0):'--'} kcal</b></div><div><span class="small">平均たんぱく質</span><br><b>${proteins.length?avg(proteins).toFixed(0):'--'} g</b></div><div><span class="small">${latestMuscle?muscleMeta(latestMuscle).label:'筋肉'}維持</span><br><b>${muscleMsg}</b></div></div><p class="muted">一番良かった日：${best?best.date+'（'+scoreRecord(best,s)+'点）':'--'}<br>来週の目標：たんぱく質${s.proteinGoal||120}g、有酸素${s.cardioGoal||35}分、睡眠★★★★☆以上を2日増やす。<br><b>AIコメント：</b>${ai}</p>`;
 }
 
-function renderList(){let box=$('list');box.innerHTML=recs().slice(-14).reverse().map(r=>`<div class="item"><b>${r.date} ${r.weight? r.weight+' kg':''}</b><br><span class="muted">${[r.fat&&`${fatMeta(r).label}:${r.fat}${fatMeta(r).unit}`,r.muscle&&`${muscleMeta(r).label}:${r.muscle}kg`,r.intake&&`摂取:${r.intake}kcal / P:${r.protein||'--'}g / F:${r.fatG||'--'}g / C:${r.carbsG||'--'}g`,r.breakfast&&'朝:'+r.breakfast,r.lunch&&'昼:'+r.lunch,r.dinner&&'夜:'+r.dinner,r.snack&&'間食:'+r.snack,r.strength&&'筋トレ:'+r.strength,r.condition&&'体調:'+r.condition].filter(Boolean).join('<br>')}</span></div>`).join('')}
+function editRecord(date){$('date').value=date;const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('記録'));if(tab)show('record',tab);else loadRecordForDate();setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),50)}
+function renderList(){let box=$('list');box.innerHTML=recs().slice(-14).reverse().map(r=>`<div class="item"><div class="item-head"><b>${r.date} ${r.weight? r.weight+' kg':''}</b><button type="button" class="item-edit" onclick="editRecord('${r.date}')">この日を編集</button></div><span class="muted">${[r.fat&&`${fatMeta(r).label}:${r.fat}${fatMeta(r).unit}`,r.muscle&&`${muscleMeta(r).label}:${r.muscle}kg`,r.intake&&`摂取:${r.intake}kcal / P:${r.protein||'--'}g / F:${r.fatG||'--'}g / C:${r.carbsG||'--'}g`,r.breakfast&&'朝:'+r.breakfast,r.lunch&&'昼:'+r.lunch,r.dinner&&'夜:'+r.dinner,r.snack&&'間食:'+r.snack,r.strength&&'筋トレ:'+r.strength,r.condition&&'体調:'+r.condition].filter(Boolean).join('<br>')}</span></div>`).join('')}
 
 function drawChart(){
  let c=$('chart');if(!c)return;
@@ -967,7 +970,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:'14.7',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:'14.8',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function mergeRecords(localRecords,backupRecords){
  const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
  backupRecords.filter(r=>r&&r.date).forEach(backup=>{
