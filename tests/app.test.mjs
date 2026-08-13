@@ -75,7 +75,10 @@ test('v14.4 update notice and email OTP are wired', () => {
   assert.match(html, /storageKey\('LastSync'\)/);
   assert.match(html, /over_request_rate_limit/);
   assert.match(html, /copyPreviousMeal/);
-  assert.match(html, /finishMeal/);
+  assert.match(html, /function finishMeals\(\)/);
+  assert.match(html, /id="finishMealsBtn"/);
+  assert.match(html, /食事内容をこれで確定/);
+  assert.doesNotMatch(html, /この食事を確定/);
   assert.match(html, /goToRecordSave/);
   assert.match(html, /id="recordSaveCard"/);
   assert.match(html, /id="recordSaveBtn"/);
