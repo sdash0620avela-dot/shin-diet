@@ -63,4 +63,5 @@ test('v14.4 update notice and email OTP are wired', () => {
   assert.match(html, /APP_UPDATED/);
   assert.match(html, /verifyOtp\(\{email,token,type:'email'\}\)/);
   assert.match(html, /id="authOtp"/);
+  assert.match(html, /maxlength="10"/);
 });
