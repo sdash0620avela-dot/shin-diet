@@ -29,6 +29,11 @@ const syncApi = new Function(
   '\nreturn { mergeSyncStates, backupStates };'
 )();
 
+const analysisApi = new Function(
+  ['dayNumber', 'weightAnalysis'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { weightAnalysis };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -129,4 +134,31 @@ test('old backup cannot revive a more recent deletion', () => {
 test('legacy array backup remains readable', () => {
   const record = { date: '2026-08-01', weight: 110 };
   assert.deepEqual(syncApi.backupStates([record]), { records: [record], deleted: [] });
+});
+
+test('forecast waits for enough weight history', () => {
+  const sparse = analysisApi.weightAnalysis([
+    { date: '2026-08-01', weight: 110 },
+    { date: '2026-08-02', weight: 109 }
+  ]);
+  assert.equal(sparse.readyForecast, false);
+  assert.equal(sparse.delta7, null);
+});
+
+test('analysis compares weekly averages instead of two individual days', () => {
+  const records = Array.from({ length: 14 }, (_, i) => ({
+    date: `2026-08-${String(i + 1).padStart(2, '0')}`,
+    weight: 110 - i * 0.1
+  }));
+  const analysis = analysisApi.weightAnalysis(records);
+  assert.equal(analysis.readyForecast, true);
+  assert.ok(analysis.delta7 < 0);
+  assert.match(analysis.label, /下降傾向/);
+});
+
+test('v16 analysis UI shows trend and one daily priority', () => {
+  assert.match(html, /id="trendAnalysis"/);
+  assert.match(html, /id="todayAction"/);
+  assert.match(html, /function todayActionText\(t,s\)/);
+  assert.match(html, /最低7回・13日以上/);
 });
