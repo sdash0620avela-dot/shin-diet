@@ -247,6 +247,11 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 
 <main class="wrap">
 <section id="home" class="page active">
+  <div id="onboardingNotice" class="card" style="display:none;border-color:rgba(255,149,0,.35);background:#FFF9E6">
+    <h3>最初に自分の目標を設定</h3>
+    <p class="muted">年齢・身長・活動量から、消費カロリーと減量目標の目安を計算します。</p>
+    <button type="button" onclick="openSettings()">初期設定を始める</button>
+  </div>
   <div class="card hero-coach" id="coachCard">
     <div class="card-title">AI ダイエットコーチ</div>
     <div id="coach">記録するとAIコーチが評価します</div>
@@ -379,12 +384,35 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card"><h3>個人設定</h3>
     <div class="label">名前</div><input id="displayName" type="text" autocomplete="name" placeholder="名前">
     <div class="label">開始日</div><input id="startDate" type="date">
-    <div class="label">開始体重 kg</div><input id="startWeight" type="number" step="0.1" inputmode="decimal" value="127.4">
-    <div class="label">基礎＋生活消費 kcal</div><input id="baseBurn" type="number" inputmode="numeric" value="2800">
+    <div class="grid">
+      <div><div class="label">年齢</div><input id="age" type="number" min="18" max="100" inputmode="numeric" placeholder="47"></div>
+      <div><div class="label">性別（計算式用）</div><select id="sex"><option value="">選択</option><option value="male">男性</option><option value="female">女性</option></select></div>
+      <div><div class="label">身長 cm</div><input id="heightCm" type="number" min="120" max="230" step="0.1" inputmode="decimal" placeholder="170"></div>
+      <div><div class="label">開始体重 kg</div><input id="startWeight" type="number" step="0.1" inputmode="decimal" value="127.4"></div>
+    </div>
     <div class="label">目標体重 kg</div><input id="goalWeight" type="number" step="0.1" inputmode="decimal" value="95">
-    <div class="label">1日の目標たんぱく質 g</div><input id="proteinGoal" type="number" step="1" inputmode="numeric" value="120">
-    <div class="label">1日の目標摂取 kcal</div><input id="calorieGoal" type="number" step="10" inputmode="numeric" value="2000">
+    <div class="label">普段の活動量</div>
+    <select id="activityLevel">
+      <option value="">選択してください</option>
+      <option value="1.2">座り仕事中心・運動ほぼなし</option>
+      <option value="1.375">軽い運動を週1〜3日</option>
+      <option value="1.55">運動を週3〜5日</option>
+      <option value="1.725">強い運動を週6〜7日</option>
+    </select>
+    <div class="label">希望する減量ペース</div>
+    <select id="weightLossPace">
+      <option value="250">ゆっくり（週約0.2〜0.3kg）</option>
+      <option value="500" selected>標準（週約0.4〜0.5kg）</option>
+      <option value="750">速め（週約0.6〜0.7kg）</option>
+    </select>
+    <button type="button" class="sub" style="margin-top:12px" onclick="calculateRecommendations()">目標kcal・Pを自動計算</button>
+    <div id="recommendationStatus" class="small" style="margin-top:10px"></div>
+    <div class="label">推定1日消費 kcal（編集可）</div><input id="baseBurn" type="number" inputmode="numeric" value="2800">
+    <div class="label">1日の目標たんぱく質 g（編集可）</div><input id="proteinGoal" type="number" step="1" inputmode="numeric" value="120">
+    <div class="label">1日の目標摂取 kcal（編集可）</div><input id="calorieGoal" type="number" step="10" inputmode="numeric" value="2000">
     <div class="label">有酸素の基準時間 分</div><input id="cardioGoal" type="number" step="1" inputmode="numeric" value="35">
+    <div class="label">既往・痛み・運動上の注意</div><textarea id="healthNotes" placeholder="例：腰痛、膝痛、服薬など。緊急時の診断には使用しません。"></textarea>
+    <p class="small">自動計算は一般的な推定値です。持病・服薬・妊娠中・摂食障害の既往がある場合は、医療専門職の指示を優先してください。</p>
     <div style="margin-top:16px"><button onclick="saveSettings()">設定を保存</button></div>
   </div>
   <div class="card"><h3>ログイン・クラウド保存</h3>
@@ -742,15 +770,29 @@ function saveRecord(){
  try{if(!$('date').value)throw new Error('日付を入力してください。');calculateMealTotals();const r={date:$('date').value,restDay:$('restDay').checked,updatedAt:new Date().toISOString()};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('保存しました ✓',true)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
 }
 function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);setStatus('',true)}
+function profileComplete(s){return !!(s.displayName&&s.startDate&&s.startWeight&&s.goalWeight&&s.baseBurn&&s.age&&s.sex&&s.heightCm&&s.activityLevel)}
+function calculateRecommendations(){
+ const age=+$('age').value,height=+$('heightCm').value,weight=+$('startWeight').value,goal=+$('goalWeight').value,sex=$('sex').value,activity=+$('activityLevel').value,deficit=+$('weightLossPace').value||500;
+ const out=$('recommendationStatus');
+ if(!age||!height||!weight||!goal||!sex||!activity){out.textContent='年齢・性別・身長・開始体重・目標体重・活動量を入力してください。';out.style.color='var(--bad)';return}
+ const bmr=10*weight+6.25*height-5*age+(sex==='male'?5:-161),tdee=Math.round(bmr*activity),calorie=Math.max(Math.round(bmr),tdee-deficit);
+ const proteinFactor=activity>=1.55?1.6:1.4,protein=Math.max(60,Math.round(goal*proteinFactor));
+ $('baseBurn').value=tdee;$('calorieGoal').value=calorie;$('proteinGoal').value=protein;
+ out.textContent=`推定基礎代謝 ${Math.round(bmr)}kcal｜推定1日消費 ${tdee}kcal｜目標摂取 ${calorie}kcal｜目標P ${protein}g`;out.style.color='var(--good)'
+}
 function saveSettings(){
- const s={displayName:$('displayName').value.trim(),startDate:$('startDate').value,startWeight:+$('startWeight').value||0,baseBurn:+$('baseBurn').value||0,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,updatedAt:new Date().toISOString()};
- if(!s.displayName||!s.startDate||!s.startWeight||!s.baseBurn||!s.goalWeight) return alert('名前・開始日・開始体重・消費kcal・目標体重をすべて入力してください。');
+ const s={displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,updatedAt:new Date().toISOString()};
+ const existing=sets(),legacyAllowed=recs().length>0&&!existing.age;
+ if(!s.displayName||!s.startDate||!s.startWeight||!s.baseBurn||!s.goalWeight)return alert('名前・開始日・開始体重・消費kcal・目標体重を入力してください。');
+ if(!legacyAllowed&&(!s.age||!s.sex||!s.heightCm||!s.activityLevel))return alert('年齢・性別・身長・活動量を入力し、自動計算してください。');
  writeSettings(s);update();alert('個人設定を保存しました')
 }
+function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('設定'));if(tab)show('settings',tab)}
 function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home')drawForecastChart()}
 
 function update(){
- const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('startWeight').value=s.startWeight||'';$('baseBurn').value=s.baseBurn||'';$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;
+ const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;
+ $('onboardingNotice').style.display=profileComplete(s)||recs().length?'none':'block';
  $('appTitle').textContent=s.displayName?`${s.displayName}のAI Diet`:'AI Diet';$('appSubhead').textContent=s.startDate?`${s.startDate.replaceAll('-','/')}開始｜目標P ${s.proteinGoal||120}g｜有酸素 ${s.cardioGoal||35}分`:'個人設定を入力してください';
  $('calorieGoalChip').textContent=`${s.calorieGoal||2000}kcal`;$('proteinGoalChip').textContent=`${s.proteinGoal||120}g P`;$('cardioGoalChip').textContent=`有酸素${s.cardioGoal||35}分`;$('cardioGoalLabel').textContent=`有酸素（${s.cardioGoal||35}分）`;
  const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];
