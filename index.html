@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v14.8 履歴編集版</title>
+<title>AI Diet v14.9 下書き保存版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -494,6 +494,15 @@ function sets(){
  }catch(e){return activeStorageId==='legacy'&&recs().length?{...LEGACY_DEFAULTS}:{...NEW_USER_DEFAULTS}}
 }
 function writeSettings(s){localStorage.setItem(storageKey('Settings'),JSON.stringify(s));scheduleCloudSync()}
+const draftKey=date=>storageKey('Draft')+':'+date;
+function readDraft(date){const d=readJson(draftKey(date),null);return d&&d.record&&d.record.date===date?d:null}
+function removeDraft(date){if(date)localStorage.removeItem(draftKey(date))}
+let draftTimer=null,recordLoading=false;
+function saveDraft(){
+ if(recordLoading||!$('date').value)return;
+ try{const record=collectRecord();localStorage.setItem(draftKey(record.date),JSON.stringify({record,savedAt:new Date().toISOString()}));setStatus('入力内容をこの端末へ下書き保存しました',true)}catch(e){}
+}
+function scheduleDraftSave(){if(recordLoading)return;clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,500)}
 function activateUserStorage(uid){
  const targetRecords=storageKey('Records',uid),targetSettings=storageKey('Settings',uid);
  const owner=localStorage.getItem('shinDietLegacyOwner'),legacyRecords=readJson('shinDietRecords',[]),legacySettings=localStorage.getItem('shinDietSettings');
@@ -610,8 +619,9 @@ function muscleTypeOf(r){return r&&r.muscleType==='skeletalMuscleMass'?'skeletal
 function fatMeta(r){return fatTypeOf(r)==='fatMass'?{label:'体脂肪量',unit:'kg'}:{label:'体脂肪率',unit:'%'}}
 function muscleMeta(r){return muscleTypeOf(r)==='skeletalMuscleMass'?{label:'骨格筋量',unit:'kg'}:{label:'筋肉量',unit:'kg'}}
 function loadRecordForDate(){
-  const d=$('date').value||today();
-  const r=recs().find(x=>x.date===d)||{};
+  clearTimeout(draftTimer);recordLoading=true;
+  const d=$('date').value||today(),saved=recs().find(x=>x.date===d),draft=readDraft(d);
+  const r=draft?draft.record:(saved||{});
   fieldIds().forEach(id=>$(id).value=r[id]??'');
   if(!r.fatType)$('fatType').value='fatPercent';
   if(!r.muscleType)$('muscleType').value='muscleMass';
@@ -620,13 +630,16 @@ function loadRecordForDate(){
   $('restDay').checked=!!r.restDay||isRestDay(r);
   clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);
   mealTypes.forEach(([id])=>clearPhoto(id+'Photo',id+'Preview',id+'Clear',false));
-  const editing=!!r.date;
+  const editing=!!saved;
   $('editState').textContent=editing?`${d}の保存済み記録を編集中です。保存すると、この日の記録を上書きします。`:'';
   $('editState').className='edit-state '+(editing?'on':'');
   $('recordSaveBtn').textContent=editing?'この日の記録を上書き':'この日の記録を保存';
-  setStatus(editing?'保存済みの記録を読み込みました':'新しい日の記録です',true);
+  recordLoading=false;
+  setStatus(draft?'前回の入力途中データを復元しました':editing?'保存済みの記録を読み込みました':'新しい日の記録です',true);
 }
 $('date').addEventListener('change',loadRecordForDate);
+$('record').addEventListener('input',e=>{if(e.target.id!=='date'&&e.target.type!=='file')scheduleDraftSave()});
+$('record').addEventListener('change',e=>{if(e.target.id!=='date'&&e.target.type!=='file')scheduleDraftSave()});
 
 function fillMeal(id,text){const el=$(id);if(el)el.value=text}
 function renderMealEntries(){
@@ -852,13 +865,13 @@ function saveRecord(){
   if(!$('date').value)throw new Error('日付を入力してください。');
   const r=collectRecord(),all=recs(),existing=all.find(x=>x.date===r.date);
   if(!confirmRecordSave(r,existing))return;
-  const a=all.filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();
+  const a=all.filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);removeDraft(r.date);update();
   $('editState').textContent=`${r.date}の記録を保存済みです。再び保存すると上書きします。`;$('editState').className='edit-state on';
   setStatus(existing?'この日の記録を上書きしました ✓':'この日の記録を保存しました ✓',true);
   $('recordSaveBtn').textContent='保存済み ✓';setTimeout(()=>{$('recordSaveBtn').textContent='この日の記録を上書き'},1800)
  }catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
 }
-function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
+function clearForm(){removeDraft($('date').value);fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
 function profileComplete(s){return !!(s.displayName&&s.startDate&&s.startWeight&&s.goalWeight&&s.baseBurn&&s.age&&s.sex&&s.heightCm&&s.activityLevel)}
 function calculateRecommendations(){
  const age=+$('age').value,height=+$('heightCm').value,weight=+$('startWeight').value,goal=+$('goalWeight').value,sex=$('sex').value,activity=+$('activityLevel').value,deficit=+$('weightLossPace').value||500;
@@ -970,7 +983,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:'14.8',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:'14.9',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function mergeRecords(localRecords,backupRecords){
  const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
  backupRecords.filter(r=>r&&r.date).forEach(backup=>{
