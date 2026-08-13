@@ -44,6 +44,11 @@ export default {
     if (!authResponse.ok) return json({ error: 'ログインの有効期限が切れています。再ログインしてください。' }, 401, origin);
     const authUser = await authResponse.json().catch(() => null);
     if (!authUser?.id) return json({ error: 'ログイン情報を確認できませんでした。' }, 401, origin);
+    const rateLimit = await env.PHOTO_RATE_LIMITER.limit({ key: authUser.id });
+    if (!rateLimit.success) {
+      console.warn(JSON.stringify({ event: 'photo_rate_limited', user_id: authUser.id }));
+      return json({ error: '写真解析の利用が続いています。1分ほど待ってから再度お試しください。', reason: 'rate_limited' }, 429, origin);
+    }
     const length = Number(request.headers.get('Content-Length') || 0);
     if (length > 10_000_000) return json({ error: '写真データが大きすぎます。' }, 413, origin);
     let stage = 'request_body';
@@ -71,17 +76,13 @@ export default {
       try {
         data = JSON.parse(responseText);
       } catch {
-        return json({
-          error: `診断: OpenAI応答をJSONとして読めません（HTTP ${response.status}）。`,
-          reason: 'invalid_openai_response',
-          request_id: response.headers.get('x-request-id') || ''
-        }, 502, origin);
+        console.error(JSON.stringify({ event: 'openai_invalid_response', status: response.status, request_id: response.headers.get('x-request-id') || '', user_id: authUser.id }));
+        return json({ error: 'AI解析サーバーから正しい応答がありませんでした。もう一度お試しください。', reason: 'invalid_openai_response' }, 502, origin);
       }
-      if (!response.ok) return json({
-        error: `診断: OpenAI APIエラー（HTTP ${response.status}）: ${data.error?.message || '詳細なし'}`,
-        reason: data.error?.code || data.error?.type || 'openai_error',
-        request_id: response.headers.get('x-request-id') || ''
-      }, 502, origin);
+      if (!response.ok) {
+        console.error(JSON.stringify({ event: 'openai_error', status: response.status, reason: data.error?.code || data.error?.type || 'openai_error', request_id: response.headers.get('x-request-id') || '', user_id: authUser.id }));
+        return json({ error: 'AI解析サーバーでエラーが発生しました。時間を置いて再度お試しください。', reason: 'openai_error' }, 502, origin);
+      }
 
       if (data.status === 'incomplete') {
         const reason = data.incomplete_details?.reason || 'unknown';
@@ -118,10 +119,8 @@ export default {
         }, 502, origin);
       }
     } catch (error) {
-      return json({
-        error: `診断: ${stage}で例外: ${error instanceof Error ? error.message : String(error)}`,
-        reason: 'worker_exception'
-      }, 500, origin);
+      console.error(JSON.stringify({ event: 'worker_exception', stage, message: error instanceof Error ? error.message : String(error), user_id: authUser?.id || null }));
+      return json({ error: '写真解析中にエラーが発生しました。時間を置いて再度お試しください。', reason: 'worker_exception' }, 500, origin);
     }
   }
 };
