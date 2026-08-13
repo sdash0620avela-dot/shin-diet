@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v14.4.1 8桁コード修正版</title>
+<title>AI Diet v14.4.2 同期自動再試行版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -244,7 +244,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v14.4.1 8桁コード修正版</div>
+  <div class="version-pill">v14.4.2 同期自動再試行版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -555,7 +555,7 @@ async function verifyLoginCode(){
  cloudMessage('ログインしました。クラウド保存を開始します。',true);if(cloudUser)await syncNow(true)
 }
 async function signOutCloud(){if(!cloudClient)return;const {error}=await cloudClient.auth.signOut();if(error)cloudMessage('ログアウトできませんでした：'+authErrorMessage(error),false)}
-async function syncNow(silent=false){
+async function syncNow(silent=false,retryCount=0){
  if(!cloudClient||!cloudUser||cloudSyncing)return;cloudSyncing=true;if(!silent)cloudMessage('同期中…');
  try{
   const uid=cloudUser.id;
@@ -574,7 +574,13 @@ async function syncNow(silent=false){
   const profileUpsert=await cloudClient.from('diet_profiles').upsert({user_id:uid,settings:mergedSettings,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(profileUpsert.error)throw profileUpsert.error;
   if(merged.length){const rows=merged.map(r=>({user_id:uid,record_date:r.date,record:r,updated_at:r.updatedAt||new Date().toISOString()}));const recordsUpsert=await cloudClient.from('diet_records').upsert(rows,{onConflict:'user_id,record_date'});if(recordsUpsert.error)throw recordsUpsert.error}
   lastSyncAt=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});update();loadRecordForDate();renderAuthState();cloudMessage(`クラウド保存済み（${merged.length}日分｜${lastSyncAt}）`)
- }catch(e){cloudMessage('クラウド同期失敗：'+(e.message||'不明なエラー'),false)}finally{cloudSyncing=false}
+ }catch(e){
+  const message=String(e&&e.message||'');
+  if(/JWT issued at future/i.test(message)&&retryCount<6){
+   cloudMessage('ログイン完了。クラウドの準備中です…',true);
+   setTimeout(()=>syncNow(true,retryCount+1),10000);
+  }else cloudMessage('クラウド同期失敗：'+(message||'不明なエラー'),false)
+ }finally{cloudSyncing=false}
 }
 const MEAL_ANALYSIS_API='https://shin-diet-photo-analysis.sdash0620.workers.dev/';
 function setStatus(msg,ok=true){let el=$('saveStatus');if(!el)return;el.textContent=msg;el.className='status '+(ok?'ok':'ng')}
@@ -914,7 +920,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:'14.4.1',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:'14.4.2',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function mergeRecords(localRecords,backupRecords){
  const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
  backupRecords.filter(r=>r&&r.date).forEach(backup=>{
