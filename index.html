@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v14.6 かんたん記録版</title>
+<title>AI Diet v14.7 安心保存版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -190,6 +190,8 @@ button.danger{background:#FFEBEA;color:var(--bad);box-shadow:none}
 .item:first-child{border-top:none}
 .status{min-height:22px;margin-top:12px;font-weight:700;font-size:15px}
 .status.ok{color:var(--good)}.status.ng{color:var(--bad)}
+.edit-state{display:none;margin-bottom:12px;padding:11px 13px;border-radius:12px;background:#FFF7E8;color:#9A5A00;font-size:14px;font-weight:700;line-height:1.5}
+.edit-state.on{display:block}
 .cloud-box{padding:14px;border-radius:var(--radius-sm);background:#F8FAFF;border:1px solid rgba(0,122,255,.15);margin-top:12px}
 .cloud-state{font-weight:700;line-height:1.5}
 
@@ -356,6 +358,8 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     </div>
   </div>
 
+  <div class="saveJump"><button type="button" onclick="goToRecordSave()">入力を確認して保存へ進む</button></div>
+
   <div class="card">
     <div class="section-head"><div class="section-icon">💪</div><h3>運動</h3></div>
     <div class="quick-chips">
@@ -372,8 +376,9 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div class="label">筋トレ内容</div><textarea id="strength" placeholder="胸25セット　1時間"></textarea>
   </div>
 
-  <div class="card">
-    <button onclick="saveRecord()">保存する</button>
+  <div id="recordSaveCard" class="card">
+    <div id="editState" class="edit-state"></div>
+    <button id="recordSaveBtn" onclick="saveRecord()">この日の記録を保存</button>
     <div id="saveStatus" class="status" role="status" aria-live="polite"></div>
     <div style="margin-top:12px"><button class="sub" onclick="clearForm()">入力クリア</button></div>
   </div>
@@ -608,12 +613,16 @@ function loadRecordForDate(){
   fieldIds().forEach(id=>$(id).value=r[id]??'');
   if(!r.fatType)$('fatType').value='fatPercent';
   if(!r.muscleType)$('muscleType').value='muscleMass';
-  mealTypes.forEach(([id])=>{if(!r[id+'Source'])$(id+'Source').value='manual'});
+  mealTypes.forEach(([id])=>{if(!r[id+'Source'])$(id+'Source').value='manual';updateMealSummary(id)});
   checkIds().forEach(id=>$(id).checked=!!r[id]);
   $('restDay').checked=!!r.restDay||isRestDay(r);
   clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);
   mealTypes.forEach(([id])=>clearPhoto(id+'Photo',id+'Preview',id+'Clear',false));
-  setStatus(r.date?'この日の記録を読み込みました':'未記入の日です',!!r.date);
+  const editing=!!r.date;
+  $('editState').textContent=editing?`${d}の保存済み記録を編集中です。保存すると、この日の記録を上書きします。`:'';
+  $('editState').className='edit-state '+(editing?'on':'');
+  $('recordSaveBtn').textContent=editing?'この日の記録を上書き':'この日の記録を保存';
+  setStatus(editing?'保存済みの記録を読み込みました':'新しい日の記録です',true);
 }
 $('date').addEventListener('change',loadRecordForDate);
 
@@ -817,10 +826,37 @@ function diaryText(r,s,last,prev){
  return msg;
 }
 
-function saveRecord(){
- try{if(!$('date').value)throw new Error('日付を入力してください。');calculateMealTotals();const r={date:$('date').value,restDay:$('restDay').checked,updatedAt:new Date().toISOString()};fieldIds().forEach(id=>{let el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});checkIds().forEach(id=>r[id]=$(id).checked);if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();let a=recs().filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();setStatus('この日の記録を保存しました ✓',true);$('recordSaveBtn').textContent='保存済み ✓';setTimeout(()=>{$('recordSaveBtn').textContent='この日の記録を保存'},1800)}catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
+function collectRecord(){
+ calculateMealTotals();
+ const r={date:$('date').value,restDay:$('restDay').checked,updatedAt:new Date().toISOString()};
+ fieldIds().forEach(id=>{const el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});
+ checkIds().forEach(id=>r[id]=$(id).checked);
+ if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.exerciseCal=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=exCal();
+ return r;
 }
-function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);setStatus('',true)}
+function recordMissingFields(r){
+ const missing=[];if(!hasValue(r.weight))missing.push('体重');assessmentStatus(r).missing.forEach(x=>missing.push(x));return missing;
+}
+function confirmRecordSave(r,existing){
+ const missing=recordMissingFields(r),messages=[];
+ if(existing)messages.push(`${r.date}は保存済みです。現在の内容で上書きします。`);
+ if(missing.length)messages.push(`未入力：${missing.join('・')}`);
+ if(!messages.length)return true;
+ messages.push(existing?'この内容で上書きしますか？':'このまま保存しますか？');
+ return confirm(messages.join('\n\n'));
+}
+function saveRecord(){
+ try{
+  if(!$('date').value)throw new Error('日付を入力してください。');
+  const r=collectRecord(),all=recs(),existing=all.find(x=>x.date===r.date);
+  if(!confirmRecordSave(r,existing))return;
+  const a=all.filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);update();
+  $('editState').textContent=`${r.date}の記録を保存済みです。再び保存すると上書きします。`;$('editState').className='edit-state on';
+  setStatus(existing?'この日の記録を上書きしました ✓':'この日の記録を保存しました ✓',true);
+  $('recordSaveBtn').textContent='保存済み ✓';setTimeout(()=>{$('recordSaveBtn').textContent='この日の記録を上書き'},1800)
+ }catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
+}
+function clearForm(){fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
 function profileComplete(s){return !!(s.displayName&&s.startDate&&s.startWeight&&s.goalWeight&&s.baseBurn&&s.age&&s.sex&&s.heightCm&&s.activityLevel)}
 function calculateRecommendations(){
  const age=+$('age').value,height=+$('heightCm').value,weight=+$('startWeight').value,goal=+$('goalWeight').value,sex=$('sex').value,activity=+$('activityLevel').value,deficit=+$('weightLossPace').value||500;
@@ -931,7 +967,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:'14.6',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:'14.7',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function mergeRecords(localRecords,backupRecords){
  const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
  backupRecords.filter(r=>r&&r.date).forEach(backup=>{
