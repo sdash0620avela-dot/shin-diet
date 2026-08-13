@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v16.1 自動総括版</title>
+<title>AI Diet v16.2 AIコーチ版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -237,8 +237,15 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 }
 .forecast-chart-wrap{margin-top:12px;background:#FAFAFA;border-radius:var(--radius-sm);padding:8px;border:1px solid var(--line)}
 .summary-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.summary-switch button{margin:0;box-shadow:none}.summary-switch button.off{background:#F2F2F7;color:var(--ink2);border:1px solid var(--line)}.reportText{white-space:pre-wrap;margin:0;font:inherit;line-height:1.75;color:var(--ink2)}.copyReport{margin-top:12px}
+.anime-coach{display:grid;grid-template-columns:132px 1fr;gap:14px;align-items:center}
+.coach-sprite{width:132px;aspect-ratio:1/1;background-image:url('./assets/ai-coach-sprite.png');background-repeat:no-repeat;background-size:200% 200%;background-position:0 0;filter:drop-shadow(0 8px 12px rgba(28,28,30,.12));transition:background-position .2s ease,transform .25s ease}
+.coach-sprite.good{background-position:100% 0}.coach-sprite.warning{background-position:0 100%}.coach-sprite.achievement{background-position:100% 100%;animation:coachCelebrate .55s cubic-bezier(.34,1.56,.64,1)}
+.coach-dialogue{min-width:0}.coach-mood{display:inline-flex;border-radius:999px;padding:5px 10px;background:#F2F2F7;color:var(--ink2);font-size:12px;font-weight:800;margin-bottom:8px}.coach-mood.good{background:#EAF8EE;color:#248A3D}.coach-mood.warning{background:#FFF4E5;color:#A35D00}.coach-mood.achievement{background:#FFF6D9;color:#8B6914}
+.coach-speech{font-size:15px;font-weight:750;line-height:1.55}.coach-detail{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.coach-detail summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px}.coach-detail-body{margin-top:12px}
+@keyframes coachCelebrate{0%{transform:scale(.88) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
 
 @media(max-width:380px){
+  .anime-coach{grid-template-columns:108px 1fr}.coach-sprite{width:108px}
   .stat-grid{grid-template-columns:1fr 1fr}
   .stat-grid .stat-tile:first-child{grid-column:1/-1}
   .big{font-size:32px}
@@ -253,7 +260,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v16.1 自動総括版</div>
+  <div class="version-pill">v16.2 AIコーチ版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -267,7 +274,11 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   </div>
   <div class="card hero-coach" id="coachCard">
     <div class="card-title">AI ダイエットコーチ</div>
-    <div id="coach">記録するとAIコーチが評価します</div>
+    <div class="anime-coach">
+      <div id="animeCoach" class="coach-sprite waiting" role="img" aria-label="記録を待っているAIコーチ"></div>
+      <div class="coach-dialogue"><div id="animeCoachMood" class="coach-mood">記録待ち</div><div id="animeCoachSpeech" class="coach-speech">まず今日の体重か食事を1つ記録しましょう。</div></div>
+    </div>
+    <details class="coach-detail"><summary>点数と詳しい評価を見る</summary><div id="coach" class="coach-detail-body">記録するとAIコーチが評価します</div></details>
   </div>
 
   <div class="stat-grid" id="statGrid">
@@ -768,6 +779,26 @@ function scoreRecord(r,s){
   const fatigue=+r.fatigue;if(fatigue>0)score+=fatigue<=2?10:fatigue===3?6:fatigue===4?3:0;else score+=5;
   return Math.max(0,Math.min(100,Math.round(score)));
 }
+function animeCoachState(r,s){
+  if(!r)return 'waiting';
+  const score=scoreRecord(r,s),complete=assessmentStatus(r).complete;
+  if((hasSleepInput(r)&&sleepStar(r)<=2)||(+r.fatigue>=4)||(complete&&score<60))return 'warning';
+  if(complete&&score>=95)return 'achievement';
+  return 'good';
+}
+function animeCoachMessage(r,s){
+  const state=animeCoachState(r,s);
+  if(state==='waiting')return 'まず今日の体重か食事を1つ記録。入力した分だけ分析が正確になります。';
+  if(state==='achievement')return `今日の評価は${scoreRecord(r,s)}点。積み上げが結果につながっています。この流れを守りましょう。`;
+  return todayActionText(r,s);
+}
+function renderAnimeCoach(r,s){
+  const state=animeCoachState(r,s),labels={waiting:'記録待ち',good:'好調',warning:'注意',achievement:'達成'};
+  const sprite=$('animeCoach'),mood=$('animeCoachMood');
+  sprite.className='coach-sprite '+state;sprite.setAttribute('aria-label',labels[state]+'のAIコーチ');
+  mood.className='coach-mood '+state;mood.textContent=labels[state];
+  $('animeCoachSpeech').textContent=animeCoachMessage(r,s);
+}
 function mealStar(r,s){let p=+r.protein||0,i=+r.intake||0,g=+s.proteinGoal||120,c=+s.calorieGoal||2000;if(p>=g&&i>=c-200&&i<=c+200)return 5;if(p>=g*.8)return 4;if(p>=g*.55)return 3;if(p>0||i>0)return 2;return 1}
 function exerciseStar(r){if(isRestDay(r))return 5;if(!hasExerciseInput(r))return 0;let ex=effectiveExercise(r);if(ex>=400&&String(r.strength||'').trim())return 5;if(ex>=300)return 4;if(ex>0)return 3;return 2}
 function sleepStar(r){return r.sleep==='★★★★★'?5:r.sleep==='★★★★☆'?4:r.sleep==='★★★☆☆'?3:r.sleep==='★★☆☆☆'?2:r.sleep==='★☆☆☆☆'?1:2}
@@ -948,6 +979,7 @@ function update(){
  const t=a.find(r=>r.date===today())||a.slice(-1)[0];const prev=t?prevRecord(a,t,'weight'):null;
  if(t){let rest=isRestDay(t),burn=s.baseBurn+effectiveExercise(t),b=t.intake?t.intake-burn:null;$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('tw').innerHTML=rest?'休養日 · 運動0分':[t.cardio?`有酸素 ${t.cardioMin||35}分`:'',t.legRaise?'足上げ腹筋':'',t.plank?'プランク':'',t.powerplate?'Power Plate':'',t.drawin?'ドローイン':'',t.strength||''].filter(Boolean).join(' · ')||'まだ記録なし';$('coach').innerHTML=coachText(t,s,last,prev);$('diary').innerHTML=diaryText(t,s,last,prev)}
  updateStatTiles(a,s,t,prev);
+ renderAnimeCoach(t,s);
  updateWeeklyChange(a,s);
  renderAnalysis(a,s,t);
  renderDailySummary(a,s,t);
