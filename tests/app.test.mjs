@@ -34,6 +34,11 @@ const analysisApi = new Function(
   '\nreturn { weightAnalysis };'
 )();
 
+const morningApi = new Function(
+  ['hasValue', 'isRestDay', 'effectiveExercise', 'hasExerciseInput', 'morningReportScore'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { morningReportScore };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -161,4 +166,37 @@ test('v16 analysis UI shows trend and one daily priority', () => {
   assert.match(html, /id="todayAction"/);
   assert.match(html, /function todayActionText\(t,s\)/);
   assert.match(html, /最低7回・13日以上/);
+});
+
+test('v16.1 morning summary keeps four-star sleep below 100', () => {
+  const morning = {
+    date: '2026-08-14',
+    weight: 113.8,
+    fat: 26.4,
+    muscle: 47.1,
+    sleep: '★★★★☆',
+    cardio: true,
+    cardioMin: 43,
+    exerciseTotal: 480
+  };
+  assert.equal(morningApi.morningReportScore(morning), 98);
+});
+
+test('v16.1 stores the full body-composition fields used by the summary', () => {
+  assert.match(html, /id="visceralFat"/);
+  assert.match(html, /id="bmi"/);
+  assert.match(html, /id="basalMetabolism"/);
+  assert.match(html, /id="totalEnergy"/);
+  assert.match(html, /function fieldIds\(\).*visceralFat.*basalMetabolism.*totalEnergy/);
+});
+
+test('v16.1 provides morning and daily summaries with verified and inferred sections', () => {
+  assert.match(html, /id="dailySummary"/);
+  assert.match(html, /selectSummaryMode\('morning'\)/);
+  assert.match(html, /selectSummaryMode\('daily'\)/);
+  assert.match(html, /function buildDailySummary\(r,prev,s,mode\)/);
+  assert.match(html, /【確認できた事実】/);
+  assert.match(html, /【推測】/);
+  assert.match(html, /単日変化/);
+  assert.match(html, /copyCurrentSummary/);
 });
