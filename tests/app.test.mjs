@@ -80,4 +80,8 @@ test('v14.4 update notice and email OTP are wired', () => {
   assert.match(html, /保存済み記録は削除されていません/);
   assert.match(html, /function editRecord\(date\)/);
   assert.match(html, /この日を編集/);
+  assert.match(html, /const draftKey=date=>storageKey\('Draft'\)/);
+  assert.match(html, /function scheduleDraftSave\(\)/);
+  assert.match(html, /前回の入力途中データを復元しました/);
+  assert.match(html, /removeDraft\(r\.date\)/);
 });
