@@ -39,6 +39,11 @@ const morningApi = new Function(
   '\nreturn { morningReportScore };'
 )();
 
+const coachApi = new Function(
+  ['sleepScore','hasValue','isRestDay','effectiveExercise','hasExerciseInput','hasMealInput','hasSleepInput','assessmentStatus','scoreRecord','sleepStar','animeCoachState'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { animeCoachState };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -199,4 +204,13 @@ test('v16.1 provides morning and daily summaries with verified and inferred sect
   assert.match(html, /【推測】/);
   assert.match(html, /単日変化/);
   assert.match(html, /copyCurrentSummary/);
+});
+
+test('v16.2 anime coach has four deterministic states', () => {
+  assert.match(html, /assets\/ai-coach-sprite\.png/);
+  assert.equal(coachApi.animeCoachState(null, settings), 'waiting');
+  assert.equal(coachApi.animeCoachState({...ideal, sleep:'★★☆☆☆'}, settings), 'warning');
+  assert.equal(coachApi.animeCoachState(ideal, settings), 'achievement');
+  assert.equal(coachApi.animeCoachState({...ideal, protein:90}, settings), 'good');
+  assert.match(html, /renderAnimeCoach\(t,s\)/);
 });
