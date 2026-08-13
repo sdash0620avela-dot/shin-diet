@@ -862,6 +862,7 @@ function confirmRecordSave(r,existing){
 }
 function saveRecord(){
  try{
+  clearTimeout(draftTimer);
   if(!$('date').value)throw new Error('日付を入力してください。');
   const r=collectRecord(),all=recs(),existing=all.find(x=>x.date===r.date);
   if(!confirmRecordSave(r,existing))return;
@@ -871,7 +872,7 @@ function saveRecord(){
   $('recordSaveBtn').textContent='保存済み ✓';setTimeout(()=>{$('recordSaveBtn').textContent='この日の記録を上書き'},1800)
  }catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
 }
-function clearForm(){removeDraft($('date').value);fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
+function clearForm(){clearTimeout(draftTimer);removeDraft($('date').value);fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
 function profileComplete(s){return !!(s.displayName&&s.startDate&&s.startWeight&&s.goalWeight&&s.baseBurn&&s.age&&s.sex&&s.heightCm&&s.activityLevel)}
 function calculateRecommendations(){
  const age=+$('age').value,height=+$('heightCm').value,weight=+$('startWeight').value,goal=+$('goalWeight').value,sex=$('sex').value,activity=+$('activityLevel').value,deficit=+$('weightLossPace').value||500;
