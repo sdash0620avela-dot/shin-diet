@@ -52,7 +52,7 @@ test('four-star sleep cannot score 100', () => {
 test('each signed-in user has a separate local storage namespace', () => {
   assert.match(html, /shinDiet:\${id}:\${kind\.toLowerCase\(\)}/);
   assert.match(html, /activateUserStorage\(nextUser\.id\)/);
-  assert.match(html, /\.eq\('user_id',cloudUser\.id\)/);
+  assert.match(html, /user_id:cloudUser\.id/);
 });
 
 test('photo analysis requires the current signed-in session', () => {
