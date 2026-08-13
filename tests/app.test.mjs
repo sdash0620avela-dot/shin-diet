@@ -24,6 +24,11 @@ const scoreApi = new Function(
   '\nreturn { sleepScore, scoreRecord };'
 )();
 
+const syncApi = new Function(
+  ['stateTime', 'mergeSyncStates'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { mergeSyncStates };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -85,7 +90,21 @@ test('v14.4 update notice and email OTP are wired', () => {
   assert.match(html, /前回の入力途中データを復元しました/);
   assert.match(html, /removeDraft\(r\.date\)/);
   assert.match(html, /async function deleteRecord\(date\)/);
-  assert.match(html, /\.delete\(\)\.eq\('user_id',cloudUser\.id\)\.eq\('record_date',date\)/);
-  assert.ok(html.indexOf("from('diet_records').delete()") < html.indexOf("setRecs(recs().filter(r=>r.date!==date))"));
+  assert.match(html, /_deleted:true/);
+  assert.match(html, /setDeletedRecords/);
+  assert.match(html, /removeDeletedRecord\(r\.date\)/);
+  assert.match(html, /record:tombstone/);
   assert.match(html, /削除できなかったため、記録は残しています/);
+});
+
+test('newer deletion tombstone wins over an old record from another device', () => {
+  const oldRecord = { date: '2026-08-01', weight: 110, updatedAt: '2026-08-01T09:00:00.000Z' };
+  const tombstone = { date: '2026-08-01', _deleted: true, updatedAt: '2026-08-02T09:00:00.000Z' };
+  assert.deepEqual(syncApi.mergeSyncStates([oldRecord], [tombstone]), [tombstone]);
+});
+
+test('saving again after deletion wins when it is newer', () => {
+  const tombstone = { date: '2026-08-01', _deleted: true, updatedAt: '2026-08-02T09:00:00.000Z' };
+  const restored = { date: '2026-08-01', weight: 109, updatedAt: '2026-08-03T09:00:00.000Z' };
+  assert.deepEqual(syncApi.mergeSyncStates([tombstone], [restored]), [restored]);
 });
