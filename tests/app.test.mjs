@@ -25,8 +25,8 @@ const scoreApi = new Function(
 )();
 
 const syncApi = new Function(
-  ['stateTime', 'mergeSyncStates'].map(name => extractFunction(html, name)).join('\n') +
-  '\nreturn { mergeSyncStates };'
+  ['stateTime', 'mergeSyncStates', 'backupStates'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { mergeSyncStates, backupStates };'
 )();
 
 const ideal = {
@@ -110,4 +110,23 @@ test('saving again after deletion wins when it is newer', () => {
   const tombstone = { date: '2026-08-01', _deleted: true, updatedAt: '2026-08-02T09:00:00.000Z' };
   const restored = { date: '2026-08-01', weight: 109, updatedAt: '2026-08-03T09:00:00.000Z' };
   assert.deepEqual(syncApi.mergeSyncStates([tombstone], [restored]), [restored]);
+});
+
+
+test('backup includes deletion tombstones', () => {
+  assert.match(html, /deletedRecords:deletedRecords\(\)/);
+  const tombstone = { date: '2026-08-01', _deleted: true, updatedAt: '2026-08-02T09:00:00.000Z' };
+  const parsed = syncApi.backupStates({ records: [], deletedRecords: [tombstone] });
+  assert.deepEqual(parsed.deleted, [tombstone]);
+});
+
+test('old backup cannot revive a more recent deletion', () => {
+  const oldBackup = { date: '2026-08-01', weight: 110, updatedAt: '2026-08-01T09:00:00.000Z' };
+  const tombstone = { date: '2026-08-01', _deleted: true, updatedAt: '2026-08-02T09:00:00.000Z' };
+  assert.deepEqual(syncApi.mergeSyncStates([tombstone], [oldBackup]), [tombstone]);
+});
+
+test('legacy array backup remains readable', () => {
+  const record = { date: '2026-08-01', weight: 110 };
+  assert.deepEqual(syncApi.backupStates([record]), { records: [record], deleted: [] });
 });
