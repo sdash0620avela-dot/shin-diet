@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v16.0 分析AI基盤版</title>
+<title>AI Diet v16.1 自動総括版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -236,6 +236,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   font-size:13px;font-weight:700;margin-top:8px
 }
 .forecast-chart-wrap{margin-top:12px;background:#FAFAFA;border-radius:var(--radius-sm);padding:8px;border:1px solid var(--line)}
+.summary-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.summary-switch button{margin:0;box-shadow:none}.summary-switch button.off{background:#F2F2F7;color:var(--ink2);border:1px solid var(--line)}.reportText{white-space:pre-wrap;margin:0;font:inherit;line-height:1.75;color:var(--ink2)}.copyReport{margin-top:12px}
 
 @media(max-width:380px){
   .stat-grid{grid-template-columns:1fr 1fr}
@@ -252,7 +253,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v16.0 分析AI基盤版</div>
+  <div class="version-pill">v16.1 自動総括版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -288,6 +289,17 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card">
     <div class="card-title">今日やること</div>
     <div id="todayAction" class="diary">今日の記録に合わせて、優先することを1つ表示します。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">自動ダイエット総括</div>
+    <div class="summary-switch">
+      <button id="morningSummaryBtn" type="button" onclick="selectSummaryMode('morning')">朝総括</button>
+      <button id="dailySummaryBtn" type="button" class="off" onclick="selectSummaryMode('daily')">1日総括</button>
+    </div>
+    <pre id="dailySummary" class="reportText">記録を保存すると自動生成します。</pre>
+    <button type="button" class="sub copyReport" onclick="copyCurrentSummary()">総括をコピー</button>
+    <div id="summaryCopyStatus" class="small" role="status" aria-live="polite"></div>
   </div>
 
   <div class="card">
@@ -341,7 +353,11 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div class="grid">
       <div><div class="label">体重 kg</div><input id="weight" type="number" step="0.1" inputmode="decimal" placeholder="127.0"></div>
       <div><div class="label">体脂肪データ</div><select id="fatType"><option value="fatPercent">体脂肪率（%）</option><option value="fatMass">体脂肪量（kg）</option></select><input id="fat" type="number" step="0.1" inputmode="decimal" placeholder="30.0" style="margin-top:8px"></div>
-      <div><div class="label">筋肉データ</div><select id="muscleType"><option value="muscleMass">筋肉量（kg）</option><option value="skeletalMuscleMass">骨格筋量（kg）</option></select><input id="muscle" type="number" step="0.1" inputmode="decimal" placeholder="85.0" style="margin-top:8px"></div>
+      <div><div class="label">筋肉データ</div><select id="muscleType"><option value="muscleMass">筋肉量（kg）</option><option value="skeletalMuscleMass">骨格筋量（kg）</option></select><input id="muscle" type="number" step="0.1" inputmode="decimal" placeholder="47.1" style="margin-top:8px"></div>
+      <div><div class="label">内臓脂肪レベル</div><input id="visceralFat" type="number" step="1" inputmode="numeric" placeholder="14"></div>
+      <div><div class="label">BMI</div><input id="bmi" type="number" step="0.1" inputmode="decimal" placeholder="34.7"></div>
+      <div><div class="label">基礎代謝 kcal</div><input id="basalMetabolism" type="number" step="1" inputmode="numeric" placeholder="2179"></div>
+      <div><div class="label">総エネルギー kcal</div><input id="totalEnergy" type="number" step="1" inputmode="numeric" placeholder="3486"></div>
       <div><div class="label">睡眠</div><select id="sleep"><option value="">未入力</option><option>★★★★★</option><option>★★★★☆</option><option>★★★☆☆</option><option>★★☆☆☆</option><option>★☆☆☆☆</option></select></div>
     </div>
     <div class="grid">
@@ -636,7 +652,7 @@ function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REA
 const mealTypes=[['breakfast','朝食'],['lunch','昼食'],['dinner','夕食'],['snack','間食']];
 const mealSuffixes=['Source','Kcal','Protein','Fat','Carbs'];
 function mealFieldIds(){return mealTypes.flatMap(([id])=>[id,...mealSuffixes.map(s=>id+s)])}
-function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioMin','exerciseCal','workoutMinutes','strength']}
+function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','visceralFat','bmi','basalMetabolism','totalEnergy','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioMin','exerciseCal','workoutMinutes','strength']}
 function checkIds(){return ['cardio','legRaise','plank','powerplate','drawin']}
 function fatTypeOf(r){return r&&r.fatType==='fatMass'?'fatMass':'fatPercent'}
 function muscleTypeOf(r){return r&&r.muscleType==='skeletalMuscleMass'?'skeletalMuscleMass':'muscleMass'}
@@ -934,6 +950,7 @@ function update(){
  updateStatTiles(a,s,t,prev);
  updateWeeklyChange(a,s);
  renderAnalysis(a,s,t);
+ renderDailySummary(a,s,t);
  $('motivation').innerHTML=motivationText(last,s);
  motivationMessage(a,s,last,t);
  forecast(last,a,s);
@@ -980,6 +997,111 @@ function renderAnalysis(a,s,t){
  else trend.innerHTML=`<div class="miniReport"><div><span class="small">7日平均の変化</span><br><b>${signedKg(x.delta7)}</b></div><div><span class="small">30日平均の変化</span><br><b>${signedKg(x.delta30)}</b></div></div><p class="muted"><b>${x.label}</b><br>${x.readyForecast?'予測に必要な記録量を満たしています。':`予測まであと ${Math.max(0,7-x.count)} 回・${Math.max(0,13-x.spanDays)} 日分が目安です。`} 日々の増減ではなく平均同士で比較します。</p>`;
  action.textContent=todayActionText(t,s);
 }
+let summaryMode='morning',currentSummaryText='';
+function numberText(v,digits=1,suffix=''){return hasValue(v)?(+v).toFixed(digits)+suffix:'未入力'}
+function signedChange(current,previous,digits=1,suffix=''){
+ if(!hasValue(current)||!hasValue(previous))return '比較なし';
+ const diff=(+current)-(+previous);return (diff>0?'+':'')+diff.toFixed(digits)+suffix;
+}
+function exerciseItems(r){
+ if(isRestDay(r))return ['休養日'];
+ return [r.cardio?`有酸素 ${r.cardioMin||35}分`:'',r.legRaise?'足上げ腹筋':'',r.plank?'プランク':'',r.powerplate?'Power Plate 4セット':'',r.drawin?'ドローイン':'',String(r.strength||'').trim()].filter(Boolean);
+}
+function morningReportScore(r){
+ let score=0;
+ if(hasValue(r.weight))score+=20;
+ if(hasValue(r.fat))score+=15;
+ if(hasValue(r.muscle))score+=15;
+ score+=r.sleep==='★★★★★'?20:r.sleep==='★★★★☆'?18:r.sleep==='★★★☆☆'?14:r.sleep==='★★☆☆☆'?8:r.sleep==='★☆☆☆☆'?3:0;
+ if(hasExerciseInput(r))score+=25;
+ if(r.date)score+=5;
+ return Math.max(0,Math.min(100,score));
+}
+function reportConclusion(r,prev,s,mode){
+ if(mode==='morning'){
+  if(!hasValue(r.weight))return '朝の体組成を入力すると総括を作成できます。';
+  const change=prev&&hasValue(prev.weight)?(+r.weight)-(+prev.weight):null;
+  if(change!==null&&change<0&&hasValue(r.muscle))return '良い流れです。体重だけでなく、筋肉データも記録できています。';
+  if(change!==null&&change>0)return '単日の増加だけで判断せず、数日から1週間の平均で確認します。';
+  return '朝の記録を確認しました。今日も同じ条件で記録を続けます。';
+ }
+ const status=assessmentStatus(r);
+ if(!status.complete)return status.missing.join('・')+'が未入力のため、1日評価は暫定です。';
+ const score=scoreRecord(r,s);
+ return score>=90?'かなり良い一日です。今の流れを崩さず継続します。':score>=75?'良い一日です。未達項目を1つだけ整えるとさらに安定します。':score>=60?'記録はできています。明日は食事・運動・睡眠のうち最優先を1つ修正します。':'今日は回復と食事の立て直しを優先します。';
+}
+function comparisonLines(r,prev){
+ const rows=[
+  ['体重',numberText(r.weight,1,'kg'),prev?signedChange(r.weight,prev.weight,1,'kg'):'比較なし'],
+  [fatMeta(r).label,numberText(r.fat,1,fatMeta(r).unit),prev&&fatTypeOf(prev)===fatTypeOf(r)?signedChange(r.fat,prev.fat,1,fatMeta(r).unit):'比較なし'],
+  [muscleMeta(r).label,numberText(r.muscle,1,'kg'),prev&&muscleTypeOf(prev)===muscleTypeOf(r)?signedChange(r.muscle,prev.muscle,1,'kg'):'比較なし'],
+  ['内臓脂肪',numberText(r.visceralFat,0,''),prev?signedChange(r.visceralFat,prev.visceralFat,0,''):'比較なし'],
+  ['BMI',numberText(r.bmi,1,''),prev?signedChange(r.bmi,prev.bmi,1,''):'比較なし'],
+  ['基礎代謝',numberText(r.basalMetabolism,0,'kcal'),prev?signedChange(r.basalMetabolism,prev.basalMetabolism,0,'kcal'):'比較なし'],
+  ['総エネルギー',numberText(r.totalEnergy,0,'kcal'),prev?signedChange(r.totalEnergy,prev.totalEnergy,0,'kcal'):'比較なし']
+ ];
+ return rows.map(([label,value,diff])=>`${label}：${value}（前回差 ${diff}）`).join('\n');
+}
+function buildDailySummary(r,prev,s,mode){
+ if(!r)return '記録を保存すると自動生成します。';
+ const dateLabel=String(r.date||'').replaceAll('-','/'),startLoss=hasValue(r.weight)&&hasValue(s.startWeight)?(+r.weight)-(+s.startWeight):null,goalRemain=hasValue(r.weight)&&hasValue(s.goalWeight)?(+r.weight)-(+s.goalWeight):null,nextMilestone=hasValue(r.weight)?Math.floor(((+r.weight)-.01)/5)*5:null,milestoneRemain=nextMilestone!==null?(+r.weight)-nextMilestone:null;
+ const exItems=exerciseItems(r),exCalories=effectiveExercise(r),score=mode==='morning'?morningReportScore(r):scoreRecord(r,s),status=mode==='morning'?'朝評価':assessmentStatus(r).complete?'確定評価':'暫定評価';
+ const facts=[comparisonLines(r,prev),hasValue(startLoss)?`開始時 ${(+s.startWeight).toFixed(1)}kgから ${startLoss.toFixed(1)}kg`:'',nextMilestone!==null&&nextMilestone>(+s.goalWeight)?`${nextMilestone.toFixed(0)}kgまで あと${Math.max(0,milestoneRemain).toFixed(1)}kg`:'',hasValue(goalRemain)?`最終目標 ${(+s.goalWeight).toFixed(1)}kgまで あと${Math.max(0,goalRemain).toFixed(1)}kg`:''].filter(Boolean).join('\n');
+ const cautions=[
+  hasValue(r.weight)&&prev&&hasValue(prev.weight)?'体重の単日変化は、水分・食事量なども含むため脂肪の増減とは断定しません。':'体重は同じ条件で記録し、数日から1週間の平均で確認します。',
+  hasValue(r.muscle)&&prev&&hasValue(prev.muscle)?`${muscleMeta(r).label}の単日変化は、体水分などの測定変動を含むため筋肉の増減とは断定しません。`:'',
+  hasValue(r.visceralFat)&&prev&&hasValue(prev.visceralFat)?'内臓脂肪レベルも単日の表示値だけで判断せず、継続して確認します。':''
+ ].filter(Boolean);
+ const mealSection=mode==='daily'?[`摂取：${numberText(r.intake,0,'kcal')}`,`P：${numberText(r.protein,0,'g')}｜F：${numberText(r.fatG,0,'g')}｜C：${numberText(r.carbsG,0,'g')}`,`水分：${numberText(r.waterL,1,'L')}`,`概算収支：${hasValue(r.intake)?Math.round((+r.intake)-(+s.baseBurn||0)-exCalories)+'kcal':'未判定'}`].join('\n'):'';
+ const missing=mode==='daily'?assessmentStatus(r).missing:[];
+ const inferred=[exCalories>0?`運動消費 ${Math.round(exCalories)}kcalは入力・運動内容からの概算です。`:'',missing.length?`${missing.join('・')}が未入力のため評価は暫定です。`:''].filter(Boolean);
+ return `${dateLabel} ${mode==='morning'?'朝':'1日'}ダイエット総括
+
+結論
+${reportConclusion(r,prev,s,mode)}
+
+【確認できた事実】
+${facts}
+
+今日の運動
+${exItems.length?exItems.map(x=>'・'+x).join('\n'):'・運動・休養は未入力'}
+${exCalories>0?`・運動消費 約${Math.round(exCalories)}kcal【推定】`:''}
+${mealSection?'\n食事・収支\n'+mealSection:''}
+
+専門家視点で厳しく見るところ
+${cautions.map((x,i)=>`${i+1}. ${x}`).join('\n')}
+
+今日の評価：${score}点 ${score>=90?'★★★★★':score>=80?'★★★★☆':score>=70?'★★★☆☆':score>=60?'★★☆☆☆':'★☆☆☆☆'}（${status}）
+
+今日の課題
+${todayActionText(r,s)}
+
+【推測】
+${inferred.length?inferred.join('\n'):'推測値はありません。'}
+
+【情報源】
+${['breakfast','lunch','dinner','snack'].some(id=>r[id+'Source']==='ai')?'アプリに保存された本人入力・AI推定記録':'アプリに保存された本人入力記録'}
+
+【回答日時】
+${dateLabel}`;
+}
+function selectSummaryMode(mode){
+ summaryMode=mode==='daily'?'daily':'morning';
+ $('morningSummaryBtn').className=summaryMode==='morning'?'':'off';
+ $('dailySummaryBtn').className=summaryMode==='daily'?'':'off';
+ renderDailySummary(recs(),sets(),recs().find(r=>r.date===today())||recs().slice(-1)[0]);
+}
+function renderDailySummary(a,s,t){
+ const prev=t?prevRecord(a,t,'weight'):null;
+ currentSummaryText=buildDailySummary(t,prev,s,summaryMode);
+ $('dailySummary').textContent=currentSummaryText;
+}
+async function copyCurrentSummary(){
+ const status=$('summaryCopyStatus');
+ if(!currentSummaryText||currentSummaryText.startsWith('記録を')){status.textContent='コピーできる総括がありません';return}
+ try{await navigator.clipboard.writeText(currentSummaryText);status.textContent='総括をコピーしました ✓'}catch(e){status.textContent='コピーできませんでした。文章を長押しして選択してください'}
+}
+
 function forecast(last,a,s){
  if(!last){$('forecast').textContent='記録が増えると予測します';return}
  const x=weightAnalysis(a);
