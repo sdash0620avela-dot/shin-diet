@@ -72,4 +72,10 @@ test('v14.4 update notice and email OTP are wired', () => {
   assert.match(html, /copyPreviousMeal/);
   assert.match(html, /finishMeal/);
   assert.match(html, /goToRecordSave/);
+  assert.match(html, /id="recordSaveCard"/);
+  assert.match(html, /id="recordSaveBtn"/);
+  assert.match(html, /recordMissingFields/);
+  assert.match(html, /confirmRecordSave/);
+  assert.match(html, /この日の記録を上書き/);
+  assert.match(html, /保存済み記録は削除されていません/);
 });
