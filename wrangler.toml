@@ -1,4 +1,11 @@
 name = "shin-diet-photo-analysis"
 main = "api/analyze-meal.js"
-compatibility_date = "2026-08-10"
+compatibility_date = "2026-08-13"
 workers_dev = true
+
+[vars]
+SUPABASE_URL = "https://ulorhqbotwsbhyoapixi.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ZQzCjvPIaKzZ6q_rGnXFiw_2df5puqb"
+
+[observability]
+enabled = true
