@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v14.2 初期設定・認証強化版</title>
+<title>AI Diet v14.3 利用制限・更新通知版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -236,11 +236,15 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   .score-ring{width:76px;height:76px}
   .score-ring span{font-size:24px}
 }
+
+.updateNotice{display:none;position:fixed;left:16px;right:16px;top:max(12px,env(safe-area-inset-top));z-index:9999;background:#1C1C1E;color:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 8px 28px #0004;align-items:center;gap:12px;font-size:14px;font-weight:700}.updateNotice.show{display:flex}.updateNotice button{margin-left:auto;width:auto;white-space:nowrap;padding:9px 14px;background:#fff;color:#007AFF;border-radius:10px}
 </style>
 </head>
 <body>
+<div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
+
 <header class="app-header">
-  <div class="version-pill">v14.2 初期設定・認証強化版</div>
+  <div class="version-pill">v14.3 利用制限・更新通知版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -447,7 +451,16 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./supabase-config.js"></script>
 <script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+function showUpdateNotice(){const notice=document.getElementById('updateNotice');if(notice)notice.classList.add('show')}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='APP_UPDATED')showUpdateNotice()});
+  navigator.serviceWorker.register('./sw.js').then(reg=>{
+    reg.addEventListener('updatefound',()=>{
+      const worker=reg.installing;
+      worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)showUpdateNotice()});
+    });
+  }).catch(()=>{});
+}
 const $=id=>document.getElementById(id);
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
@@ -882,7 +895,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:'14.1',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:'14.3',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function mergeRecords(localRecords,backupRecords){
  const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
  backupRecords.filter(r=>r&&r.date).forEach(backup=>{
