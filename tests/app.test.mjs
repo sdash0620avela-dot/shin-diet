@@ -84,4 +84,8 @@ test('v14.4 update notice and email OTP are wired', () => {
   assert.match(html, /function scheduleDraftSave\(\)/);
   assert.match(html, /前回の入力途中データを復元しました/);
   assert.match(html, /removeDraft\(r\.date\)/);
+  assert.match(html, /async function deleteRecord\(date\)/);
+  assert.match(html, /\.delete\(\)\.eq\('user_id',cloudUser\.id\)\.eq\('record_date',date\)/);
+  assert.ok(html.indexOf("from('diet_records').delete()") < html.indexOf("setRecs(recs().filter(r=>r.date!==date))"));
+  assert.match(html, /削除できなかったため、記録は残しています/);
 });
