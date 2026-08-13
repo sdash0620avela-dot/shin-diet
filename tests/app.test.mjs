@@ -66,4 +66,7 @@ test('v14.4 update notice and email OTP are wired', () => {
   assert.match(html, /maxlength="10"/);
   assert.match(html, /JWT issued at future/);
   assert.match(html, /retryCount<6/);
+  assert.match(html, /visibilitychange/);
+  assert.match(html, /storageKey\('LastSync'\)/);
+  assert.match(html, /over_request_rate_limit/);
 });
