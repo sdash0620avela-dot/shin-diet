@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v14.4.2 同期自動再試行版</title>
+<title>AI Diet v14.5 初回案内・同期監視版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -244,7 +244,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v14.4.2 同期自動再試行版</div>
+  <div class="version-pill">v14.5 初回案内・同期監視版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -497,7 +497,7 @@ function activateUserStorage(uid){
  activeStorageId=uid;
 }
 function activateGuestStorage(){activeStorageId='guest'}
-let cloudClient=null,cloudUser=null,cloudSyncTimer=null,cloudSyncing=false,lastSyncAt=null,loginCooldownTimer=null;
+let cloudClient=null,cloudUser=null,cloudSyncTimer=null,cloudSyncing=false,lastSyncAt=null,lastSyncEpoch=0,loginCooldownTimer=null;
 function cloudConfigured(){const c=window.SHIN_DIET_SUPABASE||{};return /^https:\/\/.+\.supabase\.co$/.test(c.url||'')&&!String(c.publishableKey||'').startsWith('REPLACE_')}
 function cloudMessage(message,ok=true){const el=$('cloudState');if(el){el.textContent=message;el.style.color=ok?'var(--good)':'var(--bad)'}}
 function scheduleCloudSync(){if(!cloudUser||cloudSyncing)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>syncNow(true),700)}
@@ -512,7 +512,7 @@ async function initCloud(){
   if(cloudUser&&(event==='SIGNED_IN'||event==='INITIAL_SESSION'))setTimeout(()=>syncNow(true),0)
  });
  const {data,error}=await cloudClient.auth.getSession();if(error){cloudMessage('ログイン状態を確認できません：'+authErrorMessage(error),false);return}
- cloudUser=data.session&&data.session.user||null;if(cloudUser)activateUserStorage(cloudUser.id);else activateGuestStorage();renderAuthState();update();loadRecordForDate();if(cloudUser)await syncNow(true)
+ cloudUser=data.session&&data.session.user||null;if(cloudUser){activateUserStorage(cloudUser.id);lastSyncEpoch=Number(localStorage.getItem(storageKey('LastSync'))||0);lastSyncAt=lastSyncEpoch?new Date(lastSyncEpoch).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):null}else activateGuestStorage();renderAuthState();update();loadRecordForDate();if(cloudUser)await syncNow(true)
 }
 function renderAuthState(){
  $('signedOutBox').style.display=cloudUser?'none':'block';$('signedInBox').style.display=cloudUser?'block':'none';
@@ -525,7 +525,13 @@ function authErrorMessage(error){
  if(code==='email_address_invalid')return 'メールアドレスの形式を確認してください。';
  if(code==='email_address_not_authorized')return '現在のメール送信設定では、この宛先へ送信できません。';
  if(code==='otp_expired')return '8桁コードの有効期限が切れたか、コードが違います。新しいコードを送ってください。';
- return msg||'不明なエラーです。';
+ if(code==='over_request_rate_limit')return '操作が続いたため一時停止中です。数分待ってから再度お試しください。';
+ if(code==='session_expired'||code==='session_not_found')return 'ログインの有効期限が切れました。新しいコードでログインしてください。';
+ if(code==='bad_jwt')return 'ログイン情報を確認できません。アプリを開き直してください。';
+ if(code==='signup_disabled')return '新しい利用者の登録が停止されています。管理者へお問い合わせください。';
+ if(code==='otp_disabled')return 'メールコードログインが停止されています。管理者へお問い合わせください。';
+ if(/failed to fetch|network|load failed/i.test(msg))return '通信できませんでした。電波やWi-Fiを確認して再度お試しください。';
+ return '処理を完了できませんでした。時間を置いて再度お試しください。';
 }
 function startLoginCooldown(seconds=60){
  const btn=$('loginEmailBtn');if(!btn)return;clearInterval(loginCooldownTimer);let remain=seconds;btn.disabled=true;
@@ -573,7 +579,7 @@ async function syncNow(silent=false,retryCount=0){
   const merged=mergeRecords(localRecords,cloudRecords);localStorage.setItem(storageKey('Records'),JSON.stringify(merged));
   const profileUpsert=await cloudClient.from('diet_profiles').upsert({user_id:uid,settings:mergedSettings,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(profileUpsert.error)throw profileUpsert.error;
   if(merged.length){const rows=merged.map(r=>({user_id:uid,record_date:r.date,record:r,updated_at:r.updatedAt||new Date().toISOString()}));const recordsUpsert=await cloudClient.from('diet_records').upsert(rows,{onConflict:'user_id,record_date'});if(recordsUpsert.error)throw recordsUpsert.error}
-  lastSyncAt=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});update();loadRecordForDate();renderAuthState();cloudMessage(`クラウド保存済み（${merged.length}日分｜${lastSyncAt}）`)
+  lastSyncEpoch=Date.now();localStorage.setItem(storageKey('LastSync'),String(lastSyncEpoch));lastSyncAt=new Date(lastSyncEpoch).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});update();loadRecordForDate();renderAuthState();cloudMessage(`クラウド保存済み（${merged.length}日分｜${lastSyncAt}）`)
  }catch(e){
   const message=String(e&&e.message||'');
   if(/JWT issued at future/i.test(message)&&retryCount<6){
@@ -920,7 +926,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:'14.4.2',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:'14.5',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function mergeRecords(localRecords,backupRecords){
  const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
  backupRecords.filter(r=>r&&r.date).forEach(backup=>{
@@ -937,6 +943,8 @@ async function resetAll(){
  if(cloudClient&&cloudUser){const {error}=await cloudClient.from('diet_records').delete().eq('user_id',cloudUser.id);if(error)return alert('クラウドの記録を削除できなかったため中止しました：'+error.message)}
  localStorage.removeItem(storageKey('Records'));update();alert('現在の利用者の記録をすべて削除しました')
 }
+window.addEventListener('online',()=>{if(cloudUser)syncNow(true)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&cloudUser&&Date.now()-lastSyncEpoch>300000)syncNow(true)});
 update();loadRecordForDate();initCloud();
 </script>
 </body>
