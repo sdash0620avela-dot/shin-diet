@@ -613,7 +613,9 @@ async function analyzeMeal(id,label){
   if(MEAL_ANALYSIS_API.includes('REPLACE_WITH_PRIVATE_API')){status.textContent='写真解析サーバーの接続前です。公開設定完了後に使えます。';status.style.color='var(--warn)';return}
   btn.disabled=true;btn.textContent='解析中…';status.textContent='写真から料理と栄養を推定しています。';status.style.color='var(--muted)';
   try{
-    const image=await imageForAnalysis(file),res=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image,meal_type:label,portion_note:$(id+'PortionNote').value.trim()})});
+    if(!cloudClient||!cloudUser)throw new Error('写真解析にはログインが必要です。設定からログインしてください。');
+    const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();if(sessionError||!sessionData.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
+    const image=await imageForAnalysis(file),res=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({image,meal_type:label,portion_note:$(id+'PortionNote').value.trim()})});
     const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'解析に失敗しました。');applyMealAnalysis(id,body);
     status.textContent=`AI推定を入力しました（確信度 ${body.confidence}）。写真だけで分からない油・調味料・量は修正してください。`;status.style.color='var(--good)';
   }catch(e){status.textContent=e.message||'解析に失敗しました。時間を置いて再試行してください。';status.style.color='var(--bad)'}
