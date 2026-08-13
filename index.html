@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v15.2 食事一括確認版</title>
+<title>AI Diet v15.3 復元保護版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1016,18 +1016,27 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:'15.2',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
-function mergeRecords(localRecords,backupRecords){
- const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
- backupRecords.filter(r=>r&&r.date).forEach(backup=>{
-   const local=merged.get(backup.date);
-   if(!local){merged.set(backup.date,backup);return}
-   const localTime=Date.parse(local.updatedAt||''),backupTime=Date.parse(backup.updatedAt||'');
-   if(Number.isFinite(backupTime)&&(!Number.isFinite(localTime)||backupTime>localTime))merged.set(backup.date,backup);
- });
- return [...merged.values()].sort((a,b)=>a.date.localeCompare(b.date));
+function exportData(){
+ const payload={version:'15.3',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),deletedRecords:deletedRecords(),settings:sets()};
+ const b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)
 }
-function importData(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result),records=Array.isArray(data)?data:data.records;if(!Array.isArray(records))throw new Error('記録データが見つかりません');const current=recs(),merged=mergeRecords(current,records),added=merged.length-current.length;if(!confirm(`${records.length}日分のバックアップを現在の記録へ統合しますか？\n同じ日付は新しい記録を優先し、現在の最新データを守ります。`))return;setRecs(merged);if(data.settings&&!localStorage.getItem(storageKey('Settings')))localStorage.setItem(storageKey('Settings'),JSON.stringify(data.settings));update();loadRecordForDate();alert(`復元しました（新しく追加：${added}日分／合計：${merged.length}日分）`)}catch(e){alert('復元できませんでした：'+e.message)}finally{event.target.value=''}};reader.readAsText(file)}
+function backupStates(data){
+ const records=Array.isArray(data)?data:data&&data.records,deleted=Array.isArray(data&&data.deletedRecords)?data.deletedRecords:[];
+ if(!Array.isArray(records))throw new Error('記録データが見つかりません');
+ return {records:records.filter(r=>r&&r.date&&!r._deleted),deleted:deleted.filter(r=>r&&r.date&&r._deleted)}
+}
+function importData(event){
+ const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();
+ reader.onload=()=>{try{
+  const data=JSON.parse(reader.result),backup=backupStates(data),before=recs(),states=mergeSyncStates(before,deletedRecords(),backup.records,backup.deleted);
+  const active=states.filter(r=>!r._deleted),deleted=states.filter(r=>r._deleted),added=active.filter(r=>!before.some(x=>x.date===r.date)).length,updated=active.filter(r=>before.some(x=>x.date===r.date&&stateTime(r)>stateTime(x))).length;
+  if(!confirm(`記録${backup.records.length}日分を現在のデータへ統合しますか？\n削除済み情報${backup.deleted.length}件も照合し、各日付の新しい状態だけを残します。`))return;
+  setDeletedRecords(deleted);setRecs(active);
+  if(data.settings){const current=sets(),backupTime=Date.parse(data.settings.updatedAt||''),currentTime=Date.parse(current.updatedAt||'');if(!Number.isFinite(currentTime)||(Number.isFinite(backupTime)&&backupTime>currentTime))localStorage.setItem(storageKey('Settings'),JSON.stringify({...current,...data.settings}))}
+  update();loadRecordForDate();alert(`復元しました（追加：${added}日／更新：${updated}日／合計：${active.length}日）`)
+ }catch(e){alert('復元できませんでした：'+e.message)}finally{event.target.value=''}};
+ reader.readAsText(file)
+}
 async function resetAll(){
  if(!confirm('すべての記録を削除しますか？ログイン中はクラウド上の記録にも削除済み情報を保存します。この操作は元に戻せません。'))return;
  const now=new Date().toISOString(),tombstones=recs().map(r=>({date:r.date,_deleted:true,deletedAt:now,updatedAt:now}));
