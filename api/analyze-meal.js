@@ -25,7 +25,7 @@ const schema = {
 
 function cors(origin) {
   return { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type', 'Vary': 'Origin', 'Content-Type': 'application/json; charset=utf-8' };
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Vary': 'Origin', 'Content-Type': 'application/json; charset=utf-8' };
 }
 function json(body, status, origin) { return new Response(JSON.stringify(body), { status, headers: cors(origin) }); }
 
@@ -35,7 +35,15 @@ export default {
     if (!ALLOWED_ORIGINS.has(origin)) return json({ error: '許可されていない接続元です。' }, 403, origin);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
     if (request.method !== 'POST') return json({ error: 'POSTのみ利用できます。' }, 405, origin);
-    if (!env.OPENAI_API_KEY) return json({ error: '解析サーバーの設定が未完了です。' }, 503, origin);
+    if (!env.OPENAI_API_KEY || !env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) return json({ error: '解析サーバーの設定が未完了です。' }, 503, origin);
+    const authorization = request.headers.get('Authorization') || '';
+    if (!authorization.startsWith('Bearer ')) return json({ error: '写真解析にはログインが必要です。' }, 401, origin);
+    const authResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'Authorization': authorization, 'apikey': env.SUPABASE_PUBLISHABLE_KEY }
+    });
+    if (!authResponse.ok) return json({ error: 'ログインの有効期限が切れています。再ログインしてください。' }, 401, origin);
+    const authUser = await authResponse.json().catch(() => null);
+    if (!authUser?.id) return json({ error: 'ログイン情報を確認できませんでした。' }, 401, origin);
     const length = Number(request.headers.get('Content-Length') || 0);
     if (length > 10_000_000) return json({ error: '写真データが大きすぎます。' }, 413, origin);
     let stage = 'request_body';
