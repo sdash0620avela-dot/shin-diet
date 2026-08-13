@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v14.3 利用制限・更新通知版</title>
+<title>AI Diet v14.4 6桁コードログイン版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -244,7 +244,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v14.3 利用制限・更新通知版</div>
+  <div class="version-pill">v14.4 6桁コードログイン版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -423,8 +423,13 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div id="cloudState" class="cloud-state">接続準備中</div>
     <div id="signedOutBox" class="cloud-box">
       <div class="label">メールアドレス</div><input id="authEmail" type="email" autocomplete="email" placeholder="example@email.com">
-      <button id="loginEmailBtn" style="margin-top:12px" onclick="sendLoginLink()">ログイン用メールを送る</button>
-      <p class="small">届いたメールのリンクを押すとログインします。初回はそのままアカウント作成になります。</p>
+      <button id="loginEmailBtn" style="margin-top:12px" onclick="sendLoginCode()">6桁のログインコードを送る</button>
+      <div id="otpBox" style="display:none;margin-top:16px">
+        <div class="label">メールに届いた6桁コード</div>
+        <input id="authOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="123456">
+        <button id="verifyOtpBtn" type="button" style="margin-top:12px" onclick="verifyLoginCode()">コードを確認してログイン</button>
+      </div>
+      <p class="small">メールに届いた6桁コードを、この画面へ入力します。ホーム画面アプリを追加し直す必要はありません。</p>
     </div>
     <div id="signedInBox" class="cloud-box" style="display:none">
       <div id="signedInEmail" class="small"></div>
@@ -519,21 +524,35 @@ function authErrorMessage(error){
  if(code==='over_email_send_rate_limit'||/rate limit|too many/i.test(msg))return 'メール送信回数の上限に達しました。時間を空けて再度お試しください。';
  if(code==='email_address_invalid')return 'メールアドレスの形式を確認してください。';
  if(code==='email_address_not_authorized')return '現在のメール送信設定では、この宛先へ送信できません。';
- if(code==='otp_expired')return 'ログインリンクの有効期限が切れています。新しいメールを送ってください。';
+ if(code==='otp_expired')return '6桁コードの有効期限が切れたか、コードが違います。新しいコードを送ってください。';
  return msg||'不明なエラーです。';
 }
 function startLoginCooldown(seconds=60){
  const btn=$('loginEmailBtn');if(!btn)return;clearInterval(loginCooldownTimer);let remain=seconds;btn.disabled=true;
- const draw=()=>{btn.textContent=remain>0?`再送まで ${remain}秒`:'ログイン用メールを送る';btn.disabled=remain>0};
+ const draw=()=>{btn.textContent=remain>0?`再送まで ${remain}秒`:'6桁のログインコードを送る';btn.disabled=remain>0};
  draw();loginCooldownTimer=setInterval(()=>{remain--;draw();if(remain<=0)clearInterval(loginCooldownTimer)},1000)
 }
-async function sendLoginLink(){
+async function sendLoginCode(){
  if(!cloudClient){cloudMessage('クラウドの接続設定がまだ完了していません。',false);return}
  const email=$('authEmail').value.trim();if(!email){cloudMessage('メールアドレスを入力してください。',false);return}
- cloudMessage('ログイン用メールを送信しています。');
- const redirectTo=location.origin+location.pathname;const {error}=await cloudClient.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}});
+ cloudMessage('6桁のログインコードを送信しています。');
+ const {error}=await cloudClient.auth.signInWithOtp({email});
  if(error){cloudMessage('送信できませんでした：'+authErrorMessage(error),false);return}
- startLoginCooldown(60);cloudMessage('ログインメールの送信を受け付けました。受信トレイと迷惑メールを確認してください。',true)
+ localStorage.setItem('shinDietPendingEmail',email);$('otpBox').style.display='block';$('authOtp').focus();
+ startLoginCooldown(60);cloudMessage('6桁コードを送信しました。メールを確認し、この画面へ入力してください。',true)
+}
+async function verifyLoginCode(){
+ if(!cloudClient)return;
+ const email=($('authEmail').value.trim()||localStorage.getItem('shinDietPendingEmail')||'');
+ const token=$('authOtp').value.replace(/\D/g,'');
+ if(!email){cloudMessage('先にメールアドレスを入力してください。',false);return}
+ if(token.length!==6){cloudMessage('メールに届いた6桁コードを入力してください。',false);return}
+ const btn=$('verifyOtpBtn');btn.disabled=true;btn.textContent='確認中…';
+ const {data,error}=await cloudClient.auth.verifyOtp({email,token,type:'email'});
+ if(error){btn.disabled=false;btn.textContent='コードを確認してログイン';cloudMessage('ログインできませんでした：'+authErrorMessage(error),false);return}
+ localStorage.removeItem('shinDietPendingEmail');cloudUser=data.user||data.session?.user||null;
+ if(cloudUser)activateUserStorage(cloudUser.id);renderAuthState();update();loadRecordForDate();
+ cloudMessage('ログインしました。クラウド保存を開始します。',true);if(cloudUser)await syncNow(true)
 }
 async function signOutCloud(){if(!cloudClient)return;const {error}=await cloudClient.auth.signOut();if(error)cloudMessage('ログアウトできませんでした：'+authErrorMessage(error),false)}
 async function syncNow(silent=false){
@@ -895,7 +914,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:'14.3',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:'14.4',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function mergeRecords(localRecords,backupRecords){
  const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
  backupRecords.filter(r=>r&&r.date).forEach(backup=>{
