@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v15.3 復元保護版</title>
+<title>AI Diet v16.0 分析AI基盤版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -252,7 +252,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v14.6 かんたん記録版</div>
+  <div class="version-pill">v16.0 分析AI基盤版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -278,6 +278,16 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card">
     <div class="card-title">今週の体重変化</div>
     <div id="weeklyChange" class="muted">記録が増えると表示します</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">減量分析</div>
+    <div id="trendAnalysis" class="muted">体重記録が増えると7日・30日の平均変化を表示します</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">今日やること</div>
+    <div id="todayAction" class="diary">今日の記録に合わせて、優先することを1つ表示します。</div>
   </div>
 
   <div class="card">
@@ -923,29 +933,71 @@ function update(){
  if(t){let rest=isRestDay(t),burn=s.baseBurn+effectiveExercise(t),b=t.intake?t.intake-burn:null;$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('tw').innerHTML=rest?'休養日 · 運動0分':[t.cardio?`有酸素 ${t.cardioMin||35}分`:'',t.legRaise?'足上げ腹筋':'',t.plank?'プランク':'',t.powerplate?'Power Plate':'',t.drawin?'ドローイン':'',t.strength||''].filter(Boolean).join(' · ')||'まだ記録なし';$('coach').innerHTML=coachText(t,s,last,prev);$('diary').innerHTML=diaryText(t,s,last,prev)}
  updateStatTiles(a,s,t,prev);
  updateWeeklyChange(a,s);
+ renderAnalysis(a,s,t);
  $('motivation').innerHTML=motivationText(last,s);
  motivationMessage(a,s,last,t);
  forecast(last,a,s);
  renderWeekly(a,s);renderList();drawChart();drawForecastChart();
 }
 
+function dayNumber(date){return Date.parse(date+'T00:00:00Z')/86400000}
+function weightAnalysis(a){
+ const weights=(Array.isArray(a)?a:[]).filter(r=>r&&r.date&&Number.isFinite(+r.weight)&&+r.weight>0).map(r=>({...r,weight:+r.weight,_day:dayNumber(r.date)})).filter(r=>Number.isFinite(r._day)).sort((x,y)=>x._day-y._day);
+ if(!weights.length)return {count:0,spanDays:0,readyForecast:false,delta7:null,delta30:null,pace:null,label:'記録待ち'};
+ const avg=list=>list.length?list.reduce((sum,r)=>sum+r.weight,0)/list.length:null;
+ const lastDay=weights[weights.length-1]._day,firstDay=weights[0]._day,spanDays=Math.max(0,lastDay-firstDay);
+ const recent7=weights.filter(r=>r._day>=lastDay-6);
+ const previous7=weights.filter(r=>r._day>=lastDay-13&&r._day<=lastDay-7);
+ const within30=weights.filter(r=>r._day>=lastDay-29);
+ const first30Day=within30.length?within30[0]._day:lastDay;
+ const first7of30=within30.filter(r=>r._day<=first30Day+6);
+ const delta7=recent7.length>=2&&previous7.length>=2?avg(recent7)-avg(previous7):null;
+ const delta30=spanDays>=21&&recent7.length>=2&&first7of30.length>=2?avg(recent7)-avg(first7of30):null;
+ const readyForecast=weights.length>=7&&spanDays>=13;
+ const head=weights.slice(0,Math.min(3,weights.length)),tail=weights.slice(-Math.min(3,weights.length));
+ const pace=readyForecast?(avg(head)-avg(tail))/Math.max(1,avg(tail.map(r=>({_day:r._day,weight:r._day})))-avg(head.map(r=>({_day:r._day,weight:r._day})))):null;
+ let label='データ蓄積中';
+ if(delta30!==null)label=Math.abs(delta30)<=0.3?'30日では横ばい傾向':delta30<0?'30日平均は下降傾向':'30日平均は上昇傾向';
+ else if(delta7!==null)label=delta7<0?'7日平均は下降傾向':delta7>0?'7日平均は上昇傾向':'7日平均は横ばい';
+ return {count:weights.length,spanDays,recent7Count:recent7.length,previous7Count:previous7.length,delta7,delta30,readyForecast,pace,label};
+}
+function signedKg(value){return value===null?'--':(value>0?'+':'')+value.toFixed(1)+' kg'}
+function todayActionText(t,s){
+ if(!t)return 'まず今日の体重か食事を1つ記録。入力した分だけ分析が正確になります。';
+ const status=assessmentStatus(t);
+ if(!status.complete)return status.missing[0]+'を入力すると、今日の評価と提案を確定できます。';
+ const protein=+t.protein||0,goal=+s.proteinGoal||120;
+ if(protein<goal*.75)return '最優先はたんぱく質。目標'+goal+'gに向けて、次の食事で補います。';
+ if(hasSleepInput(t)&&sleepStar(t)<=2)return '今日は回復を優先。運動を増やすより、睡眠と体調を整えます。';
+ if(isRestDay(t))return '今日は設定どおり休養。食事と水分を記録して、回復日にします。';
+ if(!hasExerciseInput(t))return '次は運動か休養を記録。実施するなら有酸素'+(s.cardioGoal||35)+'分が基準です。';
+ return '今日は大きな修正なし。今の食事・運動・睡眠の流れを続けます。';
+}
+function renderAnalysis(a,s,t){
+ const x=weightAnalysis(a);
+ const trend=$('trendAnalysis'),action=$('todayAction');
+ if(!x.count)trend.textContent='体重を記録すると分析を開始します。';
+ else trend.innerHTML=`<div class="miniReport"><div><span class="small">7日平均の変化</span><br><b>${signedKg(x.delta7)}</b></div><div><span class="small">30日平均の変化</span><br><b>${signedKg(x.delta30)}</b></div></div><p class="muted"><b>${x.label}</b><br>${x.readyForecast?'予測に必要な記録量を満たしています。':`予測まであと ${Math.max(0,7-x.count)} 回・${Math.max(0,13-x.spanDays)} 日分が目安です。`} 日々の増減ではなく平均同士で比較します。</p>`;
+ action.textContent=todayActionText(t,s);
+}
 function forecast(last,a,s){
  if(!last){$('forecast').textContent='記録が増えると予測します';return}
- let first=a.find(r=>r.weight)||last;let days=Math.max(1,(new Date(last.date)-new Date(first.date))/86400000);let pace=(first.weight-last.weight)/days;
- if(pace>0){let targets=[];for(let t=Math.floor((last.weight-1)/5)*5;t>s.goalWeight;t-=5)targets.push(t);targets.push(s.goalWeight);let paceRank=pace>.25?'速すぎ注意':pace>.12?'良いペース':pace>.05?'ゆっくり安定':'かなり緩やか';$('forecast').innerHTML=`<p class="muted">現在ペース：約 ${pace.toFixed(2)} kg/日<br>ペース評価：<b>${paceRank}</b></p>`+targets.slice(0,4).map(t=>`<div class="forecastRow"><b>${t} kg</b><span>約 ${Math.max(1,Math.round((last.weight-t)/pace))} 日後</span></div>`).join('')+'<p class="small">※初期は水分も落ちるため、実際は少しゆっくり見てOK。</p>'}else{$('forecast').textContent='減量ペースが計算できません。記録を続けてください。'}
+ const x=weightAnalysis(a);
+ if(!x.readyForecast){$('forecast').innerHTML=`予測はまだ表示しません。<br><span class="small">最低7回・13日以上の体重記録がそろうと、短期変動をならして計算します。</span>`;return}
+ const pace=x.pace;
+ if(pace>0){let targets=[];for(let t=Math.floor((last.weight-1)/5)*5;t>s.goalWeight;t-=5)targets.push(t);targets.push(s.goalWeight);let weekly=pace*7,paceRank=weekly>1?'変化が速いため経過確認':weekly>=.25?'下降傾向':'ゆるやかな下降傾向';$('forecast').innerHTML=`<p class="muted">平均ペース：約 ${weekly.toFixed(2)} kg/週<br>傾向：<b>${paceRank}</b></p>`+targets.slice(0,4).map(t=>`<div class="forecastRow"><b>${t} kg</b><span>約 ${Math.max(1,Math.round((last.weight-t)/pace))} 日後</span></div>`).join('')+'<p class="small">※過去の平均からの参考値です。体調や短期の水分変動で変わります。</p>'}else{$('forecast').textContent='現在は下降ペースを算出できません。平均の変化を見ながら記録を続けてください。'}
 }
 
 function drawForecastChart(){
  const c=$('forecastChart');if(!c)return;
  const ctx=c.getContext('2d'),a=recs().filter(r=>r.weight),s=sets();
  ctx.clearRect(0,0,c.width,c.height);
- if(a.length<2){
+ const analysis=weightAnalysis(a);
+ if(!analysis.readyForecast){
    ctx.fillStyle='#8E8E93';ctx.font='14px -apple-system,sans-serif';ctx.textAlign='center';
-   ctx.fillText('2日以上の記録で予測グラフ表示',c.width/2,c.height/2);return;
+   ctx.fillText('7回・13日以上の記録で予測表示',c.width/2,c.height/2);return;
  }
- const last=a[a.length-1],first=a.find(r=>r.weight)||last;
- const days=Math.max(1,(new Date(last.date)-new Date(first.date))/86400000);
- const pace=(first.weight-last.weight)/days;
+ const last=a[a.length-1],pace=analysis.pace;
  const p=36,w=c.width-p*2,h=c.height-p*2;
  const hist=a.slice(-14);
  const step=Math.max(1,Math.floor((pace>0?Math.min(60,Math.round((last.weight-s.goalWeight)/pace)):30)/8));
