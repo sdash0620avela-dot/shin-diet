@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v15.0 記録管理版</title>
+<title>AI Diet v15.1 同期保護版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -488,8 +488,17 @@ const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn
 let activeStorageId='legacy';
 const storageKey=(kind,id=activeStorageId)=>id==='legacy'?`shinDiet${kind}`:`shinDiet:${id}:${kind.toLowerCase()}`;
 function readJson(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v??fallback}catch(e){return fallback}}
-function recs(){const v=readJson(storageKey('Records'),[]);return Array.isArray(v)?v:[]}
-function setRecs(x){localStorage.setItem(storageKey('Records'),JSON.stringify(x));scheduleCloudSync()}
+function recs(){const v=readJson(storageKey('Records'),[]);return Array.isArray(v)?v.filter(r=>r&&!r._deleted):[]}
+function deletedRecords(){const v=readJson(storageKey('DeletedRecords'),[]);return Array.isArray(v)?v.filter(r=>r&&r._deleted&&r.date):[]}
+function setDeletedRecords(x){localStorage.setItem(storageKey('DeletedRecords'),JSON.stringify(x))}
+function removeDeletedRecord(date){setDeletedRecords(deletedRecords().filter(r=>r.date!==date))}
+function setRecs(x){localStorage.setItem(storageKey('Records'),JSON.stringify(x.filter(r=>r&&!r._deleted)));scheduleCloudSync()}
+function stateTime(r){const t=Date.parse(r&&r.updatedAt||r&&r.deletedAt||'');return Number.isFinite(t)?t:0}
+function mergeSyncStates(...groups){
+ const map=new Map();
+ groups.flat().filter(r=>r&&r.date).forEach(r=>{const old=map.get(r.date);if(!old||stateTime(r)>stateTime(old)||(stateTime(r)===stateTime(old)&&r._deleted&&!old._deleted))map.set(r.date,r)});
+ return [...map.values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
 function sets(){
  try{
   const raw=localStorage.getItem(storageKey('Settings')),legacy=activeStorageId==='legacy'&&(!!raw||recs().length>0),parsed=raw?JSON.parse(raw):{};
@@ -594,11 +603,13 @@ async function syncNow(silent=false,retryCount=0){
   const localSettingsTime=Date.parse(localSettings.updatedAt||''),cloudSettingsTime=Date.parse(cloudSettings&&cloudSettings.updatedAt||profileResult.data&&profileResult.data.updated_at||'');
   const mergedSettings=cloudSettings&&Number.isFinite(cloudSettingsTime)&&(!Number.isFinite(localSettingsTime)||cloudSettingsTime>localSettingsTime)?{...localSettings,...cloudSettings}:localSettings;
   localStorage.setItem(storageKey('Settings'),JSON.stringify(mergedSettings));
-  const cloudRecords=(recordsResult.data||[]).map(row=>({...row.record,date:row.record_date,updatedAt:row.record&&row.record.updatedAt||row.updated_at}));
+  const cloudStates=(recordsResult.data||[]).map(row=>({...row.record,date:row.record_date,updatedAt:row.record&&row.record.updatedAt||row.updated_at}));
   const localRecords=recs().map(r=>r.updatedAt?r:{...r,updatedAt:new Date().toISOString()});
-  const merged=mergeRecords(localRecords,cloudRecords);localStorage.setItem(storageKey('Records'),JSON.stringify(merged));
+  const mergedStates=mergeSyncStates(localRecords,deletedRecords(),cloudStates);
+  const merged=mergedStates.filter(r=>!r._deleted),deleted=mergedStates.filter(r=>r._deleted);
+  localStorage.setItem(storageKey('Records'),JSON.stringify(merged));setDeletedRecords(deleted);
   const profileUpsert=await cloudClient.from('diet_profiles').upsert({user_id:uid,settings:mergedSettings,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(profileUpsert.error)throw profileUpsert.error;
-  if(merged.length){const rows=merged.map(r=>({user_id:uid,record_date:r.date,record:r,updated_at:r.updatedAt||new Date().toISOString()}));const recordsUpsert=await cloudClient.from('diet_records').upsert(rows,{onConflict:'user_id,record_date'});if(recordsUpsert.error)throw recordsUpsert.error}
+  if(mergedStates.length){const rows=mergedStates.map(r=>({user_id:uid,record_date:r.date,record:r,updated_at:r.updatedAt||r.deletedAt||new Date().toISOString()}));const recordsUpsert=await cloudClient.from('diet_records').upsert(rows,{onConflict:'user_id,record_date'});if(recordsUpsert.error)throw recordsUpsert.error}
   lastSyncEpoch=Date.now();localStorage.setItem(storageKey('LastSync'),String(lastSyncEpoch));lastSyncAt=new Date(lastSyncEpoch).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});update();loadRecordForDate();renderAuthState();cloudMessage(`クラウド保存済み（${merged.length}日分｜${lastSyncAt}）`)
  }catch(e){
   const message=String(e&&e.message||'');
@@ -869,7 +880,7 @@ function saveRecord(){
   if(!$('date').value)throw new Error('日付を入力してください。');
   const r=collectRecord(),all=recs(),existing=all.find(x=>x.date===r.date);
   if(!confirmRecordSave(r,existing))return;
-  const a=all.filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));setRecs(a);removeDraft(r.date);update();
+  const a=all.filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));removeDeletedRecord(r.date);setRecs(a);removeDraft(r.date);update();
   $('editState').textContent=`${r.date}の記録を保存済みです。再び保存すると上書きします。`;$('editState').className='edit-state on';
   setStatus(existing?'この日の記録を上書きしました ✓':'この日の記録を保存しました ✓',true);
   $('recordSaveBtn').textContent='保存済み ✓';setTimeout(()=>{$('recordSaveBtn').textContent='この日の記録を上書き'},1800)
@@ -972,11 +983,12 @@ function editRecord(date){$('date').value=date;const tab=[...document.querySelec
 async function deleteRecord(date){
  if(!confirm(`${date}の記録を削除しますか？\nこの操作は元に戻せません。`))return;
  try{
+  const deletedAt=new Date().toISOString(),tombstone={date,_deleted:true,deletedAt,updatedAt:deletedAt};
   if(cloudClient&&cloudUser){
-   const {error}=await cloudClient.from('diet_records').delete().eq('user_id',cloudUser.id).eq('record_date',date);
+   const {error}=await cloudClient.from('diet_records').upsert({user_id:cloudUser.id,record_date:date,record:tombstone,updated_at:deletedAt},{onConflict:'user_id,record_date'});
    if(error)throw error;
   }
-  clearTimeout(draftTimer);removeDraft(date);setRecs(recs().filter(r=>r.date!==date));
+  clearTimeout(draftTimer);removeDraft(date);setDeletedRecords(mergeSyncStates(deletedRecords(),[tombstone]).filter(r=>r._deleted));setRecs(recs().filter(r=>r.date!==date));
   if($('date').value===date)loadRecordForDate();else update();
   alert(`${date}の記録を削除しました`);
  }catch(e){alert('削除できなかったため、記録は残しています：'+(e.message||'不明なエラー'))}
@@ -999,7 +1011,7 @@ function drawChart(){
  ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
 }
 
-function exportData(){let payload={version:'15.0',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportData(){let payload={version:'15.1',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),settings:sets()},b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function mergeRecords(localRecords,backupRecords){
  const merged=new Map(localRecords.filter(r=>r&&r.date).map(r=>[r.date,r]));
  backupRecords.filter(r=>r&&r.date).forEach(backup=>{
@@ -1012,9 +1024,10 @@ function mergeRecords(localRecords,backupRecords){
 }
 function importData(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result),records=Array.isArray(data)?data:data.records;if(!Array.isArray(records))throw new Error('記録データが見つかりません');const current=recs(),merged=mergeRecords(current,records),added=merged.length-current.length;if(!confirm(`${records.length}日分のバックアップを現在の記録へ統合しますか？\n同じ日付は新しい記録を優先し、現在の最新データを守ります。`))return;setRecs(merged);if(data.settings&&!localStorage.getItem(storageKey('Settings')))localStorage.setItem(storageKey('Settings'),JSON.stringify(data.settings));update();loadRecordForDate();alert(`復元しました（新しく追加：${added}日分／合計：${merged.length}日分）`)}catch(e){alert('復元できませんでした：'+e.message)}finally{event.target.value=''}};reader.readAsText(file)}
 async function resetAll(){
- if(!confirm('すべての記録を削除しますか？ログイン中はクラウド上の記録も削除します。この操作は元に戻せません。'))return;
- if(cloudClient&&cloudUser){const {error}=await cloudClient.from('diet_records').delete().eq('user_id',cloudUser.id);if(error)return alert('クラウドの記録を削除できなかったため中止しました：'+error.message)}
- localStorage.removeItem(storageKey('Records'));update();alert('現在の利用者の記録をすべて削除しました')
+ if(!confirm('すべての記録を削除しますか？ログイン中はクラウド上の記録にも削除済み情報を保存します。この操作は元に戻せません。'))return;
+ const now=new Date().toISOString(),tombstones=recs().map(r=>({date:r.date,_deleted:true,deletedAt:now,updatedAt:now}));
+ if(cloudClient&&cloudUser&&tombstones.length){const rows=tombstones.map(r=>({user_id:cloudUser.id,record_date:r.date,record:r,updated_at:now}));const {error}=await cloudClient.from('diet_records').upsert(rows,{onConflict:'user_id,record_date'});if(error)return alert('クラウドへ削除情報を保存できなかったため中止しました：'+error.message)}
+ setDeletedRecords(mergeSyncStates(deletedRecords(),tombstones).filter(r=>r._deleted));localStorage.removeItem(storageKey('Records'));update();loadRecordForDate();alert('現在の利用者の記録をすべて削除しました')
 }
 window.addEventListener('online',()=>{if(cloudUser)syncNow(true)});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&cloudUser&&Date.now()-lastSyncEpoch>300000)syncNow(true)});
