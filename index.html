@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v17.4 採点案内強化版</title>
+<title>AI Diet v17.5 収支安全判定版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v17.4 採点案内強化版</div>
+  <div class="version-pill">v17.5 収支安全判定版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -859,8 +859,11 @@ function scoreBreakdown(r,s){
   return {score:Math.max(0,Math.min(100,Math.round(items.reduce((sum,x)=>sum+x.points,0)))),items,proteinGoal};
 }
 function scoreRecord(r,s){return scoreBreakdown(r,s).score}
+function estimatedBalance(r,s){return hasValue(r.intake)?Math.round((+r.intake)-(+s.baseBurn||0)-effectiveExercise(r)):null}
+function largeDeficitWarning(r,s){const balance=estimatedBalance(r,s);return balance!==null&&balance<=-1000?`概算収支${balance}kcalは赤字が大きすぎる可能性があります。運動消費と1日消費の設定を確認し、これ以上の運動追加や食事削減はしません。`:''}
 function scoreImprovementLines(r,s){
   const base=scoreRecord(r,s),goal=+s.proteinGoal||120,protein=+r.protein||0,lines=[];
+  const balanceWarning=largeDeficitWarning(r,s);if(balanceWarning)lines.push(balanceWarning+' ※概算値のため確定判断ではありません。');
   const add=(label,next)=>{const gain=scoreRecord({...r,...next},s)-base;if(gain>0)lines.push(`${label} → ${base+gain}点（+${gain}点）`)};
   if(protein<goal){const mid=Math.ceil(goal*.85);if(protein<mid)add(`たんぱく質をあと${Math.max(0,mid-protein)}g、合計${mid}gまで補う`,{protein:mid});if(protein<goal)add(`たんぱく質をあと${Math.max(0,goal-protein)}g、目標${goal}gまで補う`,{protein:goal})}
   if(hasValue(r.waterL)&&+r.waterL<2)add('水分を合計2.0Lまで整える',{waterL:2});
@@ -900,7 +903,8 @@ function sleepStar(r){return r.sleep==='★★★★★'?5:r.sleep==='★★★�
 function coachText(r,s,last,prev){
   if(!r)return '<p class="muted">記録するとAIコーチが100点満点で評価します。今日の食事・運動・睡眠を入力して保存してください。</p>';
   const rest=isRestDay(r), status=assessmentStatus(r), score=scoreRecord(r,s), intake=+r.intake||0, protein=+r.protein||0, burn=s.baseBurn+effectiveExercise(r), bal=hasValue(r.intake)?intake-burn:null;
-  let lead=!status.complete?`${status.missing.join('・')}が未入力のため、評価は暫定です。`:rest?'今日は計画どおりの休養日。運動0分で問題ありません。':score>=90?'今日はかなり理想的です。筋肉を残しながら脂肪を落としやすい一日。':score>=80?'今日はかなり良い流れです。あと少し整えれば90点台が狙えます。':score>=70?'今日は合格ラインです。継続としては十分価値があります。':score>=60?'今日は修正ポイントあり。でも崩れてはいません。':'今日は回復と食事の立て直しを優先したい日です。';
+  const balanceWarning=largeDeficitWarning(r,s);
+  let lead=!status.complete?`${status.missing.join('・')}が未入力のため、評価は暫定です。`:balanceWarning?'運動量は十分ですが、概算収支の赤字が大きいため安全確認を優先します。':rest?'今日は計画どおりの休養日。運動0分で問題ありません。':score>=90?'今日はかなり理想的です。筋肉を残しながら脂肪を落としやすい一日。':score>=80?'今日はかなり良い流れです。あと少し整えれば90点台が狙えます。':score>=70?'今日は合格ラインです。継続としては十分価値があります。':score>=60?'今日は修正ポイントあり。でも崩れてはいません。':'今日は回復と食事の立て直しを優先したい日です。';
   const proteinGoal=+s.proteinGoal||120,name=s.displayName||'あなた',safeName=esc(name);
   let food=protein>=proteinGoal?'たんぱく質は目標を達成。筋肉量維持にかなり向いています。':protein>=proteinGoal*.75?`たんぱく質は悪くないです。目標${proteinGoal}gまで、もう一品足すと強いです。`:protein>0?`たんぱく質が少なめ。まず目標${proteinGoal}gを意識しましょう。`:`たんぱく質が未入力。${safeName}さんの基準は${proteinGoal}gです。`;
   let balance=bal===null?'摂取カロリー未入力なので収支は未判定。':bal< -900?'収支はかなり大きなマイナス。落ちますが、疲労と筋肉量低下には注意。':bal<0?'収支はマイナスで減量向きです。':bal<300?'ほぼ維持ライン。夜の脂質を控えれば減量側に寄せられます。':'収支はプラス気味。外食や脂質の量を少しだけ調整。';
@@ -1133,6 +1137,7 @@ function todayActionText(t,s){
  if(!t)return 'まず今日の体重か食事を1つ記録。入力した分だけ分析が正確になります。';
  const status=assessmentStatus(t);
  if(!status.complete)return status.missing[0]+'を入力すると、今日の評価と提案を確定できます。';
+ const balanceWarning=largeDeficitWarning(t,s);if(balanceWarning)return '最優先：'+balanceWarning;
  const protein=+t.protein||0,goal=+s.proteinGoal||120,improvements=scoreImprovementLines(t,s);
  if(protein<goal)return '最優先：'+improvements[0];
  if(hasSleepInput(t)&&sleepStar(t)<=2)return '今日は回復を優先。運動を増やすより、睡眠と体調を整えます。';
@@ -1177,6 +1182,7 @@ function reportConclusion(r,prev,s,mode){
  }
  const status=assessmentStatus(r);
  if(!status.complete)return status.missing.join('・')+'が未入力のため、1日評価は暫定です。';
+ if(largeDeficitWarning(r,s))return '運動は十分です。ただし概算収支の赤字が大きいため、追加で追い込まず入力値と回復を確認します。';
  const score=scoreRecord(r,s);
  return score>=90?'かなり良い一日です。今の流れを崩さず継続します。':score>=75?'良い一日です。未達項目を1つだけ整えるとさらに安定します。':score>=60?'記録はできています。明日は食事・運動・睡眠のうち最優先を1つ修正します。':'今日は回復と食事の立て直しを優先します。';
 }
@@ -1203,7 +1209,8 @@ function buildDailySummary(r,prev,s,mode){
  const cautions=[
   hasValue(r.weight)&&prev&&hasValue(prev.weight)?'体重の単日変化は、水分・食事量なども含むため脂肪の増減とは断定しません。':'体重は同じ条件で記録し、数日から1週間の平均で確認します。',
   hasValue(r.muscle)&&prev&&hasValue(prev.muscle)?`${muscleMeta(r).label}の単日変化は、体水分などの測定変動を含むため筋肉の増減とは断定しません。`:'',
-  hasValue(r.visceralFat)&&prev&&hasValue(prev.visceralFat)?'内臓脂肪レベルも単日の表示値だけで判断せず、継続して確認します。':''
+  hasValue(r.visceralFat)&&prev&&hasValue(prev.visceralFat)?'内臓脂肪レベルも単日の表示値だけで判断せず、継続して確認します。':'',
+  mode==='daily'&&largeDeficitWarning(r,s)?largeDeficitWarning(r,s)+' 運動消費は概算のため、まず入力値を確認します。':''
  ].filter(Boolean);
  const mealSection=mode==='daily'?[`摂取：${numberText(r.intake,0,'kcal')}`,`P：${numberText(r.protein,0,'g')}｜F：${numberText(r.fatG,0,'g')}｜C：${numberText(r.carbsG,0,'g')}`,`水分：${numberText(r.waterL,1,'L')}`,`概算収支：${hasValue(r.intake)?Math.round((+r.intake)-(+s.baseBurn||0)-exCalories)+'kcal':'未判定'}`].join('\n'):'';
  const missing=mode==='daily'?assessmentStatus(r).missing:[];
