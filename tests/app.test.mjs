@@ -212,6 +212,23 @@ test('v18.3 preserves calorie sources in the saved daily summary', () => {
   assert.doesNotMatch(html,/運動消費 約\$\{Math\.round\(exCalories\)\}kcal【推定】/);
 });
 
+test('v18.4 blocks contradictory or incomplete exercise input before saving', () => {
+  assert.match(html,/function exerciseInputErrors\(\)/);
+  assert.match(html,/休養日と運動内容は同時に保存できません/);
+  assert.match(html,/有酸素を行った場合は、有酸素の分数を入力してください/);
+  assert.match(html,/有酸素の内容があります。有酸素へチェックを入れるか/);
+  assert.match(html,/筋トレ内容がある場合は、筋トレ時間を入力してください/);
+  assert.match(html,/const exerciseErrors=exerciseInputErrors\(\);if\(exerciseErrors\.length\)/);
+});
+
+test('v18.4 does not mistake workout notes containing rest-day words for a rest day', () => {
+  const api=new Function(extractFunction(html,'isRestDay')+'\nreturn { isRestDay };')();
+  assert.equal(api.isRestDay({restDay:false,strength:'休養日'}),true);
+  assert.equal(api.isRestDay({restDay:false,strength:'休養日明けの胸トレ'}),false);
+  assert.equal(api.isRestDay({restDay:false,strength:'今日は休養日（運動0分）'}),true);
+  assert.equal(api.isRestDay({restDay:true,strength:'胸トレ'}),true);
+});
+
 test('each signed-in user has a separate local storage namespace', () => {
   assert.match(html, /shinDiet:\${id}:\${kind\.toLowerCase\(\)}/);
   assert.match(html, /activateUserStorage\(nextUser\.id\)/);
