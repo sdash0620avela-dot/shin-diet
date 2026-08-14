@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v18.2 旧記録コピー対応版</title>
+<title>AI Diet v18.3 運動消費内訳版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v18.2 旧記録コピー対応版</div>
+  <div class="version-pill">v18.3 運動消費内訳版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -1241,6 +1241,13 @@ function exerciseItems(r){
  const cardioName=cardioLabels[r.cardioType]||'有酸素',intensity=cardioIntensityLabels[r.cardioIntensity],detail=String(r.cardioDetails||'').trim();
  return [r.cardio?`${cardioName} ${r.cardioMin||35}分${intensity?'・'+intensity:''}${detail?'（'+detail+'）':''}${hasValue(r.cardioCalories)?`・約${Math.round(+r.cardioCalories)}kcal${r.cardioCalorieSource==='machine'?'【機器表示】':'【推定】'}`:''}`:'',hasValue(r.strengthCalories)?`筋トレのみ 約${Math.round(+r.strengthCalories)}kcal${r.strengthCalorieSource==='manual'?'【手入力】':'【推定】'}`:'',r.legRaise?'足上げ腹筋':'',r.plank?'プランク':'',r.powerplate?'Power Plate 4セット':'',r.drawin?'ドローイン':'',String(r.strength||'').trim()].filter(Boolean);
 }
+function savedExerciseBreakdown(r){
+ const cardio=Math.max(0,Math.round(+r.cardioCalories||0)),strength=Math.max(0,Math.round(+r.strengthCalories||0)),accessory=Math.max(0,Math.round(+r.accessoryCalories||0));
+ const cardioSource=r.cardioCalorieSource==='machine'?'機器表示':r.cardioCalorieSource==='met'?'推定':'',strengthSource=r.strengthCalorieSource==='manual'?'手入力':r.strengthCalorieSource==='met'?'推定':'';
+ const parts=[];if(cardio>0)parts.push(`有酸素 ${cardio}kcal${cardioSource?'【'+cardioSource+'】':''}`);if(strength>0)parts.push(`筋トレ ${strength}kcal${strengthSource?'【'+strengthSource+'】':''}`);if(accessory>0)parts.push(`補助運動 ${accessory}kcal【目安】`);
+ const manual=r.cardioCalorieSource==='machine'||r.strengthCalorieSource==='manual',estimated=r.cardioCalorieSource==='met'||r.strengthCalorieSource==='met'||accessory>0;
+ return {parts,total:effectiveExercise(r),label:manual&&estimated?'一部実測・手入力＋推定':manual?'実測・手入力':'推定'};
+}
 function morningReportScore(r){
  let score=0;
  if(hasValue(r.weight))score+=20;
@@ -1280,7 +1287,7 @@ function comparisonLines(r,prev){
 function buildDailySummary(r,prev,s,mode){
  if(!r)return '記録を保存すると自動生成します。';
  const dateLabel=String(r.date||'').replaceAll('-','/'),startLoss=hasValue(r.weight)&&hasValue(s.startWeight)?(+r.weight)-(+s.startWeight):null,goalRemain=hasValue(r.weight)&&hasValue(s.goalWeight)?(+r.weight)-(+s.goalWeight):null,nextMilestone=hasValue(r.weight)?Math.floor(((+r.weight)-.01)/5)*5:null,milestoneRemain=nextMilestone!==null?(+r.weight)-nextMilestone:null;
- const exItems=exerciseItems(r),exCalories=effectiveExercise(r),score=mode==='morning'?morningReportScore(r):scoreRecord(r,s),status=mode==='morning'?'朝コンディション評価':assessmentStatus(r).complete?'1日実行評価・確定':'1日実行評価・暫定';
+ const exItems=exerciseItems(r),savedExercise=savedExerciseBreakdown(r),exCalories=savedExercise.total,score=mode==='morning'?morningReportScore(r):scoreRecord(r,s),status=mode==='morning'?'朝コンディション評価':assessmentStatus(r).complete?'1日実行評価・確定':'1日実行評価・暫定';
  const breakdown=mode==='daily'?scoreBreakdown(r,s):null,scoreDetails=breakdown?breakdown.items.map(x=>`・${x.label}：${x.points}/${x.max}点${x.notEntered?'（未入力・減点なし）':''}`).join('\n'):'朝評価は、体組成・睡眠・朝の運動記録を対象にした別採点です。';
  const potential=mode==='daily'?scorePotential(r,s):null,scoreOutlook=potential?(largeDeficitWarning(r,s)?`安全確認を優先するため、今日は${potential.current}点のままで十分です。`:`現在${potential.current}点｜今日まだ整えられる項目で最大${potential.todayMax}点${potential.nextTimeMax>potential.todayMax?`｜次回、睡眠★★★★★なら最大${potential.nextTimeMax}点`:''}`):'';
  const morningComparison=mode==='daily'&&hasValue(r.weight)?`朝コンディション評価：${morningReportScore(r)}点\n1日実行評価：${score}点\n※この2つは採点対象が異なり、差し引き比較はしません。`:'';
@@ -1305,7 +1312,7 @@ ${facts}
 
 今日の運動
 ${exItems.length?exItems.map(x=>'・'+x).join('\n'):'・運動・休養は未入力'}
-${exCalories>0?`・運動消費 約${Math.round(exCalories)}kcal【推定】`:''}
+${exCalories>0?`・消費内訳：${savedExercise.parts.join('＋')}\n・運動消費合計 約${Math.round(exCalories)}kcal【${savedExercise.label}】`:''}
 ${mealSection?'\n食事・収支\n'+mealSection:''}
 
 専門家視点で厳しく見るところ
