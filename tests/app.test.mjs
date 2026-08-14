@@ -44,6 +44,11 @@ const coachApi = new Function(
   '\nreturn { animeCoachState };'
 )();
 
+const compositionApi = new Function(
+  ['avgOf','dayNumber','muscleTypeOf','muscleMeta','bodyCompositionAnalysis'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { bodyCompositionAnalysis };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -213,4 +218,15 @@ test('v16.2 anime coach has four deterministic states', () => {
   assert.equal(coachApi.animeCoachState(ideal, settings), 'achievement');
   assert.equal(coachApi.animeCoachState({...ideal, protein:90}, settings), 'good');
   assert.match(html, /renderAnimeCoach\(t,s\)/);
+});
+
+test('v16.3 detects plateau, short change and muscle maintenance without asserting fat change', () => {
+  const records=Array.from({length:8},(_,i)=>({date:'2026-08-'+String(i+1).padStart(2,'0'),weight:110+(i%2?.1:0),muscle:47+(i%2?.1:0),muscleType:'skeletalMuscleMass'}));
+  const stable=compositionApi.bodyCompositionAnalysis(records,records.at(-1));
+  assert.equal(stable.plateau,'possible');
+  assert.equal(stable.muscle,'maintained');
+  const jump=compositionApi.bodyCompositionAnalysis([...records,{date:'2026-08-09',weight:111.2,muscle:47,muscleType:'skeletalMuscleMass'}]);
+  assert.equal(jump.shortChange,'possible');
+  assert.match(html,/脂肪増減とは断定しません/);
+  assert.match(html,/renderCompositionAnalysis\(a,t\)/);
 });
