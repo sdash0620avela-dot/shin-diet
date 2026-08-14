@@ -20,9 +20,9 @@ function extractFunction(source, name) {
 
 const scoreApi = new Function(
   [
-    'sleepScore', 'hasValue', 'hasSleepInput', 'sleepStar', 'isRestDay', 'effectiveExercise', 'scoreBreakdown', 'scoreRecord', 'estimatedBalance', 'largeDeficitWarning', 'scoreImprovementLines'
+    'sleepScore', 'hasValue', 'hasSleepInput', 'sleepStar', 'isRestDay', 'effectiveExercise', 'scoreBreakdown', 'scoreRecord', 'estimatedDailyBurn', 'estimatedBalance', 'largeDeficitWarning', 'scoreImprovementLines'
   ].map(name => extractFunction(html, name)).join('\n') +
-  '\nreturn { sleepScore, scoreRecord, scoreBreakdown, estimatedBalance, largeDeficitWarning, scoreImprovementLines };'
+  '\nreturn { sleepScore, scoreRecord, scoreBreakdown, estimatedDailyBurn, estimatedBalance, largeDeficitWarning, scoreImprovementLines };'
 )();
 
 const syncApi = new Function(
@@ -130,8 +130,20 @@ test('v17.6 does not subtract exercise twice from an activity-adjusted daily bur
   const record={intake:2100,exerciseTotal:1135};
   assert.equal(scoreApi.estimatedBalance(record,{baseBurn:2800}),-700);
   assert.equal(scoreApi.largeDeficitWarning(record,{baseBurn:2800}),'');
-  assert.match(html,/推定1日消費には普段の活動・運動を含むため、当日の運動消費は重ねて引きません/);
+  assert.match(html,/推定1日消費.*普段の活動・運動を含む/);
+  assert.match(html,/当日の運動消費は重ねて引きません/);
   assert.doesNotMatch(html,/\(\+r\.intake\)-\(\+s\.baseBurn\|\|0\)-exCalories/);
+});
+
+test('v17.7 recalculates daily burn from the record weight when auto mode is on', () => {
+  const record={weight:113.8,intake:2100,exerciseTotal:1135};
+  const settings={baseBurn:2800,autoBurn:true,age:47,heightCm:181,activityLevel:1.375,sex:'male'};
+  assert.equal(scoreApi.estimatedDailyBurn(record,settings),2804);
+  assert.equal(scoreApi.estimatedBalance(record,settings),-704);
+  assert.equal(scoreApi.estimatedDailyBurn(record,{...settings,autoBurn:false}),2800);
+  assert.equal(scoreApi.estimatedBalance(record,{...settings,autoBurn:false}),-700);
+  assert.match(html,/id="autoBurn"/);
+  assert.match(html,/記録体重から自動計算/);
 });
 
 test('each signed-in user has a separate local storage namespace', () => {
