@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v17.9 有酸素解析版</title>
+<title>AI Diet v18.0 運動内訳確定版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v17.9 有酸素解析版</div>
+  <div class="version-pill">v18.0 運動内訳確定版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -436,6 +436,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <div><div class="label">有酸素の種類</div><select id="cardioType"><option value="bike">バイク</option><option value="walk">ウォーキング</option><option value="treadmill">トレッドミル</option><option value="elliptical">クロストレーナー</option><option value="stairs">階段・ステッパー</option><option value="rowing">ローイング</option><option value="other">その他</option></select></div>
       <div><div class="label">強度</div><select id="cardioIntensity"><option value="light">軽め</option><option value="moderate" selected>普通</option><option value="hard">強め</option></select></div>
       <div><div class="label">有酸素の分数</div><input id="cardioMin" type="number" inputmode="numeric" placeholder="40"></div>
+      <div><div class="label">機器表示 kcal（任意）</div><input id="cardioManualCalories" type="number" inputmode="numeric" placeholder="未入力なら自動推定"></div>
       <div><div class="label">筋トレのみの消費 kcal</div><input id="exerciseCal" type="number" inputmode="numeric" placeholder="400"></div>
       <div><div class="label">筋トレ時間 分</div><input id="workoutMinutes" type="number" inputmode="numeric" placeholder="60"></div>
     </div>
@@ -725,7 +726,7 @@ async function refreshServerClock(){
  }catch(e){}
 }
 function coachContext(records,settings){
- const allowed=['date','weight','fat','fatType','muscle','muscleType','visceralFat','sleep','hunger','fatigue','condition','breakfast','breakfastSource','lunch','lunchSource','dinner','dinnerSource','snack','snackSource','intake','protein','fatG','carbsG','waterL','restDay','cardio','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioCalories','strengthCalories','accessoryCalories','exerciseTotal','workoutMinutes','strength','legRaise','plank','powerplate','drawin'];
+ const allowed=['date','weight','fat','fatType','muscle','muscleType','visceralFat','sleep','hunger','fatigue','condition','breakfast','breakfastSource','lunch','lunchSource','dinner','dinnerSource','snack','snackSource','intake','protein','fatG','carbsG','waterL','restDay','cardio','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioManualCalories','cardioCalories','cardioCalorieSource','strengthCalories','accessoryCalories','exerciseTotal','workoutMinutes','strength','legRaise','plank','powerplate','drawin'];
  const list=(Array.isArray(records)?records:[]).filter(r=>r&&r.date).slice().sort((a,b)=>a.date.localeCompare(b.date)).slice(-14).map(r=>Object.fromEntries(allowed.filter(key=>r[key]!==undefined&&r[key]!=='').map(key=>[key,typeof r[key]==='string'?r[key].slice(0,200):r[key]])));
  const settingKeys=['displayName','startWeight','goalWeight','proteinGoal','calorieGoal','cardioGoal'];
  return {settings:Object.fromEntries(settingKeys.filter(key=>settings&&settings[key]!==undefined).map(key=>[key,settings[key]])),records:list};
@@ -752,7 +753,7 @@ function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REA
 const mealTypes=[['breakfast','朝食'],['lunch','昼食'],['dinner','夕食'],['snack','間食']];
 const mealSuffixes=['Source','Kcal','Protein','Fat','Carbs'];
 function mealFieldIds(){return mealTypes.flatMap(([id])=>[id,...mealSuffixes.map(s=>id+s)])}
-function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','visceralFat','bmi','basalMetabolism','totalEnergy','waistCm','chestCm','hipCm','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioType','cardioIntensity','cardioDetails','cardioMin','exerciseCal','workoutMinutes','strength']}
+function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','visceralFat','bmi','basalMetabolism','totalEnergy','waistCm','chestCm','hipCm','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioManualCalories','exerciseCal','workoutMinutes','strength']}
 function checkIds(){return ['cardio','legRaise','plank','powerplate','drawin']}
 function fatTypeOf(r){return r&&r.fatType==='fatMass'?'fatMass':'fatPercent'}
 function muscleTypeOf(r){return r&&r.muscleType==='skeletalMuscleMass'?'skeletalMuscleMass':'muscleMass'}
@@ -781,7 +782,7 @@ function loadRecordForDate(){
   setStatus(draft?'前回の入力途中データを復元しました':editing?'保存済みの記録を読み込みました':'新しい日の記録です',true);
 }
 $('date').addEventListener('change',loadRecordForDate);
-const exerciseEstimateIds=new Set(['weight','cardio','cardioType','cardioIntensity','cardioMin','exerciseCal','legRaise','plank','powerplate','drawin','restDay']);
+const exerciseEstimateIds=new Set(['weight','cardio','cardioType','cardioIntensity','cardioMin','cardioManualCalories','exerciseCal','legRaise','plank','powerplate','drawin','restDay']);
 $('record').addEventListener('input',e=>{if(e.target.id!=='date'&&e.target.type!=='file')scheduleDraftSave();if(exerciseEstimateIds.has(e.target.id))renderExerciseEstimate()});
 $('record').addEventListener('change',e=>{if(e.target.id!=='date'&&e.target.type!=='file')scheduleDraftSave();if(exerciseEstimateIds.has(e.target.id))renderExerciseEstimate()});
 
@@ -808,7 +809,7 @@ function copyPreviousMeal(id,label){const current=$('date').value,previous=recs(
 function copyPreviousCardio(){
  const current=$('date').value,previous=recs().filter(r=>r.date<current&&r.cardio&&r.cardioType&&r.cardioIntensity).slice(-1)[0];
  if(!previous){setStatus('種類と強度が保存された過去の有酸素記録がありません',false);return}
- $('cardio').checked=true;$('cardioType').value=previous.cardioType;$('cardioIntensity').value=previous.cardioIntensity;$('cardioMin').value=previous.cardioMin||'';$('cardioDetails').value=previous.cardioDetails||'';renderExerciseEstimate();scheduleDraftSave();setStatus('前回の有酸素・強度・時間をコピーしました。違う部分だけ直してください',true)
+ $('cardio').checked=true;$('cardioType').value=previous.cardioType;$('cardioIntensity').value=previous.cardioIntensity;$('cardioMin').value=previous.cardioMin||'';$('cardioDetails').value=previous.cardioDetails||'';$('cardioManualCalories').value='';renderExerciseEstimate();scheduleDraftSave();setStatus('前回の有酸素・強度・時間をコピーしました。機器表示kcalは今回の値を入れてください',true)
 }
 function finishMeals(){
  const entered=mealTypes.filter(([id])=>$(id).value.trim()||hasValue($(id+'Kcal').value));
@@ -865,12 +866,13 @@ function cardioCalories(type,intensity,minutes,weight){
 }
 function accessoryCaloriesFromForm(){let c=0;if($('powerplate').checked)c+=40;if($('legRaise').checked)c+=20;if($('plank').checked)c+=20;if($('drawin').checked)c+=15;return c}
 function exerciseBreakdownFromForm(){
- const cardio=$('cardio').checked?cardioCalories($('cardioType').value,$('cardioIntensity').value,$('cardioMin').value,cardioWeight()):0;
- const strength=+$('exerciseCal').value||0,accessory=accessoryCaloriesFromForm();return {cardio,strength,accessory,total:cardio+strength+accessory}
+ const manualEntered=hasValue($('cardioManualCalories').value),estimated=$('cardio').checked?cardioCalories($('cardioType').value,$('cardioIntensity').value,$('cardioMin').value,cardioWeight()):0;
+ const cardio=$('cardio').checked?(manualEntered?Math.max(0,Math.round(+$('cardioManualCalories').value||0)):estimated):0;
+ const source=$('cardio').checked?(manualEntered?'machine':'met'):'none',strength=+$('exerciseCal').value||0,accessory=accessoryCaloriesFromForm();return {cardio,source,strength,accessory,total:cardio+strength+accessory}
 }
 function renderExerciseEstimate(){
  const el=$('exerciseEstimate');if(!el)return;const x=exerciseBreakdownFromForm(),weight=cardioWeight(),checked=$('cardio').checked;
- const cardioText=!checked?'有酸素：0kcal':!weight?'有酸素：体重を入力すると推定できます':`有酸素：${x.cardio}kcal（${cardioLabels[$('cardioType').value]}・${cardioIntensityLabels[$('cardioIntensity').value]}・${+$('cardioMin').value||0}分・${weight.toFixed(1)}kgで推定）`;
+ const cardioText=!checked?'有酸素：0kcal':x.source==='machine'?`有酸素：${x.cardio}kcal（機器表示を優先）`:!weight?'有酸素：体重を入力すると推定できます':`有酸素：${x.cardio}kcal（${cardioLabels[$('cardioType').value]}・${cardioIntensityLabels[$('cardioIntensity').value]}・${+$('cardioMin').value||0}分・${weight.toFixed(1)}kgで推定）`;
  el.innerHTML=`<b>加算内容</b><br>${cardioText}<br>筋トレのみ：${x.strength}kcal<br>補助運動：${x.accessory}kcal<br><b>合計：約${x.total}kcal</b><br><span class="small">有酸素はMETによる一般的な推定値です。機器表示がある場合は負荷・速度欄にも記録してください。</span>`
 }
 function exCal(){return exerciseBreakdownFromForm().total}
@@ -1080,8 +1082,8 @@ function collectRecord(){
  const r={date:$('date').value,restDay:$('restDay').checked,updatedAt:appNowIso()};
  fieldIds().forEach(id=>{const el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});
  checkIds().forEach(id=>r[id]=$(id).checked);
- const breakdown=exerciseBreakdownFromForm();r.cardioCalories=breakdown.cardio;r.strengthCalories=breakdown.strength;r.accessoryCalories=breakdown.accessory;
- if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.cardioCalories=0;r.exerciseCal=0;r.strengthCalories=0;r.accessoryCalories=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=breakdown.total;
+ const breakdown=exerciseBreakdownFromForm();r.cardioCalories=breakdown.cardio;r.cardioCalorieSource=breakdown.source;r.strengthCalories=breakdown.strength;r.accessoryCalories=breakdown.accessory;
+ if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.cardioManualCalories=null;r.cardioCalories=0;r.cardioCalorieSource='none';r.exerciseCal=0;r.strengthCalories=0;r.accessoryCalories=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=breakdown.total;
  return r;
 }
 function recordMissingFields(r){
@@ -1221,7 +1223,7 @@ function signedChange(current,previous,digits=1,suffix=''){
 function exerciseItems(r){
  if(isRestDay(r))return ['休養日'];
  const cardioName=cardioLabels[r.cardioType]||'有酸素',intensity=cardioIntensityLabels[r.cardioIntensity],detail=String(r.cardioDetails||'').trim();
- return [r.cardio?`${cardioName} ${r.cardioMin||35}分${intensity?'・'+intensity:''}${detail?'（'+detail+'）':''}${hasValue(r.cardioCalories)?`・約${Math.round(+r.cardioCalories)}kcal【推定】`:''}`:'',hasValue(r.strengthCalories)?`筋トレのみ 約${Math.round(+r.strengthCalories)}kcal【推定】`:'',r.legRaise?'足上げ腹筋':'',r.plank?'プランク':'',r.powerplate?'Power Plate 4セット':'',r.drawin?'ドローイン':'',String(r.strength||'').trim()].filter(Boolean);
+ return [r.cardio?`${cardioName} ${r.cardioMin||35}分${intensity?'・'+intensity:''}${detail?'（'+detail+'）':''}${hasValue(r.cardioCalories)?`・約${Math.round(+r.cardioCalories)}kcal${r.cardioCalorieSource==='machine'?'【機器表示】':'【推定】'}`:''}`:'',hasValue(r.strengthCalories)?`筋トレのみ 約${Math.round(+r.strengthCalories)}kcal【推定】`:'',r.legRaise?'足上げ腹筋':'',r.plank?'プランク':'',r.powerplate?'Power Plate 4セット':'',r.drawin?'ドローイン':'',String(r.strength||'').trim()].filter(Boolean);
 }
 function morningReportScore(r){
  let score=0;
