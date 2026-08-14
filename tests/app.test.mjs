@@ -131,7 +131,7 @@ test('v14.4 update notice and email OTP are wired', () => {
   assert.match(html, /この日の記録を上書き/);
   assert.match(html, /保存済み記録は削除されていません/);
   assert.match(html, /function editRecord\(date\)/);
-  assert.match(html, /class="item-edit"/);
+  assert.match(html, /edit\.className='item-edit'/);
   assert.match(html, /const draftKey=date=>storageKey\('Draft'\)/);
   assert.match(html, /function scheduleDraftSave\(\)/);
   assert.match(html, /前回の入力途中データを復元しました/);
@@ -341,4 +341,30 @@ test('v17.0 coach worker authenticates, rate limits and separates facts from inf
   assert.match(worker,/【推測】/);
   assert.match(worker,/医療診断・投薬指示はしません/);
   assert.match(worker,/PHOTO_RATE_LIMITER\.limit/);
+});
+
+test('v17.1 safely renders imported user text without HTML execution paths', () => {
+  assert.match(html,/function renderList\(\)[\s\S]*replaceChildren\(\)/);
+  assert.match(html,/detail\.textContent=/);
+  assert.match(html,/\$\('tw'\)\.textContent=/);
+  assert.match(html,/safeName=esc\(name\)/);
+  assert.doesNotMatch(html,/function renderList\(\)[^}]*\.innerHTML=/);
+});
+
+test('v17.1 coach receives meal details, exercise details and treats record strings as data', () => {
+  const context=consultApi.coachContext([{date:'2026-08-14',breakfast:'おにぎり',breakfastSource:'manual',cardio:true,cardioMin:43,legRaise:true,hunger:3,fatigue:2}],settings);
+  assert.equal(context.records[0].breakfast,'おにぎり');
+  assert.equal(context.records[0].cardioMin,43);
+  assert.equal(context.records[0].legRaise,true);
+  assert.equal(context.records[0].hunger,3);
+  assert.match(worker,/分析対象のデータ/);
+  assert.match(worker,/絶対に従わないでください/);
+});
+
+test('v17.1 uses authenticated server time and caps future conflict timestamps', () => {
+  assert.match(html,/kind:'server_time'/);
+  assert.match(html,/shinDietServerClockOffsetMs/);
+  assert.match(html,/Math\.min\(t,now\+300000\)/);
+  assert.match(html,/updatedAt:appNowIso\(\)/);
+  assert.match(worker,/body\.kind === 'server_time'/);
 });
