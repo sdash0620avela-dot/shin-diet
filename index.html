@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v18.3 運動消費内訳版</title>
+<title>AI Diet v18.4 運動入力チェック版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v18.3 運動消費内訳版</div>
+  <div class="version-pill">v18.4 運動入力チェック版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -898,7 +898,10 @@ function dayName(d){return ['日','月','火','水','木','金','土'][new Date(
 function prevRecord(a,r,key){return a.filter(x=>x.date<r.date&&x[key]).slice(-1)[0]}
 function avgOf(arr,fn){const v=arr.map(fn).filter(x=>x!=null&&!isNaN(x));return v.length?v.reduce((p,c)=>p+c,0)/v.length:null}
 function hasValue(v){return v!==null&&v!==undefined&&v!==''}
-function isRestDay(r){return !!(r&&r.restDay)||/休養日|休養|完全休養|オフ日|運動休み/.test(String(r&&r.strength||''))}
+function isRestDay(r){
+ const text=String(r&&r.strength||'').trim();
+ return !!(r&&r.restDay)||/^(?:今日は)?(?:完全)?休養日(?:[（(]?(?:運動)?0分[）)]?)?$|^(?:休養|オフ日|運動休み)$/.test(text)
+}
 function effectiveExercise(r){return isRestDay(r)?0:(+r.exerciseTotal||0)}
 function hasExerciseInput(r){return isRestDay(r)||!!(r&&(r.cardio||r.legRaise||r.plank||r.powerplate||r.drawin||+r.cardioMin>0||+r.exerciseCal>0||+r.workoutMinutes>0||String(r.strength||'').trim()))}
 function hasMealInput(r){return !!(r&&(hasValue(r.intake)||hasValue(r.protein)||r.breakfast||r.lunch||r.dinner||r.snack))}
@@ -1105,6 +1108,15 @@ function collectRecord(){
 function recordMissingFields(r){
  const missing=[];if(!hasValue(r.weight))missing.push('体重');assessmentStatus(r).missing.forEach(x=>missing.push(x));return missing;
 }
+function exerciseInputErrors(){
+ const errors=[],rest=$('restDay').checked,cardio=$('cardio').checked,cardioMin=+$('cardioMin').value||0,cardioExtra=cardioMin>0||hasValue($('cardioManualCalories').value)||String($('cardioDetails').value||'').trim(),strengthText=String($('strength').value||'').trim(),strengthMin=+$('workoutMinutes').value||0,strengthExtra=strengthText||strengthMin>0||hasValue($('exerciseCal').value),accessory=checkIds().filter(id=>id!=='cardio').some(id=>$(id).checked);
+ if(rest&&(cardio||cardioExtra||strengthExtra||accessory))errors.push('休養日と運動内容は同時に保存できません。どちらかを選んでください。');
+ if(!rest&&cardio&&cardioMin<=0)errors.push('有酸素を行った場合は、有酸素の分数を入力してください。');
+ if(!rest&&!cardio&&cardioExtra)errors.push('有酸素の内容があります。有酸素へチェックを入れるか、内容を消してください。');
+ if(!rest&&strengthText&&strengthMin<=0&&!hasValue($('exerciseCal').value))errors.push('筋トレ内容がある場合は、筋トレ時間を入力してください。');
+ if(!rest&&!strengthText&&hasValue($('exerciseCal').value)&&strengthMin<=0)errors.push('筋トレ消費kcalを入力した場合は、筋トレ時間または内容も入力してください。');
+ return errors;
+}
 function confirmRecordSave(r,existing){
  const missing=recordMissingFields(r),messages=[];
  if(existing)messages.push(`${r.date}は保存済みです。現在の内容で上書きします。`);
@@ -1117,6 +1129,7 @@ function saveRecord(){
  try{
   clearTimeout(draftTimer);
   if(!$('date').value)throw new Error('日付を入力してください。');
+  const exerciseErrors=exerciseInputErrors();if(exerciseErrors.length){setStatus(exerciseErrors.join(' '),false);$('record').scrollIntoView({behavior:'smooth',block:'start'});return}
   const r=collectRecord(),all=recs(),existing=all.find(x=>x.date===r.date);
   if(!confirmRecordSave(r,existing))return;
   const a=all.filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));removeDeletedRecord(r.date);setRecs(a);removeDraft(r.date);update();
