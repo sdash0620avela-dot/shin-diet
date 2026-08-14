@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v16.2 AIコーチ版</title>
+<title>AI Diet v16.3 体組成分析版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -260,7 +260,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v16.2 AIコーチ版</div>
+  <div class="version-pill">v16.3 体組成分析版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -295,6 +295,11 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card">
     <div class="card-title">減量分析</div>
     <div id="trendAnalysis" class="muted">体重記録が増えると7日・30日の平均変化を表示します</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">体組成AI分析</div>
+    <div id="compositionAnalysis" class="muted">体重と骨格筋量の記録が増えると、停滞・短期変動・筋量維持を判定します</div>
   </div>
 
   <div class="card">
@@ -982,6 +987,7 @@ function update(){
  renderAnimeCoach(t,s);
  updateWeeklyChange(a,s);
  renderAnalysis(a,s,t);
+ renderCompositionAnalysis(a,t);
  renderDailySummary(a,s,t);
  $('motivation').innerHTML=motivationText(last,s);
  motivationMessage(a,s,last,t);
@@ -1011,6 +1017,27 @@ function weightAnalysis(a){
  return {count:weights.length,spanDays,recent7Count:recent7.length,previous7Count:previous7.length,delta7,delta30,readyForecast,pace,label};
 }
 function signedKg(value){return value===null?'--':(value>0?'+':'')+value.toFixed(1)+' kg'}
+function bodyCompositionAnalysis(a,t){
+ const records=(Array.isArray(a)?a:[]).filter(r=>r&&r.date).slice().sort((x,y)=>x.date.localeCompare(y.date));
+ const weights=records.filter(r=>Number.isFinite(+r.weight)&&+r.weight>0).slice(-14);
+ const result={plateau:'insufficient',shortChange:'none',muscle:'insufficient',facts:[]};
+ if(weights.length){
+  const last=weights[weights.length-1],prev=weights[weights.length-2];
+  if(prev){const diff=(+last.weight)-(+prev.weight),days=dayNumber(last.date)-dayNumber(prev.date);result.facts.push('直近体重差 '+(diff>0?'+':'')+diff.toFixed(1)+'kg');if(days<=2&&Math.abs(diff)>=.8)result.shortChange='possible'}
+  const span=dayNumber(last.date)-dayNumber(weights[0].date);
+  if(weights.length>=7&&span>=7){const firstAvg=avgOf(weights.slice(0,3),r=>+r.weight),lastAvg=avgOf(weights.slice(-3),r=>+r.weight),delta=lastAvg-firstAvg;result.plateau=Math.abs(delta)<=.4?'possible':delta<-.4?'declining':'rising';result.facts.push('期間平均差 '+(delta>0?'+':'')+delta.toFixed(1)+'kg（'+span+'日間）')}
+ }
+ const muscleRecords=records.filter(r=>Number.isFinite(+r.muscle)&&+r.muscle>0);
+ if(muscleRecords.length){const latestType=muscleTypeOf(muscleRecords[muscleRecords.length-1]),same=muscleRecords.filter(r=>muscleTypeOf(r)===latestType).slice(-14);if(same.length>=3){const firstAvg=avgOf(same.slice(0,Math.min(3,same.length)),r=>+r.muscle),lastAvg=avgOf(same.slice(-Math.min(3,same.length)),r=>+r.muscle),delta=lastAvg-firstAvg;result.muscle=delta>=-.5?'maintained':'watch';result.muscleLabel=muscleMeta(same[same.length-1]).label;result.facts.push(result.muscleLabel+'平均差 '+(delta>0?'+':'')+delta.toFixed(1)+'kg')}}
+ return result;
+}
+function renderCompositionAnalysis(a,t){
+ const x=bodyCompositionAnalysis(a,t),lines=[];
+ lines.push(x.plateau==='possible'?'体重：停滞傾向。ただし7日以上の平均差が小さいという判定で、脂肪減少の停止とは断定しません。':x.plateau==='declining'?'体重：平均は下降傾向。現在は停滞判定ではありません。':x.plateau==='rising'?'体重：平均は上昇傾向。食事・水分・測定条件も含めて確認します。':'体重：停滞判定には7回以上・7日以上の記録が必要です。');
+ if(x.shortChange==='possible')lines.push('短期変動：前回から0.8kg以上変化。水分・塩分・グリコーゲン・胃腸内容物などを含む可能性があるため、脂肪増減とは断定しません。');
+ lines.push(x.muscle==='maintained'?x.muscleLabel+'：平均値は維持範囲です。':x.muscle==='watch'?x.muscleLabel+'：平均値が0.5kgを超えて低下。測定条件を揃えて継続確認します。':'骨格筋量：同じ種類の記録が3回以上になると維持判定します。');
+ $('compositionAnalysis').innerHTML='<div class="diary">'+lines.join('<br><br>')+'</div>'+(x.facts.length?'<p class="small">確認値：'+x.facts.join('｜')+'</p>':'');
+}
 function todayActionText(t,s){
  if(!t)return 'まず今日の体重か食事を1つ記録。入力した分だけ分析が正確になります。';
  const status=assessmentStatus(t);
