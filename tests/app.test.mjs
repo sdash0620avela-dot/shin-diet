@@ -202,6 +202,16 @@ test('v18.2 can copy legacy cardio and strength records without inventing saved 
   assert.match(html,/強度は「普通」に仮設定/);
 });
 
+test('v18.3 preserves calorie sources in the saved daily summary', () => {
+  assert.match(html,/function savedExerciseBreakdown\(r\)/);
+  assert.match(html,/cardioCalorieSource==='machine'\?'機器表示'/);
+  assert.match(html,/strengthCalorieSource==='manual'\?'手入力'/);
+  assert.match(html,/補助運動 \$\{accessory\}kcal【目安】/);
+  assert.match(html,/消費内訳：\$\{savedExercise\.parts\.join\('＋'\)\}/);
+  assert.match(html,/運動消費合計 約\$\{Math\.round\(exCalories\)\}kcal【\$\{savedExercise\.label\}】/);
+  assert.doesNotMatch(html,/運動消費 約\$\{Math\.round\(exCalories\)\}kcal【推定】/);
+});
+
 test('each signed-in user has a separate local storage namespace', () => {
   assert.match(html, /shinDiet:\${id}:\${kind\.toLowerCase\(\)}/);
   assert.match(html, /activateUserStorage\(nextUser\.id\)/);
