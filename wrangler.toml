@@ -1,6 +1,6 @@
 name = "shin-diet-photo-analysis"
 main = "api/analyze-meal.js"
-compatibility_date = "2026-08-13"
+compatibility_date = "2026-08-14"
 workers_dev = true
 compatibility_flags = [ "nodejs_compat" ]
 
@@ -14,6 +14,14 @@ enabled = true
 [[ratelimits]]
 name = "PHOTO_RATE_LIMITER"
 namespace_id = "14031"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
+[[ratelimits]]
+name = "AI_CHAT_RATE_LIMITER"
+namespace_id = "14032"
 
   [ratelimits.simple]
   limit = 5
