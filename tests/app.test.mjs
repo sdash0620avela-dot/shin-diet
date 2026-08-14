@@ -69,6 +69,10 @@ const bodyProgressApi = new Function(
   '\nreturn { bodyProgressSummary };'
 )();
 
+const consultApi = new Function(
+  extractFunction(html, 'coachContext') + '\nreturn { coachContext };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -311,4 +315,30 @@ test('v16.7 body comment only uses recorded numeric changes', () => {
   assert.match(summary.comment,/骨格筋量は平均で維持範囲/);
   assert.match(html,/写真から体型を判定したものではありません/);
   assert.match(html,/renderBodyProgressComment\(a,s\)/);
+});
+
+test('v17.0 AI consultation sends only a bounded record context for a signed-in user', () => {
+  const records=Array.from({length:20},(_,i)=>({date:`2026-08-${String(i+1).padStart(2,'0')}`,weight:120-i,privateExtra:'do not send',condition:'x'.repeat(300)}));
+  const context=consultApi.coachContext(records,{displayName:'慎',goalWeight:95,healthNotes:'do not send'});
+  assert.equal(context.records.length,14);
+  assert.equal(context.records[0].date,'2026-08-07');
+  assert.equal(context.records[0].privateExtra,undefined);
+  assert.equal(context.records[0].condition.length,200);
+  assert.equal(context.settings.healthNotes,undefined);
+  assert.match(html,/id="chat" class="page"/);
+  assert.match(html,/kind:'coach_chat'/);
+  assert.match(html,/cloudClient\.auth\.getSession\(\)/);
+  assert.match(html,/相談文・回答は端末やクラウドの記録へ保存しません/);
+});
+
+test('v17.0 coach worker authenticates, rate limits and separates facts from inference', () => {
+  assert.match(worker,/body\.kind === 'coach_chat'/);
+  assert.match(worker,/message\.length > 500/);
+  assert.match(worker,/cleanCoachContext/);
+  assert.match(worker,/slice\(-14\)/);
+  assert.match(worker,/store: false/);
+  assert.match(worker,/【確認できた事実】/);
+  assert.match(worker,/【推測】/);
+  assert.match(worker,/医療診断・投薬指示はしません/);
+  assert.match(worker,/PHOTO_RATE_LIMITER\.limit/);
 });
