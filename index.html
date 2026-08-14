@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v16.7 体型変化コメント版</title>
+<title>AI Diet v17.0 AI相談版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -169,7 +169,7 @@ button.danger{background:#FFEBEA;color:var(--bad);box-shadow:none}
 .tabs{
   position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);
+  border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);
   padding-bottom:var(--safe-b);z-index:100;height:var(--tab-h)
 }
 .tab{
@@ -242,6 +242,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 .coach-sprite.good{background-position:100% 0}.coach-sprite.warning{background-position:0 100%}.coach-sprite.achievement{background-position:100% 100%;animation:coachCelebrate .55s cubic-bezier(.34,1.56,.64,1)}
 .coach-dialogue{min-width:0}.coach-mood{display:inline-flex;border-radius:999px;padding:5px 10px;background:#F2F2F7;color:var(--ink2);font-size:12px;font-weight:800;margin-bottom:8px}.coach-mood.good{background:#EAF8EE;color:#248A3D}.coach-mood.warning{background:#FFF4E5;color:#A35D00}.coach-mood.achievement{background:#FFF6D9;color:#8B6914}
 .coach-speech{font-size:15px;font-weight:750;line-height:1.55}.coach-detail{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.coach-detail summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px}.coach-detail-body{margin-top:12px}
+.coach-question{min-height:112px}.coach-answer{display:none;white-space:pre-wrap;margin-top:14px}.coach-answer.show{display:block}.coach-privacy{margin-top:10px}.quick-coach{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.quick-coach button{margin:0;padding:11px 8px;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line);font-size:13px}.quick-coach button:disabled{opacity:.55}
 @keyframes coachCelebrate{0%{transform:scale(.88) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
 
 @media(max-width:380px){
@@ -260,7 +261,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v16.7 体型変化コメント版</div>
+  <div class="version-pill">v17.0 AI相談版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -450,6 +451,25 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card"><h3>最近の記録</h3><div id="list"></div></div>
 </section>
 
+<section id="chat" class="page">
+  <div class="card hero-coach">
+    <div class="card-title">AIコーチに相談</div>
+    <p class="muted">本人の保存記録（直近最大14日）を踏まえて、今日の最優先を一緒に考えます。</p>
+    <div class="quick-coach">
+      <button type="button" onclick="askQuickCoach('今日の食事で最優先して気をつけることは？')">今日の食事</button>
+      <button type="button" onclick="askQuickCoach('今の記録は停滞と考えるべき？')">停滞してる？</button>
+      <button type="button" onclick="askQuickCoach('今日は運動を増やすべき？それとも休養を優先すべき？')">運動か休養か</button>
+      <button type="button" onclick="askQuickCoach('今週の記録から改善点を1つ教えて')">今週の改善点</button>
+    </div>
+    <div class="label">相談内容（500文字以内）</div>
+    <textarea id="coachQuestion" class="coach-question" maxlength="500" placeholder="例：体重が3日動かないけど、食事をさらに減らすべき？"></textarea>
+    <button id="askCoachBtn" type="button" onclick="askCoach()">記録を踏まえて相談する</button>
+    <div id="coachConsultStatus" class="status" role="status" aria-live="polite"></div>
+    <div id="coachAnswer" class="diary coach-answer" aria-live="polite"></div>
+    <p class="small coach-privacy">相談にはログインが必要です。送信するのは質問と直近最大14日の記録だけで、相談文・回答は端末やクラウドの記録へ保存しません。医療診断には使用できません。</p>
+  </div>
+</section>
+
 <section id="settings" class="page">
   <div class="card"><h3>個人設定</h3>
     <div class="label">名前</div><input id="displayName" type="text" autocomplete="name" placeholder="名前">
@@ -516,6 +536,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="tab on" onclick="show('home',this)"><span class="tab-icon">🏠</span>ホーム</div>
   <div class="tab" onclick="show('record',this)"><span class="tab-icon">✏️</span>記録</div>
   <div class="tab" onclick="show('graph',this)"><span class="tab-icon">📈</span>グラフ</div>
+  <div class="tab" onclick="show('chat',this)"><span class="tab-icon">💬</span>相談</div>
   <div class="tab" onclick="show('settings',this)"><span class="tab-icon">⚙️</span>設定</div>
 </nav>
 
@@ -675,6 +696,28 @@ async function syncNow(silent=false,retryCount=0){
  }finally{cloudSyncing=false}
 }
 const MEAL_ANALYSIS_API='https://shin-diet-photo-analysis.sdash0620.workers.dev/';
+function coachContext(records,settings){
+ const allowed=['date','weight','fat','fatType','muscle','muscleType','visceralFat','sleep','intake','protein','fatG','carbsG','waterL','restDay','cardioMin','exerciseTotal','workoutMinutes','strength','condition'];
+ const list=(Array.isArray(records)?records:[]).filter(r=>r&&r.date).slice().sort((a,b)=>a.date.localeCompare(b.date)).slice(-14).map(r=>Object.fromEntries(allowed.filter(key=>r[key]!==undefined&&r[key]!=='').map(key=>[key,typeof r[key]==='string'?r[key].slice(0,200):r[key]])));
+ const settingKeys=['displayName','startWeight','goalWeight','proteinGoal','calorieGoal','cardioGoal'];
+ return {settings:Object.fromEntries(settingKeys.filter(key=>settings&&settings[key]!==undefined).map(key=>[key,settings[key]])),records:list};
+}
+function coachStatus(message,ok=true){const el=$('coachConsultStatus');if(!el)return;el.textContent=message;el.className='status '+(ok?'ok':'ng')}
+async function askQuickCoach(question){$('coachQuestion').value=question;await askCoach()}
+async function askCoach(){
+ const question=$('coachQuestion').value.trim(),btn=$('askCoachBtn'),answer=$('coachAnswer');
+ if(!question){coachStatus('相談内容を入力してください。',false);return}
+ if(!cloudClient||!cloudUser){coachStatus('相談にはログインが必要です。「設定」からログインしてください。',false);return}
+ btn.disabled=true;document.querySelectorAll('.quick-coach button').forEach(x=>x.disabled=true);btn.textContent='AIコーチが確認中…';answer.classList.remove('show');coachStatus('直近の保存記録を確認しています。',true);
+ try{
+  const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();
+  if(sessionError||!sessionData.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
+  const response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({kind:'coach_chat',message:question,context:coachContext(recs(),sets())})});
+  const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'相談に回答できませんでした。');
+  answer.textContent=body.answer||'回答がありませんでした。';answer.classList.add('show');coachStatus('回答しました。相談内容と回答は保存していません。',true);
+ }catch(error){coachStatus(error.message||'相談中にエラーが発生しました。時間を置いて再度お試しください。',false)}
+ finally{btn.disabled=false;document.querySelectorAll('.quick-coach button').forEach(x=>x.disabled=false);btn.textContent='記録を踏まえて相談する'}
+}
 function setStatus(msg,ok=true){let el=$('saveStatus');if(!el)return;el.textContent=msg;el.className='status '+(ok?'ok':'ng')}
 function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REACHED'].includes(e.name)||e.code===22||e.code===1014))return '保存容量が足りません。写真は保存対象外ですが、過去データが大きい可能性があります。データを書き出して整理してください。';return e&&e.message?e.message:'不明なエラーです。'}
 
