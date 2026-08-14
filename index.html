@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v17.7 最新体重TDEE版</title>
+<title>AI Diet v17.8 点数見通し版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v17.7 最新体重TDEE版</div>
+  <div class="version-pill">v17.8 点数見通し版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -878,10 +878,22 @@ function scoreImprovementLines(r,s){
   if(hasSleepInput(r)&&sleepStar(r)<5)lines.push(`睡眠${r.sleep}は${sleepScore(r.sleep)}/20点。今日は変更せず、次回★★★★★なら+${20-sleepScore(r.sleep)}点相当です。`);
   return lines.length?lines:['現在の入力項目に、追加で点数を上げる修正はありません。'];
 }
+function scorePotential(r,s){
+  const current=scoreRecord(r,s),today={...r};
+  if(!largeDeficitWarning(r,s)){
+    const goal=+s.proteinGoal||120;
+    if((+today.protein||0)<goal)today.protein=goal;
+    if(hasValue(today.waterL)&&+today.waterL<2)today.waterL=2;
+  }
+  const todayMax=scoreRecord(today,s),next={...today};
+  if(hasSleepInput(next))next.sleep='★★★★★';
+  return {current,todayMax,nextTimeMax:scoreRecord(next,s)};
+}
 function scoreGuideHtml(r,s){
   const breakdown=scoreBreakdown(r,s),details=breakdown.items.map(x=>`<div><span>${x.label}${x.notEntered?'（未入力・減点なし）':''}</span><b>${x.points}/${x.max}</b></div>`).join('');
   const improvements=scoreImprovementLines(r,s).map(x=>`<li>${esc(x)}</li>`).join('');
-  return `<div class="hint"><b>1日実行評価の内訳</b><div class="score-breakdown">${details}</div><b>点数を上げる具体策</b><ul>${improvements}</ul><p class="small" style="margin-bottom:0">朝コンディション評価とは採点対象が異なるため、朝から点数が下がったという比較はしません。</p></div>`;
+  const potential=scorePotential(r,s),outlook=largeDeficitWarning(r,s)?`安全確認を優先するため、今日は${potential.current}点のままで十分です。`:`現在${potential.current}点｜今日まだ整えられる項目で最大${potential.todayMax}点${potential.nextTimeMax>potential.todayMax?`｜次回、睡眠★★★★★なら最大${potential.nextTimeMax}点`:''}`;
+  return `<div class="hint"><b>1日実行評価の内訳</b><div class="score-breakdown">${details}</div><p><b>点数の見通し</b><br>${outlook}</p><b>点数を上げる具体策</b><ul>${improvements}</ul><p class="small" style="margin-bottom:0">朝コンディション評価とは採点対象が異なるため、朝から点数が下がったという比較はしません。</p></div>`;
 }
 function animeCoachState(r,s){
   if(!r)return 'waiting';
@@ -1210,6 +1222,7 @@ function buildDailySummary(r,prev,s,mode){
  const dateLabel=String(r.date||'').replaceAll('-','/'),startLoss=hasValue(r.weight)&&hasValue(s.startWeight)?(+r.weight)-(+s.startWeight):null,goalRemain=hasValue(r.weight)&&hasValue(s.goalWeight)?(+r.weight)-(+s.goalWeight):null,nextMilestone=hasValue(r.weight)?Math.floor(((+r.weight)-.01)/5)*5:null,milestoneRemain=nextMilestone!==null?(+r.weight)-nextMilestone:null;
  const exItems=exerciseItems(r),exCalories=effectiveExercise(r),score=mode==='morning'?morningReportScore(r):scoreRecord(r,s),status=mode==='morning'?'朝コンディション評価':assessmentStatus(r).complete?'1日実行評価・確定':'1日実行評価・暫定';
  const breakdown=mode==='daily'?scoreBreakdown(r,s):null,scoreDetails=breakdown?breakdown.items.map(x=>`・${x.label}：${x.points}/${x.max}点${x.notEntered?'（未入力・減点なし）':''}`).join('\n'):'朝評価は、体組成・睡眠・朝の運動記録を対象にした別採点です。';
+ const potential=mode==='daily'?scorePotential(r,s):null,scoreOutlook=potential?(largeDeficitWarning(r,s)?`安全確認を優先するため、今日は${potential.current}点のままで十分です。`:`現在${potential.current}点｜今日まだ整えられる項目で最大${potential.todayMax}点${potential.nextTimeMax>potential.todayMax?`｜次回、睡眠★★★★★なら最大${potential.nextTimeMax}点`:''}`):'';
  const morningComparison=mode==='daily'&&hasValue(r.weight)?`朝コンディション評価：${morningReportScore(r)}点\n1日実行評価：${score}点\n※この2つは採点対象が異なり、差し引き比較はしません。`:'';
  const improvements=mode==='daily'?scoreImprovementLines(r,s):['朝評価と1日評価は採点対象が異なるため、夜に点数が下がったという比較はしません。'];
  const facts=[comparisonLines(r,prev),hasValue(startLoss)?`開始時 ${(+s.startWeight).toFixed(1)}kgから ${startLoss.toFixed(1)}kg`:'',nextMilestone!==null&&nextMilestone>(+s.goalWeight)?`${nextMilestone.toFixed(0)}kgまで あと${Math.max(0,milestoneRemain).toFixed(1)}kg`:'',hasValue(goalRemain)?`最終目標 ${(+s.goalWeight).toFixed(1)}kgまで あと${Math.max(0,goalRemain).toFixed(1)}kg`:''].filter(Boolean).join('\n');
@@ -1243,6 +1256,7 @@ ${morningComparison?'\n'+morningComparison:''}
 
 点数の内訳
 ${scoreDetails}
+${scoreOutlook?'\n点数の見通し\n'+scoreOutlook:''}
 
 ※朝コンディション評価と1日実行評価は採点対象が異なる別の点数です。
 
