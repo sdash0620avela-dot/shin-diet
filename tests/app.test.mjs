@@ -49,6 +49,11 @@ const compositionApi = new Function(
   '\nreturn { bodyCompositionAnalysis };'
 )();
 
+const weeklyApi = new Function(
+  ['sleepScore','hasValue','isRestDay','effectiveExercise','hasExerciseInput','hasMealInput','hasSleepInput','assessmentStatus','scoreRecord','sleepStar','dayNumber','muscleTypeOf','weeklyWindow','weeklyStats','muscleMeta','buildWeeklyReport'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { weeklyWindow, weeklyStats, buildWeeklyReport };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -229,4 +234,20 @@ test('v16.3 detects plateau, short change and muscle maintenance without asserti
   assert.equal(jump.shortChange,'possible');
   assert.match(html,/脂肪増減とは断定しません/);
   assert.match(html,/renderCompositionAnalysis\(a,t\)/);
+});
+
+test('v16.4 weekly report uses the latest seven calendar days and is copyable', () => {
+  const records=[
+    {date:'2026-08-01',weight:115},
+    {date:'2026-08-08',weight:114,intake:2000,protein:120,restDay:true,sleep:'★★★★★',waterL:2,fatigue:2,muscle:47,muscleType:'skeletalMuscleMass'},
+    {date:'2026-08-10',weight:113.8,intake:1900,protein:125,restDay:true,sleep:'★★★★☆',waterL:2,fatigue:2,muscle:47.1,muscleType:'skeletalMuscleMass'},
+    {date:'2026-08-14',weight:113.5,intake:1950,protein:122,restDay:true,sleep:'★★★★☆',waterL:2,fatigue:2,muscle:47.2,muscleType:'skeletalMuscleMass'}
+  ];
+  assert.deepEqual(weeklyApi.weeklyWindow(records).map(r=>r.date),['2026-08-08','2026-08-10','2026-08-14']);
+  const report=weeklyApi.buildWeeklyReport(records,settings);
+  assert.match(report,/AI週間総括/);
+  assert.match(report,/期間内体重差：-0.5kg/);
+  assert.match(report,/【来週の最優先】/);
+  assert.match(report,/脂肪・筋肉の増減とは断定しません/);
+  assert.match(html,/copyWeeklyReport/);
 });
