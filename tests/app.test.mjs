@@ -20,9 +20,9 @@ function extractFunction(source, name) {
 
 const scoreApi = new Function(
   [
-    'sleepScore', 'hasValue', 'hasSleepInput', 'sleepStar', 'isRestDay', 'effectiveExercise', 'scoreBreakdown', 'scoreRecord', 'estimatedDailyBurn', 'estimatedBalance', 'largeDeficitWarning', 'scoreImprovementLines'
+    'sleepScore', 'hasValue', 'hasSleepInput', 'sleepStar', 'isRestDay', 'effectiveExercise', 'scoreBreakdown', 'scoreRecord', 'estimatedDailyBurn', 'estimatedBalance', 'largeDeficitWarning', 'scoreImprovementLines', 'scorePotential'
   ].map(name => extractFunction(html, name)).join('\n') +
-  '\nreturn { sleepScore, scoreRecord, scoreBreakdown, estimatedDailyBurn, estimatedBalance, largeDeficitWarning, scoreImprovementLines };'
+  '\nreturn { sleepScore, scoreRecord, scoreBreakdown, estimatedDailyBurn, estimatedBalance, largeDeficitWarning, scoreImprovementLines, scorePotential };'
 )();
 
 const syncApi = new Function(
@@ -144,6 +144,14 @@ test('v17.7 recalculates daily burn from the record weight when auto mode is on'
   assert.equal(scoreApi.estimatedBalance(record,{...settings,autoBurn:false}),-700);
   assert.match(html,/id="autoBurn"/);
   assert.match(html,/記録体重から自動計算/);
+});
+
+test('v17.8 separates current score, today actionable ceiling and next-time sleep potential', () => {
+  const record={intake:2100,protein:93,cardio:true,exerciseTotal:1135,strength:'腕トレ28セット 60分',sleep:'★★★★☆',waterL:null,fatigue:2};
+  assert.deepEqual(scoreApi.scorePotential(record,settings),{current:87,todayMax:96,nextTimeMax:100});
+  assert.match(html,/点数の見通し/);
+  assert.match(html,/今日まだ整えられる項目で最大/);
+  assert.match(html,/次回、睡眠★★★★★なら最大/);
 });
 
 test('each signed-in user has a separate local storage namespace', () => {
