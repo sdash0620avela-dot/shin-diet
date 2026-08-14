@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const worker = readFileSync(new URL('../api/analyze-meal.js', import.meta.url), 'utf8');
+const wrangler = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
@@ -103,7 +104,8 @@ test('photo analysis requires the current signed-in session', () => {
   assert.match(html, /cloudClient\.auth\.getSession\(\)/);
   assert.match(html, /Authorization':`Bearer \${sessionData\.session\.access_token}`/);
   assert.match(worker, /auth\/v1\/user/);
-  assert.match(worker, /PHOTO_RATE_LIMITER\.limit\(\{ key: authUser\.id \}\)/);
+  assert.match(worker, /env\.PHOTO_RATE_LIMITER/);
+  assert.match(worker, /limiter\.limit\(\{ key: authUser\.id \}\)/);
   assert.match(worker, /429/);
 });
 
@@ -340,7 +342,7 @@ test('v17.0 coach worker authenticates, rate limits and separates facts from inf
   assert.match(worker,/【確認できた事実】/);
   assert.match(worker,/【推測】/);
   assert.match(worker,/医療診断・投薬指示はしません/);
-  assert.match(worker,/PHOTO_RATE_LIMITER\.limit/);
+  assert.match(worker,/limiter\.limit/);
 });
 
 test('v17.1 safely renders imported user text without HTML execution paths', () => {
@@ -367,4 +369,15 @@ test('v17.1 uses authenticated server time and caps future conflict timestamps',
   assert.match(html,/Math\.min\(t,now\+300000\)/);
   assert.match(html,/updatedAt:appNowIso\(\)/);
   assert.match(worker,/body\.kind === 'server_time'/);
+});
+
+test('v17.2 keeps photo analysis and AI consultation rate limits independent', () => {
+  assert.match(worker,/env\.AI_CHAT_RATE_LIMITER/);
+  assert.match(worker,/env\.PHOTO_RATE_LIMITER/);
+  assert.match(worker,/aiKind === 'coach'/);
+  assert.match(wrangler,/name = "PHOTO_RATE_LIMITER"/);
+  assert.match(wrangler,/namespace_id = "14031"/);
+  assert.match(wrangler,/name = "AI_CHAT_RATE_LIMITER"/);
+  assert.match(wrangler,/namespace_id = "14032"/);
+  assert.match(worker,/kind: aiKind/);
 });
