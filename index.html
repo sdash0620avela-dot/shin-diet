@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v16.4 AI週間レポート版</title>
+<title>AI Diet v16.5 グラフ強化版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -260,7 +260,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v16.4 AI週間レポート版</div>
+  <div class="version-pill">v16.5 グラフ強化版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -432,7 +432,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </section>
 
 <section id="graph" class="page">
-  <div class="card"><h3>体重推移</h3><canvas id="chart" class="chart-canvas" width="380" height="260"></canvas></div>
+  <div class="card"><h3 id="chartTitle">体重推移</h3><div class="summary-switch" style="grid-template-columns:repeat(3,1fr)"><button id="graphWeightBtn" type="button" onclick="selectGraphMode('weight')">体重</button><button id="graphFatBtn" type="button" class="off" onclick="selectGraphMode('fat')">体脂肪</button><button id="graphMuscleBtn" type="button" class="off" onclick="selectGraphMode('muscle')">骨格筋</button></div><canvas id="chart" class="chart-canvas" width="380" height="260"></canvas><div id="chartNote" class="small">実線：実測値｜点線：7日平均</div></div>
   <div class="card"><h3>AI週間レポート</h3><div id="weekly" class="muted">記録が増えると表示します</div><button type="button" class="sub copyReport" onclick="copyWeeklyReport()">週間総括をコピー</button><div id="weeklyCopyStatus" class="small" role="status" aria-live="polite"></div></div>
   <div class="card"><h3>最近の記録</h3><div id="list"></div></div>
 </section>
@@ -1282,20 +1282,34 @@ async function deleteRecord(date){
 }
 function renderList(){let box=$('list');box.innerHTML=recs().slice(-14).reverse().map(r=>`<div class="item"><div class="item-head"><b>${r.date} ${r.weight? r.weight+' kg':''}</b><div class="item-actions"><button type="button" class="item-edit" onclick="editRecord('${r.date}')">編集</button><button type="button" class="item-delete" onclick="deleteRecord('${r.date}')">削除</button></div></div><span class="muted">${[r.fat&&`${fatMeta(r).label}:${r.fat}${fatMeta(r).unit}`,r.muscle&&`${muscleMeta(r).label}:${r.muscle}kg`,r.intake&&`摂取:${r.intake}kcal / P:${r.protein||'--'}g / F:${r.fatG||'--'}g / C:${r.carbsG||'--'}g`,r.breakfast&&'朝:'+r.breakfast,r.lunch&&'昼:'+r.lunch,r.dinner&&'夜:'+r.dinner,r.snack&&'間食:'+r.snack,r.strength&&'筋トレ:'+r.strength,r.condition&&'体調:'+r.condition].filter(Boolean).join('<br>')}</span></div>`).join('')}
 
+let graphMode='weight';
+function graphSeries(records,mode){
+ const sorted=(Array.isArray(records)?records:[]).filter(r=>r&&r.date).slice().sort((x,y)=>x.date.localeCompare(y.date));
+ if(mode==='fat'){const latest=sorted.filter(r=>hasValue(r.fat)).slice(-1)[0],type=latest?fatTypeOf(latest):null;return sorted.filter(r=>hasValue(r.fat)&&fatTypeOf(r)===type).map(r=>({date:r.date,value:+r.fat})).slice(-30)}
+ if(mode==='muscle'){const latest=sorted.filter(r=>hasValue(r.muscle)).slice(-1)[0],type=latest?muscleTypeOf(latest):null;return sorted.filter(r=>hasValue(r.muscle)&&muscleTypeOf(r)===type).map(r=>({date:r.date,value:+r.muscle})).slice(-30)}
+ return sorted.filter(r=>hasValue(r.weight)).map(r=>({date:r.date,value:+r.weight})).slice(-30);
+}
+function rollingSevenDay(series){
+ return series.map(point=>{const day=dayNumber(point.date),window=series.filter(x=>dayNumber(x.date)>=day-6&&dayNumber(x.date)<=day);return {date:point.date,value:window.reduce((sum,x)=>sum+x.value,0)/window.length,count:window.length}});
+}
+function selectGraphMode(mode){
+ graphMode=['weight','fat','muscle'].includes(mode)?mode:'weight';
+ ['weight','fat','muscle'].forEach(x=>$(`graph${x[0].toUpperCase()+x.slice(1)}Btn`).className=x===graphMode?'':'off');
+ drawChart();
+}
 function drawChart(){
- let c=$('chart');if(!c)return;
- let ctx=c.getContext('2d'),a=recs().filter(r=>r.weight).slice(-30);
- ctx.clearRect(0,0,c.width,c.height);
- if(a.length<2){ctx.fillStyle='#8E8E93';ctx.font='14px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('2日以上入力するとグラフ表示',c.width/2,c.height/2);return}
- let p=36,w=c.width-p*2,h=c.height-p*2,vals=a.map(r=>r.weight),mn=Math.min(...vals)-1,mx=Math.max(...vals)+1,s=sets();
- ctx.strokeStyle='rgba(60,60,67,.1)';ctx.lineWidth=1;
- for(let i=0;i<5;i++){let y=p+h*i/4;ctx.beginPath();ctx.moveTo(p,y);ctx.lineTo(p+w,y);ctx.stroke()}
- if(s.goalWeight>=mn&&s.goalWeight<=mx){let gy=p+h-(s.goalWeight-mn)/(mx-mn)*h;ctx.strokeStyle='rgba(52,199,89,.4)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(p,gy);ctx.lineTo(p+w,gy);ctx.stroke();ctx.setLineDash([])}
- const grad=ctx.createLinearGradient(p,0,p+w,0);
- grad.addColorStop(0,'#007AFF');grad.addColorStop(1,'#5856D6');
- ctx.strokeStyle=grad;ctx.lineWidth=3;ctx.lineJoin='round';ctx.beginPath();
- a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y)});ctx.stroke();
- ctx.fillStyle='#007AFF';a.forEach((r,i)=>{let x=p+w*i/(a.length-1),y=p+h-(r.weight-mn)/(mx-mn)*h;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()});
+ const c=$('chart');if(!c)return;const ctx=c.getContext('2d'),a=graphSeries(recs(),graphMode),s=sets(),labels={weight:'体重推移',fat:'体脂肪推移',muscle:'骨格筋量推移'},units={weight:'kg',fat:a.length&&fatTypeOf(recs().filter(r=>hasValue(r.fat)).slice(-1)[0])==='fatMass'?'kg':'%',muscle:'kg'};
+ $('chartTitle').textContent=labels[graphMode];$('chartNote').textContent='実線：実測値｜点線：7日平均｜単位 '+units[graphMode];ctx.clearRect(0,0,c.width,c.height);
+ if(a.length<2){ctx.fillStyle='#8E8E93';ctx.font='14px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('同じ種類を2日以上入力すると表示',c.width/2,c.height/2);return}
+ const rolling=rollingSevenDay(a),p=40,w=c.width-p*2,h=c.height-p*2,vals=[...a.map(r=>r.value),...rolling.map(r=>r.value)],range=Math.max(...vals)-Math.min(...vals),pad=Math.max(graphMode==='weight'?1:.5,range*.15),mn=Math.min(...vals)-pad,mx=Math.max(...vals)+pad;
+ const xAt=i=>p+w*i/(a.length-1),yAt=v=>p+h-(v-mn)/(mx-mn)*h;
+ ctx.strokeStyle='rgba(60,60,67,.1)';ctx.lineWidth=1;ctx.fillStyle='#8E8E93';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='right';
+ for(let i=0;i<5;i++){const y=p+h*i/4,value=mx-(mx-mn)*i/4;ctx.beginPath();ctx.moveTo(p,y);ctx.lineTo(p+w,y);ctx.stroke();ctx.fillText(value.toFixed(1),p-5,y+3)}
+ if(graphMode==='weight'&&s.goalWeight>=mn&&s.goalWeight<=mx){ctx.strokeStyle='rgba(52,199,89,.45)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(p,yAt(s.goalWeight));ctx.lineTo(p+w,yAt(s.goalWeight));ctx.stroke();ctx.setLineDash([])}
+ const grad=ctx.createLinearGradient(p,0,p+w,0);grad.addColorStop(0,'#007AFF');grad.addColorStop(1,'#5856D6');ctx.strokeStyle=grad;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.beginPath();a.forEach((r,i)=>{i?ctx.lineTo(xAt(i),yAt(r.value)):ctx.moveTo(xAt(i),yAt(r.value))});ctx.stroke();
+ ctx.fillStyle='#007AFF';a.forEach((r,i)=>{ctx.beginPath();ctx.arc(xAt(i),yAt(r.value),4,0,7);ctx.fill()});
+ ctx.strokeStyle='#FF9500';ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.beginPath();rolling.forEach((r,i)=>{i?ctx.lineTo(xAt(i),yAt(r.value)):ctx.moveTo(xAt(i),yAt(r.value))});ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle='#8E8E93';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='left';ctx.fillText(a[0].date.slice(5).replace('-','/'),p,c.height-8);ctx.textAlign='right';ctx.fillText(a[a.length-1].date.slice(5).replace('-','/'),p+w,c.height-8);
 }
 
 function exportData(){
