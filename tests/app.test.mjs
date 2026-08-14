@@ -192,6 +192,16 @@ test('v18.1 estimates strength training from intensity, duration and current wei
   assert.match(html,/\$\('exerciseCal'\)\.value=''/);
 });
 
+test('v18.2 can copy legacy cardio and strength records without inventing saved intensity', () => {
+  assert.match(html,/filter\(r=>r\.date<current&&r\.cardio\)/);
+  assert.match(html,/previous\.cardioType\|\|'other'/);
+  assert.match(html,/previous\.cardioIntensity\|\|'moderate'/);
+  assert.match(html,/種類は「その他」、強度は「普通」に仮設定/);
+  assert.match(html,/String\(r\.strength\|\|''\)\.trim\(\)\|\|\+r\.workoutMinutes>0/);
+  assert.match(html,/previous\.strengthIntensity\|\|'moderate'/);
+  assert.match(html,/強度は「普通」に仮設定/);
+});
+
 test('each signed-in user has a separate local storage namespace', () => {
   assert.match(html, /shinDiet:\${id}:\${kind\.toLowerCase\(\)}/);
   assert.match(html, /activateUserStorage\(nextUser\.id\)/);
