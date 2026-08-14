@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v16.3 体組成分析版</title>
+<title>AI Diet v16.4 AI週間レポート版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -260,7 +260,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v16.3 体組成分析版</div>
+  <div class="version-pill">v16.4 AI週間レポート版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -433,7 +433,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 
 <section id="graph" class="page">
   <div class="card"><h3>体重推移</h3><canvas id="chart" class="chart-canvas" width="380" height="260"></canvas></div>
-  <div class="card"><h3>週間レポート</h3><div id="weekly" class="muted">記録が増えると表示します</div></div>
+  <div class="card"><h3>AI週間レポート</h3><div id="weekly" class="muted">記録が増えると表示します</div><button type="button" class="sub copyReport" onclick="copyWeeklyReport()">週間総括をコピー</button><div id="weeklyCopyStatus" class="small" role="status" aria-live="polite"></div></div>
   <div class="card"><h3>最近の記録</h3><div id="list"></div></div>
 </section>
 
@@ -1208,13 +1208,62 @@ function drawForecastChart(){
  ctx.fillStyle='#8E8E93';ctx.fillText(s.goalWeight+'kg 目標',c.width-p-72,16);
 }
 
+let currentWeeklyReport='';
+function weeklyWindow(a){
+ const sorted=(Array.isArray(a)?a:[]).filter(r=>r&&r.date).slice().sort((x,y)=>x.date.localeCompare(y.date));
+ if(!sorted.length)return [];
+ const lastDay=dayNumber(sorted[sorted.length-1].date);
+ return sorted.filter(r=>dayNumber(r.date)>=lastDay-6&&dayNumber(r.date)<=lastDay);
+}
+function weeklyStats(a,s){
+ const recent=weeklyWindow(a),values=(key)=>recent.filter(r=>hasValue(r[key])).map(r=>+r[key]),avg=v=>v.length?v.reduce((p,c)=>p+c,0)/v.length:null;
+ const weights=values('weight'),intakes=values('intake'),proteins=values('protein'),complete=recent.filter(r=>assessmentStatus(r).complete);
+ const scored=complete.map(r=>scoreRecord(r,s)),exercise=recent.reduce((sum,r)=>sum+effectiveExercise(r),0),sleep=recent.filter(hasSleepInput).map(sleepStar);
+ const latestMuscle=recent.filter(r=>hasValue(r.muscle)).slice(-1)[0],muscleType=latestMuscle?muscleTypeOf(latestMuscle):null,muscles=recent.filter(r=>hasValue(r.muscle)&&muscleTypeOf(r)===muscleType).map(r=>+r.muscle);
+ const firstWeight=recent.find(r=>hasValue(r.weight)),lastWeight=recent.filter(r=>hasValue(r.weight)).slice(-1)[0];
+ return {recent,weights,intakes,proteins,complete,exercise,sleep,muscles,latestMuscle,avgWeight:avg(weights),avgIntake:avg(intakes),avgProtein:avg(proteins),avgScore:avg(scored),avgSleep:avg(sleep),weightChange:firstWeight&&lastWeight?(+lastWeight.weight)-(+firstWeight.weight):null,muscleChange:muscles.length>=2?muscles[muscles.length-1]-muscles[0]:null,best:complete.slice().sort((x,y)=>scoreRecord(y,s)-scoreRecord(x,s))[0]};
+}
+function buildWeeklyReport(a,s){
+ const w=weeklyStats(a,s);if(!w.recent.length)return '週間レポートを作れる記録がありません。';
+ const start=w.recent[0].date.replaceAll('-','/'),end=w.recent[w.recent.length-1].date.replaceAll('-','/');
+ const change=w.weightChange===null?'比較なし':(w.weightChange>0?'+':'')+w.weightChange.toFixed(1)+'kg';
+ const muscle=w.muscleChange===null?'比較なし':(w.muscleChange>0?'+':'')+w.muscleChange.toFixed(1)+'kg';
+ const action=w.avgProtein!==null&&w.avgProtein<(s.proteinGoal||120)*.85?'来週は、たんぱく質を1日平均'+(s.proteinGoal||120)+'gへ近づける。':w.avgSleep!==null&&w.avgSleep<4?'来週は運動量を増やさず、睡眠★★★★☆以上の日を増やす。':'来週も現在の食事・運動・睡眠の流れを維持する。';
+ return `${start}〜${end} AI週間総括
+
+【確認できた事実】
+記録：${w.recent.length}日（評価確定 ${w.complete.length}日）
+平均体重：${w.avgWeight===null?'未入力':w.avgWeight.toFixed(1)+'kg'}
+期間内体重差：${change}
+平均摂取：${w.avgIntake===null?'未入力':Math.round(w.avgIntake)+'kcal'}
+平均たんぱく質：${w.avgProtein===null?'未入力':Math.round(w.avgProtein)+'g'}
+運動消費合計：${Math.round(w.exercise)}kcal
+平均睡眠：${w.avgSleep===null?'未入力':w.avgSleep.toFixed(1)+' / 5'}
+${w.latestMuscle?muscleMeta(w.latestMuscle).label:'骨格筋量'}差：${muscle}
+平均評価：${w.avgScore===null?'未確定':Math.round(w.avgScore)+'点'}
+一番良かった日：${w.best?w.best.date+'（'+scoreRecord(w.best,s)+'点）':'未確定'}
+
+【来週の最優先】
+${action}
+
+【注意】
+体重・体組成の短期変化は、水分や測定条件を含むため脂肪・筋肉の増減とは断定しません。
+
+【情報源】
+アプリに保存された本人入力記録
+
+【回答日時】
+${end}`;
+}
 function renderWeekly(a,s){
- let recent=a.slice(-7);if(!recent.length){$('weekly').textContent='記録が増えると表示します';return}
- const latestMuscle=recent.filter(r=>r.muscle).slice(-1)[0],latestMuscleType=latestMuscle?muscleTypeOf(latestMuscle):null;
- let weights=recent.filter(r=>r.weight).map(r=>+r.weight), intakes=recent.filter(r=>r.intake).map(r=>+r.intake), proteins=recent.filter(r=>r.protein).map(r=>+r.protein), exs=recent.map(r=>r.exerciseTotal||0), muscles=recent.filter(r=>r.muscle&&muscleTypeOf(r)===latestMuscleType).map(r=>+r.muscle);
- let avg=x=>x.length?(x.reduce((p,c)=>p+c,0)/x.length):0;let complete=recent.filter(r=>assessmentStatus(r).complete),best=complete.slice().sort((x,y)=>scoreRecord(y,s)-scoreRecord(x,s))[0];let muscleMsg=muscles.length>=2?(muscles[muscles.length-1]>=muscles[0]?'維持できています':'少し低下傾向'):'記録待ち';
- let ai=avg(proteins)>=(s.proteinGoal||120)*.9&&avg(exs)>=250?'今週は減量の質がかなり良いです。睡眠をもう少し整えるとさらに強いです。':`来週はたんぱく質${s.proteinGoal||120}g前後と有酸素${s.cardioGoal||35}分を軸にすると安定します。`;
- $('weekly').innerHTML=`<div class="miniReport"><div><span class="small">平均体重</span><br><b>${avg(weights).toFixed(1)} kg</b></div><div><span class="small">平均摂取</span><br><b>${intakes.length?avg(intakes).toFixed(0):'--'} kcal</b></div><div><span class="small">平均たんぱく質</span><br><b>${proteins.length?avg(proteins).toFixed(0):'--'} g</b></div><div><span class="small">${latestMuscle?muscleMeta(latestMuscle).label:'筋肉'}維持</span><br><b>${muscleMsg}</b></div></div><p class="muted">一番良かった日：${best?best.date+'（'+scoreRecord(best,s)+'点）':'--'}<br>来週の目標：たんぱく質${s.proteinGoal||120}g、有酸素${s.cardioGoal||35}分、睡眠★★★★☆以上を2日増やす。<br><b>AIコメント：</b>${ai}</p>`;
+ const w=weeklyStats(a,s);currentWeeklyReport=buildWeeklyReport(a,s);
+ if(!w.recent.length){$('weekly').textContent='記録が増えると表示します';return}
+ const change=w.weightChange===null?'--':(w.weightChange>0?'+':'')+w.weightChange.toFixed(1)+' kg',muscle=w.muscleChange===null?'記録待ち':Math.abs(w.muscleChange)<=.5?'維持範囲':(w.muscleChange>0?'+':'')+w.muscleChange.toFixed(1)+' kg';
+ $('weekly').innerHTML=`<div class="miniReport"><div><span class="small">7日平均体重</span><br><b>${w.avgWeight===null?'--':w.avgWeight.toFixed(1)+' kg'}</b></div><div><span class="small">期間内体重差</span><br><b>${change}</b></div><div><span class="small">平均P</span><br><b>${w.avgProtein===null?'--':Math.round(w.avgProtein)+' g'}</b></div><div><span class="small">${w.latestMuscle?muscleMeta(w.latestMuscle).label:'骨格筋量'}</span><br><b>${muscle}</b></div></div><p class="muted">記録 ${w.recent.length}日｜評価確定 ${w.complete.length}日<br>運動消費合計 ${Math.round(w.exercise)}kcal｜平均睡眠 ${w.avgSleep===null?'--':w.avgSleep.toFixed(1)}/5<br>平均評価 ${w.avgScore===null?'--':Math.round(w.avgScore)}点</p>`;
+}
+async function copyWeeklyReport(){
+ const status=$('weeklyCopyStatus');if(!currentWeeklyReport){status.textContent='コピーできる週間総括がありません';return}
+ try{await navigator.clipboard.writeText(currentWeeklyReport);status.textContent='週間総括をコピーしました ✓'}catch(e){status.textContent='コピーできませんでした。文章を選択してコピーしてください'}
 }
 
 function editRecord(date){$('date').value=date;const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('記録'));if(tab)show('record',tab);else loadRecordForDate();setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),50)}
