@@ -107,6 +107,15 @@ test('v17.3 explains the final score and never penalizes blank optional water', 
   assert.match(html,/この点数をAIコーチに詳しく聞く/);
 });
 
+test('v17.4 keeps score guidance visible on home and separates morning from daily scoring', () => {
+  assert.match(html,/1日実行評価の内訳/);
+  assert.match(html,/点数の内訳・上げ方を見る/);
+  assert.match(html,/次に点数を上げる方法/);
+  assert.match(html,/朝コンディション評価：\$\{morningReportScore\(r\)\}点/);
+  assert.match(html,/差し引き比較はしません/);
+  assert.match(html,/openScoreConsult\(\)/);
+});
+
 test('each signed-in user has a separate local storage namespace', () => {
   assert.match(html, /shinDiet:\${id}:\${kind\.toLowerCase\(\)}/);
   assert.match(html, /activateUserStorage\(nextUser\.id\)/);
