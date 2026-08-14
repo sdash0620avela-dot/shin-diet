@@ -154,6 +154,22 @@ test('v17.8 separates current score, today actionable ceiling and next-time slee
   assert.match(html,/次回、睡眠★★★★★なら最大/);
 });
 
+test('v17.9 estimates cardio separately and keeps strength calories separate', () => {
+  const cardioMetSource=html.match(/const cardioMets=\{.*?\};/s)?.[0];
+  assert.ok(cardioMetSource);
+  const cardioApi=new Function(
+    cardioMetSource+'\n'+extractFunction(html,'cardioCalories')+'\nreturn { cardioCalories };'
+  )();
+  assert.equal(cardioApi.cardioCalories('bike','moderate',45,113.8),538);
+  assert.equal(cardioApi.cardioCalories('bike','hard',45,113.8),717);
+  assert.match(html,/前回の有酸素・強度をそのまま使う/);
+  assert.match(html,/筋トレのみの消費 kcal/);
+  assert.match(html,/有酸素：\$\{x\.cardio\}kcal/);
+  assert.match(html,/r\.cardioCalories=breakdown\.cardio/);
+  assert.match(html,/r\.strengthCalories=breakdown\.strength/);
+  assert.match(html,/r\.accessoryCalories=breakdown\.accessory/);
+});
+
 test('each signed-in user has a separate local storage namespace', () => {
   assert.match(html, /shinDiet:\${id}:\${kind\.toLowerCase\(\)}/);
   assert.match(html, /activateUserStorage\(nextUser\.id\)/);
