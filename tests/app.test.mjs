@@ -20,9 +20,9 @@ function extractFunction(source, name) {
 
 const scoreApi = new Function(
   [
-    'sleepScore', 'isRestDay', 'effectiveExercise', 'scoreRecord'
+    'sleepScore', 'hasValue', 'hasSleepInput', 'sleepStar', 'isRestDay', 'effectiveExercise', 'scoreBreakdown', 'scoreRecord', 'scoreImprovementLines'
   ].map(name => extractFunction(html, name)).join('\n') +
-  '\nreturn { sleepScore, scoreRecord };'
+  '\nreturn { sleepScore, scoreRecord, scoreBreakdown, scoreImprovementLines };'
 )();
 
 const syncApi = new Function(
@@ -41,7 +41,7 @@ const morningApi = new Function(
 )();
 
 const coachApi = new Function(
-  ['sleepScore','hasValue','isRestDay','effectiveExercise','hasExerciseInput','hasMealInput','hasSleepInput','assessmentStatus','scoreRecord','sleepStar','animeCoachState'].map(name => extractFunction(html, name)).join('\n') +
+  ['sleepScore','hasValue','isRestDay','effectiveExercise','hasExerciseInput','hasMealInput','hasSleepInput','assessmentStatus','scoreBreakdown','scoreRecord','sleepStar','animeCoachState'].map(name => extractFunction(html, name)).join('\n') +
   '\nreturn { animeCoachState };'
 )();
 
@@ -51,7 +51,7 @@ const compositionApi = new Function(
 )();
 
 const weeklyApi = new Function(
-  ['sleepScore','hasValue','isRestDay','effectiveExercise','hasExerciseInput','hasMealInput','hasSleepInput','assessmentStatus','scoreRecord','sleepStar','dayNumber','muscleTypeOf','weeklyWindow','weeklyStats','muscleMeta','buildWeeklyReport'].map(name => extractFunction(html, name)).join('\n') +
+  ['sleepScore','hasValue','isRestDay','effectiveExercise','hasExerciseInput','hasMealInput','hasSleepInput','assessmentStatus','scoreBreakdown','scoreRecord','sleepStar','dayNumber','muscleTypeOf','weeklyWindow','weeklyStats','muscleMeta','buildWeeklyReport'].map(name => extractFunction(html, name)).join('\n') +
   '\nreturn { weeklyWindow, weeklyStats, buildWeeklyReport };'
 )();
 
@@ -92,6 +92,19 @@ test('four-star sleep cannot score 100', () => {
   const record = { ...ideal, sleep: '★★★★☆' };
   assert.equal(scoreApi.scoreRecord(record, settings), 96);
   assert.ok(scoreApi.scoreRecord(record, settings) < 100);
+});
+
+test('v17.3 explains the final score and never penalizes blank optional water', () => {
+  const record = {intake:2100,protein:93,cardio:true,exerciseTotal:1135,strength:'腕トレ28セット 60分',sleep:'★★★★☆',waterL:null,fatigue:2};
+  assert.equal(scoreApi.scoreRecord(record, settings), 87);
+  const breakdown=scoreApi.scoreBreakdown(record,settings);
+  assert.deepEqual(breakdown.items.map(x=>[x.label,x.points,x.max]),[['摂取カロリー',20,20],['たんぱく質',11,20],['運動',25,25],['睡眠',16,20],['水分',5,5],['疲労度',10,10]]);
+  const improvements=scoreApi.scoreImprovementLines(record,settings).join('\n');
+  assert.match(improvements,/あと9g、合計102gまで補う → 92点（\+5点）/);
+  assert.match(improvements,/あと27g、目標120gまで補う → 96点（\+9点）/);
+  assert.match(improvements,/水分は未入力のため減点していません/);
+  assert.match(html,/朝コンディション評価と1日実行評価は採点対象が異なる別の点数/);
+  assert.match(html,/この点数をAIコーチに詳しく聞く/);
 });
 
 test('each signed-in user has a separate local storage namespace', () => {
