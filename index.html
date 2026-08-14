@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v18.1 筋トレ解析版</title>
+<title>AI Diet v18.2 旧記録コピー対応版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v18.1 筋トレ解析版</div>
+  <div class="version-pill">v18.2 旧記録コピー対応版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -810,14 +810,16 @@ function quickFull(){quickCardio();$('drawin').checked=true;$('legRaise').checke
 function updateMealSummary(id){const text=$(id).value.trim(),kcal=+$(id+'Kcal').value||0;$(id+'Summary').textContent=text?(kcal?`${kcal}kcal`:'入力済み'):'未入力'}
 function copyPreviousMeal(id,label){const current=$('date').value,previous=recs().filter(r=>r.date<current&&String(r[id]||'').trim()).slice(-1)[0];if(!previous){setStatus(`前回の${label}記録がありません`,false);return}$(id).value=previous[id]||'';mealSuffixes.forEach(s=>$(id+s).value=previous[id+s]??(s==='Source'?'manual':''));calculateMealTotals();updateMealSummary(id);setStatus(`前回の${label}をコピーしました。量が違う場合だけ直してください`,true)}
 function copyPreviousCardio(){
- const current=$('date').value,previous=recs().filter(r=>r.date<current&&r.cardio&&r.cardioType&&r.cardioIntensity).slice(-1)[0];
- if(!previous){setStatus('種類と強度が保存された過去の有酸素記録がありません',false);return}
- $('cardio').checked=true;$('cardioType').value=previous.cardioType;$('cardioIntensity').value=previous.cardioIntensity;$('cardioMin').value=previous.cardioMin||'';$('cardioDetails').value=previous.cardioDetails||'';$('cardioManualCalories').value='';renderExerciseEstimate();scheduleDraftSave();setStatus('前回の有酸素・強度・時間をコピーしました。機器表示kcalは今回の値を入れてください',true)
+ const current=$('date').value,previous=recs().filter(r=>r.date<current&&r.cardio).slice(-1)[0];
+ if(!previous){setStatus('過去の有酸素記録がありません',false);return}
+ const legacy=!previous.cardioType||!previous.cardioIntensity;
+ $('cardio').checked=true;$('cardioType').value=previous.cardioType||'other';$('cardioIntensity').value=previous.cardioIntensity||'moderate';$('cardioMin').value=previous.cardioMin||'';$('cardioDetails').value=previous.cardioDetails||'';$('cardioManualCalories').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'旧記録から時間をコピーしました。種類は「その他」、強度は「普通」に仮設定したので今回の内容に合わせて確認してください':'前回の有酸素・強度・時間をコピーしました。機器表示kcalは今回の値を入れてください',true)
 }
 function copyPreviousStrength(){
- const current=$('date').value,previous=recs().filter(r=>r.date<current&&String(r.strength||'').trim()&&r.strengthIntensity).slice(-1)[0];
- if(!previous){setStatus('強度が保存された過去の筋トレ記録がありません',false);return}
- $('strengthIntensity').value=previous.strengthIntensity;$('workoutMinutes').value=previous.workoutMinutes||'';$('strength').value=previous.strength||'';$('exerciseCal').value='';renderExerciseEstimate();scheduleDraftSave();setStatus('前回の筋トレ内容・強度・時間をコピーしました。消費kcalは今回の条件で再計算します',true)
+ const current=$('date').value,previous=recs().filter(r=>r.date<current&&(String(r.strength||'').trim()||+r.workoutMinutes>0)).slice(-1)[0];
+ if(!previous){setStatus('過去の筋トレ記録がありません',false);return}
+ const legacy=!previous.strengthIntensity;
+ $('strengthIntensity').value=previous.strengthIntensity||'moderate';$('workoutMinutes').value=previous.workoutMinutes||'';$('strength').value=previous.strength||'';$('exerciseCal').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'旧記録から筋トレ内容・時間をコピーしました。強度は「普通」に仮設定したので今回の強度に合わせて確認してください':'前回の筋トレ内容・強度・時間をコピーしました。消費kcalは今回の条件で再計算します',true)
 }
 function finishMeals(){
  const entered=mealTypes.filter(([id])=>$(id).value.trim()||hasValue($(id+'Kcal').value));
