@@ -54,6 +54,11 @@ const weeklyApi = new Function(
   '\nreturn { weeklyWindow, weeklyStats, buildWeeklyReport };'
 )();
 
+const graphApi = new Function(
+  ['hasValue','fatTypeOf','muscleTypeOf','dayNumber','graphSeries','rollingSevenDay'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { graphSeries, rollingSevenDay };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -250,4 +255,19 @@ test('v16.4 weekly report uses the latest seven calendar days and is copyable', 
   assert.match(report,/【来週の最優先】/);
   assert.match(report,/脂肪・筋肉の増減とは断定しません/);
   assert.match(html,/copyWeeklyReport/);
+});
+
+test('v16.5 chart switches metrics without mixing measurement types and uses calendar averages', () => {
+  const records=[
+    {date:'2026-08-01',weight:115,fat:27,fatType:'fatPercent',muscle:47,muscleType:'skeletalMuscleMass'},
+    {date:'2026-08-08',weight:114,fat:26.8,fatType:'fatPercent',muscle:47.1,muscleType:'skeletalMuscleMass'},
+    {date:'2026-08-09',weight:113.8,fat:30,fatType:'fatMass',muscle:80,muscleType:'muscleMass'},
+    {date:'2026-08-14',weight:113.5,fat:29.8,fatType:'fatMass',muscle:79.5,muscleType:'muscleMass'}
+  ];
+  assert.deepEqual(graphApi.graphSeries(records,'fat').map(x=>x.value),[30,29.8]);
+  assert.deepEqual(graphApi.graphSeries(records,'muscle').map(x=>x.value),[80,79.5]);
+  const rolling=graphApi.rollingSevenDay(graphApi.graphSeries(records,'weight'));
+  assert.equal(rolling.at(-1).value,(114+113.8+113.5)/3);
+  assert.match(html,/selectGraphMode\('weight'\)/);
+  assert.match(html,/実線：実測値｜点線：7日平均/);
 });
