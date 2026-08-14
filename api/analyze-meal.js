@@ -104,10 +104,13 @@ export default {
     let body;
     try { body = await request.json(); } catch { return json({ error: '送信内容を読み取れませんでした。' }, 400, origin); }
     if (body.kind === 'server_time') return json({ server_time: new Date().toISOString() }, 200, origin);
-    const rateLimit = await env.PHOTO_RATE_LIMITER.limit({ key: authUser.id });
+    const aiKind = body.kind === 'coach_chat' ? 'coach' : 'photo';
+    const limiter = aiKind === 'coach' ? env.AI_CHAT_RATE_LIMITER : env.PHOTO_RATE_LIMITER;
+    if (!limiter) return json({ error: 'AI機能の利用制限設定が未完了です。' }, 503, origin);
+    const rateLimit = await limiter.limit({ key: authUser.id });
     if (!rateLimit.success) {
-      console.warn(JSON.stringify({ event: 'ai_rate_limited', user_id: authUser.id }));
-      return json({ error: 'AI機能の利用が続いています。1分ほど待ってから再度お試しください。', reason: 'rate_limited' }, 429, origin);
+      console.warn(JSON.stringify({ event: 'ai_rate_limited', kind: aiKind, user_id: authUser.id }));
+      return json({ error: aiKind === 'coach' ? 'AI相談の利用が続いています。1分ほど待ってから再度お試しください。' : '写真解析の利用が続いています。1分ほど待ってから再度お試しください。', reason: 'rate_limited' }, 429, origin);
     }
     let stage = 'request_body';
     try {
