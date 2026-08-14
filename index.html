@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v16.5 グラフ強化版</title>
+<title>AI Diet v16.6 身体サイズ版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -260,7 +260,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v16.5 グラフ強化版</div>
+  <div class="version-pill">v16.6 身体サイズ版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -376,6 +376,13 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <div><div class="label">総エネルギー kcal</div><input id="totalEnergy" type="number" step="1" inputmode="numeric" placeholder="3486"></div>
       <div><div class="label">睡眠</div><select id="sleep"><option value="">未入力</option><option>★★★★★</option><option>★★★★☆</option><option>★★★☆☆</option><option>★★☆☆☆</option><option>★☆☆☆☆</option></select></div>
     </div>
+    <div class="label">身体サイズ（任意・cm）</div>
+    <div class="grid">
+      <div><div class="label">ウエスト</div><input id="waistCm" type="number" step="0.1" inputmode="decimal" placeholder="100.0"></div>
+      <div><div class="label">胸囲</div><input id="chestCm" type="number" step="0.1" inputmode="decimal" placeholder="110.0"></div>
+      <div><div class="label">ヒップ</div><input id="hipCm" type="number" step="0.1" inputmode="decimal" placeholder="105.0"></div>
+    </div>
+    <p class="small">同じ位置・同じ姿勢・同じ時間帯で測ると比較しやすくなります。</p>
     <div class="grid">
       <div><div class="label">空腹感 1〜5</div><input id="hunger" type="number" min="1" max="5" inputmode="numeric" placeholder="3"></div>
       <div><div class="label">疲労感 1〜5</div><input id="fatigue" type="number" min="1" max="5" inputmode="numeric" placeholder="3"></div>
@@ -433,6 +440,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 
 <section id="graph" class="page">
   <div class="card"><h3 id="chartTitle">体重推移</h3><div class="summary-switch" style="grid-template-columns:repeat(3,1fr)"><button id="graphWeightBtn" type="button" onclick="selectGraphMode('weight')">体重</button><button id="graphFatBtn" type="button" class="off" onclick="selectGraphMode('fat')">体脂肪</button><button id="graphMuscleBtn" type="button" class="off" onclick="selectGraphMode('muscle')">骨格筋</button></div><canvas id="chart" class="chart-canvas" width="380" height="260"></canvas><div id="chartNote" class="small">実線：実測値｜点線：7日平均</div></div>
+  <div class="card"><h3>身体サイズの変化</h3><div id="measurementProgress" class="muted">サイズを記録すると開始時と現在を比較します</div></div>
   <div class="card"><h3>AI週間レポート</h3><div id="weekly" class="muted">記録が増えると表示します</div><button type="button" class="sub copyReport" onclick="copyWeeklyReport()">週間総括をコピー</button><div id="weeklyCopyStatus" class="small" role="status" aria-live="polite"></div></div>
   <div class="card"><h3>最近の記録</h3><div id="list"></div></div>
 </section>
@@ -668,7 +676,7 @@ function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REA
 const mealTypes=[['breakfast','朝食'],['lunch','昼食'],['dinner','夕食'],['snack','間食']];
 const mealSuffixes=['Source','Kcal','Protein','Fat','Carbs'];
 function mealFieldIds(){return mealTypes.flatMap(([id])=>[id,...mealSuffixes.map(s=>id+s)])}
-function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','visceralFat','bmi','basalMetabolism','totalEnergy','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioMin','exerciseCal','workoutMinutes','strength']}
+function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','visceralFat','bmi','basalMetabolism','totalEnergy','waistCm','chestCm','hipCm','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioMin','exerciseCal','workoutMinutes','strength']}
 function checkIds(){return ['cardio','legRaise','plank','powerplate','drawin']}
 function fatTypeOf(r){return r&&r.fatType==='fatMass'?'fatMass':'fatPercent'}
 function muscleTypeOf(r){return r&&r.muscleType==='skeletalMuscleMass'?'skeletalMuscleMass':'muscleMass'}
@@ -992,7 +1000,7 @@ function update(){
  $('motivation').innerHTML=motivationText(last,s);
  motivationMessage(a,s,last,t);
  forecast(last,a,s);
- renderWeekly(a,s);renderList();drawChart();drawForecastChart();
+ renderWeekly(a,s);renderList();drawChart();drawForecastChart();renderMeasurementProgress(a);
 }
 
 function dayNumber(date){return Date.parse(date+'T00:00:00Z')/86400000}
@@ -1296,6 +1304,15 @@ function selectGraphMode(mode){
  graphMode=['weight','fat','muscle'].includes(mode)?mode:'weight';
  ['weight','fat','muscle'].forEach(x=>$(`graph${x[0].toUpperCase()+x.slice(1)}Btn`).className=x===graphMode?'':'off');
  drawChart();
+}
+function measurementStats(records){
+ const sorted=(Array.isArray(records)?records:[]).filter(r=>r&&r.date).slice().sort((x,y)=>x.date.localeCompare(y.date)),defs=[['waistCm','ウエスト'],['chestCm','胸囲'],['hipCm','ヒップ']];
+ return defs.map(([key,label])=>{const rows=sorted.filter(r=>hasValue(r[key])&&Number.isFinite(+r[key])&&+r[key]>0),first=rows[0],last=rows[rows.length-1];return {key,label,count:rows.length,first:first?+first[key]:null,last:last?+last[key]:null,change:first&&last?(+last[key])-(+first[key]):null,firstDate:first&&first.date,lastDate:last&&last.date}})
+}
+function renderMeasurementProgress(records){
+ const stats=measurementStats(records),entered=stats.filter(x=>x.count);
+ if(!entered.length){$('measurementProgress').textContent='ウエスト・胸囲・ヒップを記録すると、最初の記録と現在を比較します。';return}
+ $('measurementProgress').innerHTML='<div class="miniReport">'+stats.map(x=>`<div><span class="small">${x.label}</span><br><b>${x.last===null?'--':x.last.toFixed(1)+' cm'}</b><br><span class="${x.change===null?'small':x.change<0?'good':x.change>0?'warn':'small'}">${x.change===null?'比較待ち':(x.change>0?'+':'')+x.change.toFixed(1)+' cm'}</span></div>`).join('')+'</div><p class="small">各項目の最初の記録との比較です。測定位置・姿勢・時間帯の違いでも数値は変動します。</p>';
 }
 function drawChart(){
  const c=$('chart');if(!c)return;const ctx=c.getContext('2d'),a=graphSeries(recs(),graphMode),s=sets(),labels={weight:'体重推移',fat:'体脂肪推移',muscle:'骨格筋量推移'},units={weight:'kg',fat:a.length&&fatTypeOf(recs().filter(r=>hasValue(r.fat)).slice(-1)[0])==='fatMass'?'kg':'%',muscle:'kg'};
