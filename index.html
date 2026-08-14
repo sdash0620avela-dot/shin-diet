@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v17.6 収支計算修正版</title>
+<title>AI Diet v17.7 最新体重TDEE版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v17.6 収支計算修正版</div>
+  <div class="version-pill">v17.7 最新体重TDEE版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -340,7 +340,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card">
     <div class="card-title">今日の収支</div>
     <span id="bal" class="big">--</span><span class="unit"> kcal</span>
-    <p class="muted" style="margin:8px 0 0;font-size:13px">摂取 − 推定1日消費の概算（普段の活動・運動を含む平均）</p>
+    <p id="balanceBasis" class="muted" style="margin:8px 0 0;font-size:13px">摂取 − 推定1日消費の概算</p>
   </div>
 
   <div class="card">
@@ -501,6 +501,8 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <button type="button" class="sub" style="margin-top:12px" onclick="calculateRecommendations()">目標kcal・Pを自動計算</button>
     <div id="recommendationStatus" class="small" style="margin-top:10px"></div>
     <div class="label">推定1日消費 kcal（普段の活動・運動を含む平均・編集可）</div><input id="baseBurn" type="number" inputmode="numeric" value="2800">
+    <label class="check"><input id="autoBurn" type="checkbox" checked>最新の記録体重から推定1日消費を自動更新</label>
+    <p class="small">オン：最新体重・年齢・性別・身長・活動量から各日の収支を再計算。オフ：上の手入力値を固定使用。</p>
     <div class="label">1日の目標たんぱく質 g（編集可）</div><input id="proteinGoal" type="number" step="1" inputmode="numeric" value="120">
     <div class="label">1日の目標摂取 kcal（編集可）</div><input id="calorieGoal" type="number" step="10" inputmode="numeric" value="2000">
     <div class="label">有酸素の基準時間 分</div><input id="cardioGoal" type="number" step="1" inputmode="numeric" value="35">
@@ -562,8 +564,8 @@ const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
 $('date').value=today();
 
-const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35};
-const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35};
+const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35};
+const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35};
 let activeStorageId='legacy';
 let serverClockOffsetMs=Number(localStorage.getItem('shinDietServerClockOffsetMs')||0);
 const appNowMs=()=>Date.now()+serverClockOffsetMs;
@@ -859,7 +861,12 @@ function scoreBreakdown(r,s){
   return {score:Math.max(0,Math.min(100,Math.round(items.reduce((sum,x)=>sum+x.points,0)))),items,proteinGoal};
 }
 function scoreRecord(r,s){return scoreBreakdown(r,s).score}
-function estimatedBalance(r,s){return hasValue(r.intake)?Math.round((+r.intake)-(+s.baseBurn||0)):null}
+function estimatedDailyBurn(r,s){
+ const weight=+r.weight||0,age=+s.age||0,height=+s.heightCm||0,activity=+s.activityLevel||0,sex=s.sex;
+ if(s.autoBurn!==false&&weight&&age&&height&&activity&&(sex==='male'||sex==='female'))return Math.round((10*weight+6.25*height-5*age+(sex==='male'?5:-161))*activity);
+ return +s.baseBurn||0;
+}
+function estimatedBalance(r,s){return hasValue(r.intake)?Math.round((+r.intake)-estimatedDailyBurn(r,s)):null}
 function largeDeficitWarning(r,s){const balance=estimatedBalance(r,s);return balance!==null&&balance<=-1000?`概算収支${balance}kcalは赤字が大きすぎる可能性があります。運動消費と1日消費の設定を確認し、これ以上の運動追加や食事削減はしません。`:''}
 function scoreImprovementLines(r,s){
   const base=scoreRecord(r,s),goal=+s.proteinGoal||120,protein=+r.protein||0,lines=[];
@@ -907,7 +914,7 @@ function coachText(r,s,last,prev){
   let lead=!status.complete?`${status.missing.join('・')}が未入力のため、評価は暫定です。`:balanceWarning?'運動量は十分ですが、概算収支の赤字が大きいため安全確認を優先します。':rest?'今日は計画どおりの休養日。運動0分で問題ありません。':score>=90?'今日はかなり理想的です。筋肉を残しながら脂肪を落としやすい一日。':score>=80?'今日はかなり良い流れです。あと少し整えれば90点台が狙えます。':score>=70?'今日は合格ラインです。継続としては十分価値があります。':score>=60?'今日は修正ポイントあり。でも崩れてはいません。':'今日は回復と食事の立て直しを優先したい日です。';
   const proteinGoal=+s.proteinGoal||120,name=s.displayName||'あなた',safeName=esc(name);
   let food=protein>=proteinGoal?'たんぱく質は目標を達成。筋肉量維持にかなり向いています。':protein>=proteinGoal*.75?`たんぱく質は悪くないです。目標${proteinGoal}gまで、もう一品足すと強いです。`:protein>0?`たんぱく質が少なめ。まず目標${proteinGoal}gを意識しましょう。`:`たんぱく質が未入力。${safeName}さんの基準は${proteinGoal}gです。`;
-  let balance=bal===null?'摂取カロリー未入力なので収支は未判定。':bal< -900?'収支はかなり大きなマイナス。落ちますが、疲労と筋肉量低下には注意。':bal<0?'収支はマイナスで減量向きです。':bal<300?'ほぼ維持ライン。夜の脂質を控えれば減量側に寄せられます。':'収支はプラス気味。外食や脂質の量を少しだけ調整。';
+  let balance=bal===null?'摂取カロリー未入力なので収支は未判定。':bal< -900?`収支はかなり大きなマイナス（推定1日消費${estimatedDailyBurn(r,s)}kcal基準）。疲労と筋肉量低下には注意。`:bal<0?`収支はマイナスで減量向きです（推定1日消費${estimatedDailyBurn(r,s)}kcal基準）。`:bal<300?'ほぼ維持ライン。夜の脂質を控えれば減量側に寄せられます。':'収支はプラス気味。外食や脂質の量を少しだけ調整。';
   let exercise=rest?'今日は休養日として記録されています。運動は0分。身体を回復させる日です。':!hasExerciseInput(r)?'運動・休養が未入力のため、運動量は判定していません。':effectiveExercise(r)>=350?'運動量は十分。脂肪を動かす刺激として良いです。':effectiveExercise(r)>0?'運動は入っています。軽めでも継続できているのが大事。':'運動内容は入力されていますが、消費量は0kcalとして記録されています。';
   let sleep=r.sleep?`睡眠は${r.sleep}。${sleepStar(r)>=4?'回復も良いです。':sleepStar(r)>=3?'最低限は取れています。':'回復不足なので無理しすぎ注意。'}`:'睡眠未入力。睡眠を入れるとAI評価が安定します。';
   const mm=muscleMeta(r),prevMuscle=prevRecord(recs(),r,'muscle');
@@ -1050,16 +1057,16 @@ function saveRecord(){
 function clearForm(){clearTimeout(draftTimer);removeDraft($('date').value);fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
 function profileComplete(s){return !!(s.displayName&&s.startDate&&s.startWeight&&s.goalWeight&&s.baseBurn&&s.age&&s.sex&&s.heightCm&&s.activityLevel)}
 function calculateRecommendations(){
- const age=+$('age').value,height=+$('heightCm').value,weight=+$('startWeight').value,goal=+$('goalWeight').value,sex=$('sex').value,activity=+$('activityLevel').value,deficit=+$('weightLossPace').value||500;
+ const age=+$('age').value,height=+$('heightCm').value,latest=recs().filter(r=>+r.weight>0).slice(-1)[0],weight=latest?+latest.weight:+$('startWeight').value,goal=+$('goalWeight').value,sex=$('sex').value,activity=+$('activityLevel').value,deficit=+$('weightLossPace').value||500;
  const out=$('recommendationStatus');
  if(!age||!height||!weight||!goal||!sex||!activity){out.textContent='年齢・性別・身長・開始体重・目標体重・活動量を入力してください。';out.style.color='var(--bad)';return}
  const bmr=10*weight+6.25*height-5*age+(sex==='male'?5:-161),tdee=Math.round(bmr*activity),calorie=Math.max(Math.round(bmr),tdee-deficit);
  const proteinFactor=activity>=1.55?1.6:1.4,protein=Math.max(60,Math.round(goal*proteinFactor));
  $('baseBurn').value=tdee;$('calorieGoal').value=calorie;$('proteinGoal').value=protein;
- out.textContent=`推定基礎代謝 ${Math.round(bmr)}kcal｜推定1日消費 ${tdee}kcal｜目標摂取 ${calorie}kcal｜目標P ${protein}g`;out.style.color='var(--good)'
+ out.textContent=`${latest?'最新体重 '+weight.toFixed(1)+'kg':'開始体重 '+weight.toFixed(1)+'kg'}を使用｜推定基礎代謝 ${Math.round(bmr)}kcal｜推定1日消費 ${tdee}kcal｜目標摂取 ${calorie}kcal｜目標P ${protein}g`;out.style.color='var(--good)'
 }
 function saveSettings(){
- const s={displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,updatedAt:appNowIso()};
+ const s={displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,updatedAt:appNowIso()};
  const existing=sets(),legacyAllowed=recs().length>0&&!existing.age;
  if(!s.displayName||!s.startDate||!s.startWeight||!s.baseBurn||!s.goalWeight)return alert('名前・開始日・開始体重・消費kcal・目標体重を入力してください。');
  if(!legacyAllowed&&(!s.age||!s.sex||!s.heightCm||!s.activityLevel))return alert('年齢・性別・身長・活動量を入力し、自動計算してください。');
@@ -1069,14 +1076,14 @@ function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=
 function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home')drawForecastChart()}
 
 function update(){
- const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;
+ const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;
  $('onboardingNotice').style.display=profileComplete(s)||recs().length?'none':'block';
  $('appTitle').textContent=s.displayName?`${s.displayName}のAI Diet`:'AI Diet';$('appSubhead').textContent=s.startDate?`${s.startDate.replaceAll('-','/')}開始｜目標P ${s.proteinGoal||120}g｜有酸素 ${s.cardioGoal||35}分`:'個人設定を入力してください';
  $('calorieGoalChip').textContent=`${s.calorieGoal||2000}kcal`;$('proteinGoalChip').textContent=`${s.proteinGoal||120}g P`;$('cardioGoalChip').textContent=`有酸素${s.cardioGoal||35}分`;$('cardioGoalLabel').textContent=`有酸素（${s.cardioGoal||35}分）`;
  const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];
  if(last){const fm=fatMeta(last),mm=muscleMeta(last);$('cw').textContent=(+last.weight).toFixed(1);$('cf').textContent=last.fat??'--';$('cfLabel').textContent=fm.label;$('cfUnit').textContent=' '+fm.unit;$('cm').textContent=last.muscle??'--';$('cmLabel').textContent=mm.label;$('cmUnit').textContent=' '+mm.unit;$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+' kg';$('loss').className=(last.weight-s.startWeight)<0?'good':'warn'}
  const t=a.find(r=>r.date===today())||a.slice(-1)[0];const prev=t?prevRecord(a,t,'weight'):null;
- if(t){let rest=isRestDay(t),b=estimatedBalance(t,s);$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('tw').textContent=rest?'休養日 · 運動0分':[t.cardio?`有酸素 ${t.cardioMin||35}分`:'',t.legRaise?'足上げ腹筋':'',t.plank?'プランク':'',t.powerplate?'Power Plate':'',t.drawin?'ドローイン':'',t.strength||''].filter(Boolean).join(' · ')||'まだ記録なし';$('coach').innerHTML=coachText(t,s,last,prev);$('diary').innerHTML=diaryText(t,s,last,prev)}
+ if(t){let rest=isRestDay(t),b=estimatedBalance(t,s),burn=estimatedDailyBurn(t,s);$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('balanceBasis').textContent=`摂取 − 推定1日消費 ${burn}kcal（${s.autoBurn!==false&&+t.weight?'記録体重から自動計算':'固定設定'}）`;$('tw').textContent=rest?'休養日 · 運動0分':[t.cardio?`有酸素 ${t.cardioMin||35}分`:'',t.legRaise?'足上げ腹筋':'',t.plank?'プランク':'',t.powerplate?'Power Plate':'',t.drawin?'ドローイン':'',t.strength||''].filter(Boolean).join(' · ')||'まだ記録なし';$('coach').innerHTML=coachText(t,s,last,prev);$('diary').innerHTML=diaryText(t,s,last,prev)}
  updateStatTiles(a,s,t,prev);
  renderAnimeCoach(t,s);
  updateWeeklyChange(a,s);
@@ -1212,7 +1219,7 @@ function buildDailySummary(r,prev,s,mode){
   hasValue(r.visceralFat)&&prev&&hasValue(prev.visceralFat)?'内臓脂肪レベルも単日の表示値だけで判断せず、継続して確認します。':'',
   mode==='daily'&&largeDeficitWarning(r,s)?largeDeficitWarning(r,s)+' 運動消費は概算のため、まず入力値を確認します。':''
  ].filter(Boolean);
- const mealSection=mode==='daily'?[`摂取：${numberText(r.intake,0,'kcal')}`,`P：${numberText(r.protein,0,'g')}｜F：${numberText(r.fatG,0,'g')}｜C：${numberText(r.carbsG,0,'g')}`,`水分：${numberText(r.waterL,1,'L')}`,`概算収支：${estimatedBalance(r,s)===null?'未判定':estimatedBalance(r,s)+'kcal'}（推定1日消費には普段の活動・運動を含むため、当日の運動消費は重ねて引きません）`].join('\n'):'';
+ const mealSection=mode==='daily'?[`摂取：${numberText(r.intake,0,'kcal')}`,`P：${numberText(r.protein,0,'g')}｜F：${numberText(r.fatG,0,'g')}｜C：${numberText(r.carbsG,0,'g')}`,`水分：${numberText(r.waterL,1,'L')}`,`推定1日消費：${estimatedDailyBurn(r,s)}kcal（${s.autoBurn!==false&&+r.weight?'記録体重から自動計算':'固定設定'}）`,`概算収支：${estimatedBalance(r,s)===null?'未判定':estimatedBalance(r,s)+'kcal'}（当日の運動消費は重ねて引きません）`].join('\n'):'';
  const missing=mode==='daily'?assessmentStatus(r).missing:[];
  const inferred=[exCalories>0?`運動消費 ${Math.round(exCalories)}kcalは入力・運動内容からの概算です。`:'',missing.length?`${missing.join('・')}が未入力のため評価は暫定です。`:''].filter(Boolean);
  return `${dateLabel} ${mode==='morning'?'朝':'1日'}ダイエット総括
