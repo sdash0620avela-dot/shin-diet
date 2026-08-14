@@ -118,12 +118,20 @@ test('v17.4 keeps score guidance visible on home and separates morning from dail
 
 test('v17.5 prioritizes a very large estimated deficit before chasing score points', () => {
   const record={intake:2100,protein:93,cardio:true,exerciseTotal:1135,strength:'腕トレ28セット 60分',sleep:'★★★★☆',waterL:null,fatigue:2};
-  const personalSettings={...settings,baseBurn:2800};
-  assert.equal(scoreApi.estimatedBalance(record,personalSettings),-1835);
-  assert.match(scoreApi.largeDeficitWarning(record,personalSettings),/概算収支-1835kcal/);
+  const personalSettings={...settings,baseBurn:3200};
+  assert.equal(scoreApi.estimatedBalance(record,personalSettings),-1100);
+  assert.match(scoreApi.largeDeficitWarning(record,personalSettings),/概算収支-1100kcal/);
   assert.match(scoreApi.scoreImprovementLines(record,personalSettings)[0],/これ以上の運動追加や食事削減はしません/);
   assert.match(html,/if\(balanceWarning\)return '最優先：'\+balanceWarning/);
   assert.match(html,/概算収支の赤字が大きいため安全確認を優先/);
+});
+
+test('v17.6 does not subtract exercise twice from an activity-adjusted daily burn', () => {
+  const record={intake:2100,exerciseTotal:1135};
+  assert.equal(scoreApi.estimatedBalance(record,{baseBurn:2800}),-700);
+  assert.equal(scoreApi.largeDeficitWarning(record,{baseBurn:2800}),'');
+  assert.match(html,/推定1日消費には普段の活動・運動を含むため、当日の運動消費は重ねて引きません/);
+  assert.doesNotMatch(html,/\(\+r\.intake\)-\(\+s\.baseBurn\|\|0\)-exCalories/);
 });
 
 test('each signed-in user has a separate local storage namespace', () => {
