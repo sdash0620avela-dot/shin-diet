@@ -59,6 +59,11 @@ const graphApi = new Function(
   '\nreturn { graphSeries, rollingSevenDay };'
 )();
 
+const measurementApi = new Function(
+  ['hasValue','measurementStats'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { measurementStats };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -270,4 +275,20 @@ test('v16.5 chart switches metrics without mixing measurement types and uses cal
   assert.equal(rolling.at(-1).value,(114+113.8+113.5)/3);
   assert.match(html,/selectGraphMode\('weight'\)/);
   assert.match(html,/実線：実測値｜点線：7日平均/);
+});
+
+test('v16.6 stores and compares optional body measurements', () => {
+  const stats=measurementApi.measurementStats([
+    {date:'2026-08-01',waistCm:110,chestCm:120},
+    {date:'2026-08-08',waistCm:108},
+    {date:'2026-08-14',waistCm:106.5,chestCm:118,hipCm:105}
+  ]);
+  assert.equal(stats.find(x=>x.key==='waistCm').change,-3.5);
+  assert.equal(stats.find(x=>x.key==='chestCm').change,-2);
+  assert.equal(stats.find(x=>x.key==='hipCm').change,0);
+  assert.match(html,/id="waistCm"/);
+  assert.match(html,/id="chestCm"/);
+  assert.match(html,/id="hipCm"/);
+  assert.match(html,/renderMeasurementProgress\(a\)/);
+  assert.match(html,/測定位置・姿勢・時間帯の違い/);
 });
