@@ -170,6 +170,16 @@ test('v17.9 estimates cardio separately and keeps strength calories separate', (
   assert.match(html,/r\.accessoryCalories=breakdown\.accessory/);
 });
 
+test('v18.0 accepts a current machine calorie reading without copying an old reading', () => {
+  assert.match(html,/id="cardioManualCalories"/);
+  assert.match(html,/機器表示 kcal（任意）/);
+  assert.match(html,/manualEntered\?'machine':'met'/);
+  assert.match(html,/機器表示を優先/);
+  assert.match(html,/\$\('cardioManualCalories'\)\.value=''/);
+  assert.match(html,/cardioCalorieSource=breakdown\.source/);
+  assert.match(html,/r\.cardioCalorieSource==='machine'/);
+});
+
 test('each signed-in user has a separate local storage namespace', () => {
   assert.match(html, /shinDiet:\${id}:\${kind\.toLowerCase\(\)}/);
   assert.match(html, /activateUserStorage\(nextUser\.id\)/);
