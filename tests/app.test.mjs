@@ -64,6 +64,11 @@ const measurementApi = new Function(
   '\nreturn { measurementStats };'
 )();
 
+const bodyProgressApi = new Function(
+  ['hasValue','avgOf','dayNumber','muscleTypeOf','muscleMeta','measurementStats','bodyCompositionAnalysis','bodyProgressSummary'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { bodyProgressSummary };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -291,4 +296,19 @@ test('v16.6 stores and compares optional body measurements', () => {
   assert.match(html,/id="hipCm"/);
   assert.match(html,/renderMeasurementProgress\(a\)/);
   assert.match(html,/測定位置・姿勢・時間帯の違い/);
+});
+
+test('v16.7 body comment only uses recorded numeric changes', () => {
+  const records=[
+    {date:'2026-08-01',weight:120,waistCm:110,muscle:47,muscleType:'skeletalMuscleMass'},
+    {date:'2026-08-08',weight:115,waistCm:106,muscle:47.1,muscleType:'skeletalMuscleMass'},
+    {date:'2026-08-14',weight:113.8,waistCm:104.5,muscle:47,muscleType:'skeletalMuscleMass'}
+  ];
+  const summary=bodyProgressApi.bodyProgressSummary(records,{startWeight:127.4});
+  assert.match(summary.facts.join('\n'),/開始体重 127.4kg → 現在 113.8kg（-13.6kg）/);
+  assert.match(summary.facts.join('\n'),/ウエスト 110.0cm → 104.5cm（-5.5cm）/);
+  assert.match(summary.comment,/体重とウエストが減少/);
+  assert.match(summary.comment,/骨格筋量は平均で維持範囲/);
+  assert.match(html,/写真から体型を判定したものではありません/);
+  assert.match(html,/renderBodyProgressComment\(a,s\)/);
 });
