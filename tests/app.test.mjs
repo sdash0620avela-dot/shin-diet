@@ -163,7 +163,7 @@ test('v17.9 estimates cardio separately and keeps strength calories separate', (
   assert.equal(cardioApi.cardioCalories('bike','moderate',45,113.8),538);
   assert.equal(cardioApi.cardioCalories('bike','hard',45,113.8),717);
   assert.match(html,/前回の有酸素・強度をそのまま使う/);
-  assert.match(html,/筋トレのみの消費 kcal/);
+  assert.match(html,/筋トレ消費 kcal（任意・上書き）/);
   assert.match(html,/有酸素：\$\{x\.cardio\}kcal/);
   assert.match(html,/r\.cardioCalories=breakdown\.cardio/);
   assert.match(html,/r\.strengthCalories=breakdown\.strength/);
@@ -178,6 +178,18 @@ test('v18.0 accepts a current machine calorie reading without copying an old rea
   assert.match(html,/\$\('cardioManualCalories'\)\.value=''/);
   assert.match(html,/cardioCalorieSource=breakdown\.source/);
   assert.match(html,/r\.cardioCalorieSource==='machine'/);
+});
+
+test('v18.1 estimates strength training from intensity, duration and current weight', () => {
+  const strengthMetSource=html.match(/const strengthMets=\{.*?\};/s)?.[0];
+  assert.ok(strengthMetSource);
+  const api=new Function(strengthMetSource+'\n'+extractFunction(html,'strengthEstimatedCalories')+'\nreturn { strengthEstimatedCalories };')();
+  assert.equal(api.strengthEstimatedCalories('moderate',60,113.8),597);
+  assert.equal(api.strengthEstimatedCalories('hard',60,113.8),717);
+  assert.match(html,/id="strengthIntensity"/);
+  assert.match(html,/前回の筋トレ・強度をそのまま使う/);
+  assert.match(html,/strengthCalorieSource=breakdown\.strengthSource/);
+  assert.match(html,/\$\('exerciseCal'\)\.value=''/);
 });
 
 test('each signed-in user has a separate local storage namespace', () => {
