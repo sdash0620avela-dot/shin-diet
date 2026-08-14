@@ -20,9 +20,9 @@ function extractFunction(source, name) {
 
 const scoreApi = new Function(
   [
-    'sleepScore', 'hasValue', 'hasSleepInput', 'sleepStar', 'isRestDay', 'effectiveExercise', 'scoreBreakdown', 'scoreRecord', 'scoreImprovementLines'
+    'sleepScore', 'hasValue', 'hasSleepInput', 'sleepStar', 'isRestDay', 'effectiveExercise', 'scoreBreakdown', 'scoreRecord', 'estimatedBalance', 'largeDeficitWarning', 'scoreImprovementLines'
   ].map(name => extractFunction(html, name)).join('\n') +
-  '\nreturn { sleepScore, scoreRecord, scoreBreakdown, scoreImprovementLines };'
+  '\nreturn { sleepScore, scoreRecord, scoreBreakdown, estimatedBalance, largeDeficitWarning, scoreImprovementLines };'
 )();
 
 const syncApi = new Function(
@@ -114,6 +114,16 @@ test('v17.4 keeps score guidance visible on home and separates morning from dail
   assert.match(html,/朝コンディション評価：\$\{morningReportScore\(r\)\}点/);
   assert.match(html,/差し引き比較はしません/);
   assert.match(html,/openScoreConsult\(\)/);
+});
+
+test('v17.5 prioritizes a very large estimated deficit before chasing score points', () => {
+  const record={intake:2100,protein:93,cardio:true,exerciseTotal:1135,strength:'腕トレ28セット 60分',sleep:'★★★★☆',waterL:null,fatigue:2};
+  const personalSettings={...settings,baseBurn:2800};
+  assert.equal(scoreApi.estimatedBalance(record,personalSettings),-1835);
+  assert.match(scoreApi.largeDeficitWarning(record,personalSettings),/概算収支-1835kcal/);
+  assert.match(scoreApi.scoreImprovementLines(record,personalSettings)[0],/これ以上の運動追加や食事削減はしません/);
+  assert.match(html,/if\(balanceWarning\)return '最優先：'\+balanceWarning/);
+  assert.match(html,/概算収支の赤字が大きいため安全確認を優先/);
 });
 
 test('each signed-in user has a separate local storage namespace', () => {
