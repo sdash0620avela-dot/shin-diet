@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v17.3 採点透明化版</title>
+<title>AI Diet v17.4 採点案内強化版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -96,6 +96,7 @@ body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,
 .score-meta{flex:1;min-width:0}
 .score-meta .coach-tag{font-size:15px;font-weight:700;line-height:1.45;color:var(--ink)}
 .score-meta .score-sub{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}
+.score-breakdown{display:grid;gap:5px;margin:10px 0 14px}.score-breakdown div{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(60,60,67,.1);padding-bottom:5px}.score-breakdown b{white-space:nowrap}.hint ul{margin:8px 0 12px;padding-left:20px}.hint li{margin:5px 0}
 
 /* Forms */
 input,textarea,select{
@@ -261,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v17.3 採点透明化版</div>
+  <div class="version-pill">v17.4 採点案内強化版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -279,11 +280,12 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <div id="animeCoach" class="coach-sprite waiting" role="img" aria-label="記録を待っているAIコーチ"></div>
       <div class="coach-dialogue"><div id="animeCoachMood" class="coach-mood">記録待ち</div><div id="animeCoachSpeech" class="coach-speech">まず今日の体重か食事を1つ記録しましょう。</div></div>
     </div>
-    <details class="coach-detail"><summary>点数と詳しい評価を見る</summary><div id="coach" class="coach-detail-body">記録するとAIコーチが評価します</div></details>
+    <details class="coach-detail"><summary>点数の内訳・上げ方を見る</summary><div id="coach" class="coach-detail-body">記録するとAIコーチが評価します</div></details>
+    <button type="button" class="sub" style="margin-top:10px" onclick="openScoreConsult()">この点数をAIコーチに詳しく聞く</button>
   </div>
 
   <div class="stat-grid" id="statGrid">
-    <div class="stat-tile"><div class="label">今日の評価</div><div class="val" id="todayScore">--<small>点</small></div><div class="delta neutral" id="scoreDelta">記録待ち</div></div>
+    <div class="stat-tile"><div class="label">1日実行評価</div><div class="val" id="todayScore">--<small>点</small></div><div class="delta neutral" id="scoreDelta">記録待ち</div></div>
     <div class="stat-tile"><div class="label">昨日比</div><div class="val" id="yesterdayCompare">--</div><div class="delta neutral" id="weightDelta">体重 --</div></div>
     <div class="stat-tile"><div class="label">7日平均</div><div class="val" id="avg7">--<small>kg</small></div><div class="delta neutral" id="avg7Score">評価 --</div></div>
   </div>
@@ -866,6 +868,11 @@ function scoreImprovementLines(r,s){
   if(hasSleepInput(r)&&sleepStar(r)<5)lines.push(`睡眠${r.sleep}は${sleepScore(r.sleep)}/20点。今日は変更せず、次回★★★★★なら+${20-sleepScore(r.sleep)}点相当です。`);
   return lines.length?lines:['現在の入力項目に、追加で点数を上げる修正はありません。'];
 }
+function scoreGuideHtml(r,s){
+  const breakdown=scoreBreakdown(r,s),details=breakdown.items.map(x=>`<div><span>${x.label}${x.notEntered?'（未入力・減点なし）':''}</span><b>${x.points}/${x.max}</b></div>`).join('');
+  const improvements=scoreImprovementLines(r,s).map(x=>`<li>${esc(x)}</li>`).join('');
+  return `<div class="hint"><b>1日実行評価の内訳</b><div class="score-breakdown">${details}</div><b>点数を上げる具体策</b><ul>${improvements}</ul><p class="small" style="margin-bottom:0">朝コンディション評価とは採点対象が異なるため、朝から点数が下がったという比較はしません。</p></div>`;
+}
 function animeCoachState(r,s){
   if(!r)return 'waiting';
   const score=scoreRecord(r,s),complete=assessmentStatus(r).complete;
@@ -906,7 +913,7 @@ function coachText(r,s,last,prev){
   let fatHint=''; if((r.dinner||'').includes('軟骨')||(r.dinner||'').includes('カルビ')||(r.dinner||'').includes('揚げ'))fatHint='<div class="hint">脂質メモ：夜に脂質が多い日は、翌日の昼を蕎麦・魚・サラダチキン寄りにすると戻しやすいです。</div>';
   const ringPct=score+'%';
   const exerciseRating=hasExerciseInput(r)?starText(exerciseStar(r)):'未判定';
-  return `<div class="score-hero"><div class="score-ring" style="--pct:${ringPct}"><span>${score}</span></div><div class="score-meta"><div class="coach-tag">${lead}</div><div class="score-sub">${status.complete?'100点満点':'暫定点'}｜${dayName(r.date)}曜日</div></div></div><div class="pill">食事 ${hasMealInput(r)?starText(mealStar(r,s)):'未判定'}</div><div class="pill">${rest?'休養':'運動'} ${exerciseRating}</div><div class="pill">睡眠 ${hasSleepInput(r)?starText(sleepStar(r)):'未判定'}</div><p class="coachLead">おはようございます、${safeName}さん。</p><p class="muted">${food}<br>${balance}<br>${exercise}<br>${sleep}<br>${muscle}<br><b>${tomorrow}</b></p>${fatHint}`;
+  return `<div class="score-hero"><div class="score-ring" style="--pct:${ringPct}"><span>${score}</span></div><div class="score-meta"><div class="coach-tag">${lead}</div><div class="score-sub">1日実行評価｜${status.complete?'100点満点':'暫定点'}｜${dayName(r.date)}曜日</div></div></div><div class="pill">食事 ${hasMealInput(r)?starText(mealStar(r,s)):'未判定'}</div><div class="pill">${rest?'休養':'運動'} ${exerciseRating}</div><div class="pill">睡眠 ${hasSleepInput(r)?starText(sleepStar(r)):'未判定'}</div>${scoreGuideHtml(r,s)}<p class="coachLead">おはようございます、${safeName}さん。</p><p class="muted">${food}<br>${balance}<br>${exercise}<br>${sleep}<br>${muscle}<br><b>${tomorrow}</b></p>${fatHint}`;
 }
 
 function motivationText(last,s){
@@ -995,12 +1002,13 @@ function updateWeeklyChange(a,s){
 
 function diaryText(r,s,last,prev){
  if(!r)return '今日の記録を保存すると自動生成します。';
- const rest=isRestDay(r),status=assessmentStatus(r),score=scoreRecord(r,s);let msg=`${esc(r.date)}（${dayName(r.date)}）<br>今日は${score}点${status.complete?'':'（暫定）'}。<br>`;
+ const rest=isRestDay(r),status=assessmentStatus(r),score=scoreRecord(r,s),topAction=scoreImprovementLines(r,s)[0];let msg=`${esc(r.date)}（${dayName(r.date)}）<br>1日実行評価は${score}点${status.complete?'':'（暫定）'}。<br>`;
  if(!status.complete)msg+=`${status.missing.join('・')}が未入力のため、入力済みデータだけでまとめます。<br>`;
  msg+=rest?'計画どおりの休養日です。食事と回復の流れを整える一日です。':score>=85?'かなり良い一日です。記録・食事・運動の流れが整っています。':'完璧でなくても、記録を続けている時点で前進です。';
  msg+=rest?'<br>運動は0分。今日は身体を休ませ、次のトレーニングへつなげます。':!hasExerciseInput(r)?'<br>運動・休養は未入力です。':effectiveExercise(r)>=300?`<br>${r.cardio&&String(r.strength||'').trim()?'有酸素と筋トレ':'運動'}の刺激が入り、消費量も確保できています。`:effectiveExercise(r)>0?'<br>軽めでも運動を継続できています。':'<br>運動内容はありますが、消費量は0kcalです。';
  if(!hasMealInput(r))msg+='<br>食事データは未入力です。';else if(+r.protein>=(+s.proteinGoal||120))msg+='<br>たんぱく質は目標達成。筋肉量維持にかなり良いです。';else if(hasValue(r.protein))msg+=`<br>次は目標${s.proteinGoal||120}gへ近づけると、減量の質が上がります。`;else msg+='<br>たんぱく質は未入力のため判定していません。';
  if(prev&&prev.weight&&r.weight){msg+=r.weight<prev.weight?'<br>体重も前回より落ちています。焦らずこのペースでOK。':'<br>体重は前回より少し上がっていますが、水分・塩分・便通でも動くので単日で判断しなくてOK。'}
+ msg+=`<br><b>次に点数を上げる方法：${esc(topAction)}</b><br><span class="small">朝コンディション評価とは別採点です。</span>`;
  return msg;
 }
 
@@ -1189,6 +1197,7 @@ function buildDailySummary(r,prev,s,mode){
  const dateLabel=String(r.date||'').replaceAll('-','/'),startLoss=hasValue(r.weight)&&hasValue(s.startWeight)?(+r.weight)-(+s.startWeight):null,goalRemain=hasValue(r.weight)&&hasValue(s.goalWeight)?(+r.weight)-(+s.goalWeight):null,nextMilestone=hasValue(r.weight)?Math.floor(((+r.weight)-.01)/5)*5:null,milestoneRemain=nextMilestone!==null?(+r.weight)-nextMilestone:null;
  const exItems=exerciseItems(r),exCalories=effectiveExercise(r),score=mode==='morning'?morningReportScore(r):scoreRecord(r,s),status=mode==='morning'?'朝コンディション評価':assessmentStatus(r).complete?'1日実行評価・確定':'1日実行評価・暫定';
  const breakdown=mode==='daily'?scoreBreakdown(r,s):null,scoreDetails=breakdown?breakdown.items.map(x=>`・${x.label}：${x.points}/${x.max}点${x.notEntered?'（未入力・減点なし）':''}`).join('\n'):'朝評価は、体組成・睡眠・朝の運動記録を対象にした別採点です。';
+ const morningComparison=mode==='daily'&&hasValue(r.weight)?`朝コンディション評価：${morningReportScore(r)}点\n1日実行評価：${score}点\n※この2つは採点対象が異なり、差し引き比較はしません。`:'';
  const improvements=mode==='daily'?scoreImprovementLines(r,s):['朝評価と1日評価は採点対象が異なるため、夜に点数が下がったという比較はしません。'];
  const facts=[comparisonLines(r,prev),hasValue(startLoss)?`開始時 ${(+s.startWeight).toFixed(1)}kgから ${startLoss.toFixed(1)}kg`:'',nextMilestone!==null&&nextMilestone>(+s.goalWeight)?`${nextMilestone.toFixed(0)}kgまで あと${Math.max(0,milestoneRemain).toFixed(1)}kg`:'',hasValue(goalRemain)?`最終目標 ${(+s.goalWeight).toFixed(1)}kgまで あと${Math.max(0,goalRemain).toFixed(1)}kg`:''].filter(Boolean).join('\n');
  const cautions=[
@@ -1216,6 +1225,7 @@ ${mealSection?'\n食事・収支\n'+mealSection:''}
 ${cautions.map((x,i)=>`${i+1}. ${x}`).join('\n')}
 
 今日の評価：${score}点 ${score>=90?'★★★★★':score>=80?'★★★★☆':score>=70?'★★★☆☆':score>=60?'★★☆☆☆':'★☆☆☆☆'}（${status}）
+${morningComparison?'\n'+morningComparison:''}
 
 点数の内訳
 ${scoreDetails}
