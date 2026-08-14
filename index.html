@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v17.5 収支安全判定版</title>
+<title>AI Diet v17.6 収支計算修正版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v17.5 収支安全判定版</div>
+  <div class="version-pill">v17.6 収支計算修正版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -340,7 +340,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card">
     <div class="card-title">今日の収支</div>
     <span id="bal" class="big">--</span><span class="unit"> kcal</span>
-    <p class="muted" style="margin:8px 0 0;font-size:13px">摂取 − 基礎消費 − 運動消費の概算</p>
+    <p class="muted" style="margin:8px 0 0;font-size:13px">摂取 − 推定1日消費の概算（普段の活動・運動を含む平均）</p>
   </div>
 
   <div class="card">
@@ -500,7 +500,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     </select>
     <button type="button" class="sub" style="margin-top:12px" onclick="calculateRecommendations()">目標kcal・Pを自動計算</button>
     <div id="recommendationStatus" class="small" style="margin-top:10px"></div>
-    <div class="label">推定1日消費 kcal（編集可）</div><input id="baseBurn" type="number" inputmode="numeric" value="2800">
+    <div class="label">推定1日消費 kcal（普段の活動・運動を含む平均・編集可）</div><input id="baseBurn" type="number" inputmode="numeric" value="2800">
     <div class="label">1日の目標たんぱく質 g（編集可）</div><input id="proteinGoal" type="number" step="1" inputmode="numeric" value="120">
     <div class="label">1日の目標摂取 kcal（編集可）</div><input id="calorieGoal" type="number" step="10" inputmode="numeric" value="2000">
     <div class="label">有酸素の基準時間 分</div><input id="cardioGoal" type="number" step="1" inputmode="numeric" value="35">
@@ -859,7 +859,7 @@ function scoreBreakdown(r,s){
   return {score:Math.max(0,Math.min(100,Math.round(items.reduce((sum,x)=>sum+x.points,0)))),items,proteinGoal};
 }
 function scoreRecord(r,s){return scoreBreakdown(r,s).score}
-function estimatedBalance(r,s){return hasValue(r.intake)?Math.round((+r.intake)-(+s.baseBurn||0)-effectiveExercise(r)):null}
+function estimatedBalance(r,s){return hasValue(r.intake)?Math.round((+r.intake)-(+s.baseBurn||0)):null}
 function largeDeficitWarning(r,s){const balance=estimatedBalance(r,s);return balance!==null&&balance<=-1000?`概算収支${balance}kcalは赤字が大きすぎる可能性があります。運動消費と1日消費の設定を確認し、これ以上の運動追加や食事削減はしません。`:''}
 function scoreImprovementLines(r,s){
   const base=scoreRecord(r,s),goal=+s.proteinGoal||120,protein=+r.protein||0,lines=[];
@@ -902,7 +902,7 @@ function sleepStar(r){return r.sleep==='★★★★★'?5:r.sleep==='★★★�
 
 function coachText(r,s,last,prev){
   if(!r)return '<p class="muted">記録するとAIコーチが100点満点で評価します。今日の食事・運動・睡眠を入力して保存してください。</p>';
-  const rest=isRestDay(r), status=assessmentStatus(r), score=scoreRecord(r,s), intake=+r.intake||0, protein=+r.protein||0, burn=s.baseBurn+effectiveExercise(r), bal=hasValue(r.intake)?intake-burn:null;
+  const rest=isRestDay(r), status=assessmentStatus(r), score=scoreRecord(r,s), intake=+r.intake||0, protein=+r.protein||0, bal=estimatedBalance(r,s);
   const balanceWarning=largeDeficitWarning(r,s);
   let lead=!status.complete?`${status.missing.join('・')}が未入力のため、評価は暫定です。`:balanceWarning?'運動量は十分ですが、概算収支の赤字が大きいため安全確認を優先します。':rest?'今日は計画どおりの休養日。運動0分で問題ありません。':score>=90?'今日はかなり理想的です。筋肉を残しながら脂肪を落としやすい一日。':score>=80?'今日はかなり良い流れです。あと少し整えれば90点台が狙えます。':score>=70?'今日は合格ラインです。継続としては十分価値があります。':score>=60?'今日は修正ポイントあり。でも崩れてはいません。':'今日は回復と食事の立て直しを優先したい日です。';
   const proteinGoal=+s.proteinGoal||120,name=s.displayName||'あなた',safeName=esc(name);
@@ -1076,7 +1076,7 @@ function update(){
  const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];
  if(last){const fm=fatMeta(last),mm=muscleMeta(last);$('cw').textContent=(+last.weight).toFixed(1);$('cf').textContent=last.fat??'--';$('cfLabel').textContent=fm.label;$('cfUnit').textContent=' '+fm.unit;$('cm').textContent=last.muscle??'--';$('cmLabel').textContent=mm.label;$('cmUnit').textContent=' '+mm.unit;$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+' kg';$('loss').className=(last.weight-s.startWeight)<0?'good':'warn'}
  const t=a.find(r=>r.date===today())||a.slice(-1)[0];const prev=t?prevRecord(a,t,'weight'):null;
- if(t){let rest=isRestDay(t),burn=s.baseBurn+effectiveExercise(t),b=t.intake?t.intake-burn:null;$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('tw').textContent=rest?'休養日 · 運動0分':[t.cardio?`有酸素 ${t.cardioMin||35}分`:'',t.legRaise?'足上げ腹筋':'',t.plank?'プランク':'',t.powerplate?'Power Plate':'',t.drawin?'ドローイン':'',t.strength||''].filter(Boolean).join(' · ')||'まだ記録なし';$('coach').innerHTML=coachText(t,s,last,prev);$('diary').innerHTML=diaryText(t,s,last,prev)}
+ if(t){let rest=isRestDay(t),b=estimatedBalance(t,s);$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('tw').textContent=rest?'休養日 · 運動0分':[t.cardio?`有酸素 ${t.cardioMin||35}分`:'',t.legRaise?'足上げ腹筋':'',t.plank?'プランク':'',t.powerplate?'Power Plate':'',t.drawin?'ドローイン':'',t.strength||''].filter(Boolean).join(' · ')||'まだ記録なし';$('coach').innerHTML=coachText(t,s,last,prev);$('diary').innerHTML=diaryText(t,s,last,prev)}
  updateStatTiles(a,s,t,prev);
  renderAnimeCoach(t,s);
  updateWeeklyChange(a,s);
@@ -1212,7 +1212,7 @@ function buildDailySummary(r,prev,s,mode){
   hasValue(r.visceralFat)&&prev&&hasValue(prev.visceralFat)?'内臓脂肪レベルも単日の表示値だけで判断せず、継続して確認します。':'',
   mode==='daily'&&largeDeficitWarning(r,s)?largeDeficitWarning(r,s)+' 運動消費は概算のため、まず入力値を確認します。':''
  ].filter(Boolean);
- const mealSection=mode==='daily'?[`摂取：${numberText(r.intake,0,'kcal')}`,`P：${numberText(r.protein,0,'g')}｜F：${numberText(r.fatG,0,'g')}｜C：${numberText(r.carbsG,0,'g')}`,`水分：${numberText(r.waterL,1,'L')}`,`概算収支：${hasValue(r.intake)?Math.round((+r.intake)-(+s.baseBurn||0)-exCalories)+'kcal':'未判定'}`].join('\n'):'';
+ const mealSection=mode==='daily'?[`摂取：${numberText(r.intake,0,'kcal')}`,`P：${numberText(r.protein,0,'g')}｜F：${numberText(r.fatG,0,'g')}｜C：${numberText(r.carbsG,0,'g')}`,`水分：${numberText(r.waterL,1,'L')}`,`概算収支：${estimatedBalance(r,s)===null?'未判定':estimatedBalance(r,s)+'kcal'}（推定1日消費には普段の活動・運動を含むため、当日の運動消費は重ねて引きません）`].join('\n'):'';
  const missing=mode==='daily'?assessmentStatus(r).missing:[];
  const inferred=[exCalories>0?`運動消費 ${Math.round(exCalories)}kcalは入力・運動内容からの概算です。`:'',missing.length?`${missing.join('・')}が未入力のため評価は暫定です。`:''].filter(Boolean);
  return `${dateLabel} ${mode==='morning'?'朝':'1日'}ダイエット総括
