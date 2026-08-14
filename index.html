@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v16.6 身体サイズ版</title>
+<title>AI Diet v16.7 体型変化コメント版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -260,7 +260,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v16.6 身体サイズ版</div>
+  <div class="version-pill">v16.7 体型変化コメント版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -300,6 +300,11 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card">
     <div class="card-title">体組成AI分析</div>
     <div id="compositionAnalysis" class="muted">体重と骨格筋量の記録が増えると、停滞・短期変動・筋量維持を判定します</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">体型変化コメント</div>
+    <div id="bodyProgressComment" class="muted">体重・身体サイズ・骨格筋量の記録から、確認できた変化をまとめます</div>
   </div>
 
   <div class="card">
@@ -996,6 +1001,7 @@ function update(){
  updateWeeklyChange(a,s);
  renderAnalysis(a,s,t);
  renderCompositionAnalysis(a,t);
+ renderBodyProgressComment(a,s);
  renderDailySummary(a,s,t);
  $('motivation').innerHTML=motivationText(last,s);
  motivationMessage(a,s,last,t);
@@ -1313,6 +1319,23 @@ function renderMeasurementProgress(records){
  const stats=measurementStats(records),entered=stats.filter(x=>x.count);
  if(!entered.length){$('measurementProgress').textContent='ウエスト・胸囲・ヒップを記録すると、最初の記録と現在を比較します。';return}
  $('measurementProgress').innerHTML='<div class="miniReport">'+stats.map(x=>`<div><span class="small">${x.label}</span><br><b>${x.last===null?'--':x.last.toFixed(1)+' cm'}</b><br><span class="${x.change===null?'small':x.change<0?'good':x.change>0?'warn':'small'}">${x.change===null?'比較待ち':(x.change>0?'+':'')+x.change.toFixed(1)+' cm'}</span></div>`).join('')+'</div><p class="small">各項目の最初の記録との比較です。測定位置・姿勢・時間帯の違いでも数値は変動します。</p>';
+}
+function bodyProgressSummary(records,s){
+ const sorted=(Array.isArray(records)?records:[]).filter(r=>r&&r.date).slice().sort((x,y)=>x.date.localeCompare(y.date)),lastWeight=sorted.filter(r=>hasValue(r.weight)).slice(-1)[0],measurements=measurementStats(sorted),composition=bodyCompositionAnalysis(sorted,lastWeight),facts=[];
+ if(lastWeight&&hasValue(s&&s.startWeight)){const change=(+lastWeight.weight)-(+s.startWeight);facts.push('開始体重 '+(+s.startWeight).toFixed(1)+'kg → 現在 '+(+lastWeight.weight).toFixed(1)+'kg（'+(change>0?'+':'')+change.toFixed(1)+'kg）')}
+ measurements.filter(x=>x.count>=2).forEach(x=>facts.push(x.label+' '+x.first.toFixed(1)+'cm → '+x.last.toFixed(1)+'cm（'+(x.change>0?'+':'')+x.change.toFixed(1)+'cm）'));
+ if(composition.muscle==='maintained')facts.push((composition.muscleLabel||'骨格筋量')+'は記録期間の平均で維持範囲');
+ else if(composition.muscle==='watch')facts.push((composition.muscleLabel||'骨格筋量')+'は記録期間の平均で0.5kgを超える低下');
+ let comment='比較できる記録がまだ少ないため、体型変化は判定しません。';
+ const weightChange=lastWeight&&hasValue(s&&s.startWeight)?(+lastWeight.weight)-(+s.startWeight):null,waist=measurements.find(x=>x.key==='waistCm');
+ if(weightChange!==null&&weightChange<0&&waist&&waist.count>=2&&waist.change<0&&composition.muscle==='maintained')comment='体重とウエストが減少し、骨格筋量は平均で維持範囲です。数値上は、筋量を大きく落とさずサイズダウンしている流れです。';
+ else if(weightChange!==null&&weightChange<0&&composition.muscle==='maintained')comment='体重は開始時より減少し、骨格筋量は平均で維持範囲です。身体サイズの記録が増えると、体型変化をさらに確認できます。';
+ else if(weightChange!==null&&weightChange<0&&waist&&waist.count>=2&&waist.change<0)comment='体重とウエストはいずれも開始時より減少しています。骨格筋量は記録条件を揃えて継続確認します。';
+ else if(weightChange!==null&&weightChange<0)comment='体重は開始時より減少しています。身体サイズと骨格筋量の比較記録が増えると、減量の質まで判定できます。';
+ return {facts,comment};
+}
+function renderBodyProgressComment(records,s){
+ const x=bodyProgressSummary(records,s);$('bodyProgressComment').innerHTML='<div class="diary"><b>確認できた変化</b><br>'+(x.facts.length?x.facts.join('<br>'):'比較できる記録はまだありません。')+'<br><br><b>数値からのコメント</b><br>'+x.comment+'</div><p class="small">写真から体型を判定したものではありません。保存された数値だけを使用しています。</p>';
 }
 function drawChart(){
  const c=$('chart');if(!c)return;const ctx=c.getContext('2d'),a=graphSeries(recs(),graphMode),s=sets(),labels={weight:'体重推移',fat:'体脂肪推移',muscle:'骨格筋量推移'},units={weight:'kg',fat:a.length&&fatTypeOf(recs().filter(r=>hasValue(r.fat)).slice(-1)[0])==='fatMass'?'kg':'%',muscle:'kg'};
