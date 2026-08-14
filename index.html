@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v17.2 AI利用安定化版</title>
+<title>AI Diet v17.3 採点透明化版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -261,7 +261,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v17.2 AI利用安定化版</div>
+  <div class="version-pill">v17.3 採点透明化版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -321,6 +321,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     </div>
     <pre id="dailySummary" class="reportText">記録を保存すると自動生成します。</pre>
     <button type="button" class="sub copyReport" onclick="copyCurrentSummary()">総括をコピー</button>
+    <button type="button" class="sub" onclick="openScoreConsult()">この点数をAIコーチに詳しく聞く</button>
     <div id="summaryCopyStatus" class="small" role="status" aria-live="polite"></div>
   </div>
 
@@ -842,17 +843,28 @@ function hasMealInput(r){return !!(r&&(hasValue(r.intake)||hasValue(r.protein)||
 function hasSleepInput(r){return !!(r&&r.sleep)}
 function assessmentStatus(r){const missing=[];if(!hasMealInput(r))missing.push('食事');if(!hasExerciseInput(r))missing.push('運動・休養');if(!hasSleepInput(r))missing.push('睡眠');return {complete:missing.length===0,missing}}
 
-function scoreRecord(r,s){
-  let score=0,intake=+r.intake||0,protein=+r.protein||0,rest=isRestDay(r),ex=effectiveExercise(r);
+function scoreBreakdown(r,s){
+  let intake=+r.intake||0,protein=+r.protein||0,rest=isRestDay(r),ex=effectiveExercise(r);
   const calorieGoal=+s.calorieGoal||2000,calorieDiff=Math.abs(intake-calorieGoal);
-  if(intake){if(calorieDiff<=200)score+=20;else if(calorieDiff<=400)score+=14;else if(calorieDiff<=600)score+=8;else score+=2}
+  let calorie=0;if(intake){if(calorieDiff<=200)calorie=20;else if(calorieDiff<=400)calorie=14;else if(calorieDiff<=600)calorie=8;else calorie=2}
   const proteinGoal=+s.proteinGoal||120;
-  if(protein>=proteinGoal)score+=20;else if(protein>=proteinGoal*.85)score+=16;else if(protein>=proteinGoal*.7)score+=11;else if(protein>0)score+=5;
-  if(rest)score+=25;else{if(r.cardio)score+=8;if(ex>=350)score+=10;else if(ex>=200)score+=7;else if(ex>0)score+=3;if(r.strength&&r.strength.trim())score+=7}
-  score+=sleepScore(r.sleep);
-  if(+r.waterL>=2)score+=5;else if(+r.waterL>=1.5)score+=3;else if(+r.waterL>0)score+=1;
-  const fatigue=+r.fatigue;if(fatigue>0)score+=fatigue<=2?10:fatigue===3?6:fatigue===4?3:0;else score+=5;
-  return Math.max(0,Math.min(100,Math.round(score)));
+  let proteinPoints=0;if(protein>=proteinGoal)proteinPoints=20;else if(protein>=proteinGoal*.85)proteinPoints=16;else if(protein>=proteinGoal*.7)proteinPoints=11;else if(protein>0)proteinPoints=5;
+  let exercise=0;if(rest)exercise=25;else{if(r.cardio)exercise+=8;if(ex>=350)exercise+=10;else if(ex>=200)exercise+=7;else if(ex>0)exercise+=3;if(r.strength&&r.strength.trim())exercise+=7}
+  const sleep=sleepScore(r.sleep);
+  const waterEntered=hasValue(r.waterL),water=!waterEntered?5:+r.waterL>=2?5:+r.waterL>=1.5?3:+r.waterL>0?1:0;
+  const fatigueEntered=hasValue(r.fatigue)&&+r.fatigue>0,fatigue=!fatigueEntered?10:+r.fatigue<=2?10:+r.fatigue===3?6:+r.fatigue===4?3:0;
+  const items=[{key:'calorie',label:'摂取カロリー',points:calorie,max:20},{key:'protein',label:'たんぱく質',points:proteinPoints,max:20},{key:'exercise',label:rest?'休養':'運動',points:exercise,max:25},{key:'sleep',label:'睡眠',points:sleep,max:20},{key:'water',label:'水分',points:water,max:5,notEntered:!waterEntered},{key:'fatigue',label:'疲労度',points:fatigue,max:10,notEntered:!fatigueEntered}];
+  return {score:Math.max(0,Math.min(100,Math.round(items.reduce((sum,x)=>sum+x.points,0)))),items,proteinGoal};
+}
+function scoreRecord(r,s){return scoreBreakdown(r,s).score}
+function scoreImprovementLines(r,s){
+  const base=scoreRecord(r,s),goal=+s.proteinGoal||120,protein=+r.protein||0,lines=[];
+  const add=(label,next)=>{const gain=scoreRecord({...r,...next},s)-base;if(gain>0)lines.push(`${label} → ${base+gain}点（+${gain}点）`)};
+  if(protein<goal){const mid=Math.ceil(goal*.85);if(protein<mid)add(`たんぱく質をあと${Math.max(0,mid-protein)}g、合計${mid}gまで補う`,{protein:mid});if(protein<goal)add(`たんぱく質をあと${Math.max(0,goal-protein)}g、目標${goal}gまで補う`,{protein:goal})}
+  if(hasValue(r.waterL)&&+r.waterL<2)add('水分を合計2.0Lまで整える',{waterL:2});
+  else if(!hasValue(r.waterL))lines.push('水分は未入力のため減点していません。飲んだ実量を記録すると管理が正確になります。');
+  if(hasSleepInput(r)&&sleepStar(r)<5)lines.push(`睡眠${r.sleep}は${sleepScore(r.sleep)}/20点。今日は変更せず、次回★★★★★なら+${20-sleepScore(r.sleep)}点相当です。`);
+  return lines.length?lines:['現在の入力項目に、追加で点数を上げる修正はありません。'];
 }
 function animeCoachState(r,s){
   if(!r)return 'waiting';
@@ -1113,8 +1125,8 @@ function todayActionText(t,s){
  if(!t)return 'まず今日の体重か食事を1つ記録。入力した分だけ分析が正確になります。';
  const status=assessmentStatus(t);
  if(!status.complete)return status.missing[0]+'を入力すると、今日の評価と提案を確定できます。';
- const protein=+t.protein||0,goal=+s.proteinGoal||120;
- if(protein<goal*.75)return '最優先はたんぱく質。目標'+goal+'gに向けて、次の食事で補います。';
+ const protein=+t.protein||0,goal=+s.proteinGoal||120,improvements=scoreImprovementLines(t,s);
+ if(protein<goal)return '最優先：'+improvements[0];
  if(hasSleepInput(t)&&sleepStar(t)<=2)return '今日は回復を優先。運動を増やすより、睡眠と体調を整えます。';
  if(isRestDay(t))return '今日は設定どおり休養。食事と水分を記録して、回復日にします。';
  if(!hasExerciseInput(t))return '次は運動か休養を記録。実施するなら有酸素'+(s.cardioGoal||35)+'分が基準です。';
@@ -1175,7 +1187,9 @@ function comparisonLines(r,prev){
 function buildDailySummary(r,prev,s,mode){
  if(!r)return '記録を保存すると自動生成します。';
  const dateLabel=String(r.date||'').replaceAll('-','/'),startLoss=hasValue(r.weight)&&hasValue(s.startWeight)?(+r.weight)-(+s.startWeight):null,goalRemain=hasValue(r.weight)&&hasValue(s.goalWeight)?(+r.weight)-(+s.goalWeight):null,nextMilestone=hasValue(r.weight)?Math.floor(((+r.weight)-.01)/5)*5:null,milestoneRemain=nextMilestone!==null?(+r.weight)-nextMilestone:null;
- const exItems=exerciseItems(r),exCalories=effectiveExercise(r),score=mode==='morning'?morningReportScore(r):scoreRecord(r,s),status=mode==='morning'?'朝評価':assessmentStatus(r).complete?'確定評価':'暫定評価';
+ const exItems=exerciseItems(r),exCalories=effectiveExercise(r),score=mode==='morning'?morningReportScore(r):scoreRecord(r,s),status=mode==='morning'?'朝コンディション評価':assessmentStatus(r).complete?'1日実行評価・確定':'1日実行評価・暫定';
+ const breakdown=mode==='daily'?scoreBreakdown(r,s):null,scoreDetails=breakdown?breakdown.items.map(x=>`・${x.label}：${x.points}/${x.max}点${x.notEntered?'（未入力・減点なし）':''}`).join('\n'):'朝評価は、体組成・睡眠・朝の運動記録を対象にした別採点です。';
+ const improvements=mode==='daily'?scoreImprovementLines(r,s):['朝評価と1日評価は採点対象が異なるため、夜に点数が下がったという比較はしません。'];
  const facts=[comparisonLines(r,prev),hasValue(startLoss)?`開始時 ${(+s.startWeight).toFixed(1)}kgから ${startLoss.toFixed(1)}kg`:'',nextMilestone!==null&&nextMilestone>(+s.goalWeight)?`${nextMilestone.toFixed(0)}kgまで あと${Math.max(0,milestoneRemain).toFixed(1)}kg`:'',hasValue(goalRemain)?`最終目標 ${(+s.goalWeight).toFixed(1)}kgまで あと${Math.max(0,goalRemain).toFixed(1)}kg`:''].filter(Boolean).join('\n');
  const cautions=[
   hasValue(r.weight)&&prev&&hasValue(prev.weight)?'体重の単日変化は、水分・食事量なども含むため脂肪の増減とは断定しません。':'体重は同じ条件で記録し、数日から1週間の平均で確認します。',
@@ -1203,7 +1217,15 @@ ${cautions.map((x,i)=>`${i+1}. ${x}`).join('\n')}
 
 今日の評価：${score}点 ${score>=90?'★★★★★':score>=80?'★★★★☆':score>=70?'★★★☆☆':score>=60?'★★☆☆☆':'★☆☆☆☆'}（${status}）
 
-今日の課題
+点数の内訳
+${scoreDetails}
+
+※朝コンディション評価と1日実行評価は採点対象が異なる別の点数です。
+
+点数を上げる具体策
+${improvements.map(x=>'・'+x).join('\n')}
+
+今日の最優先
 ${todayActionText(r,s)}
 
 【推測】
@@ -1230,6 +1252,12 @@ async function copyCurrentSummary(){
  const status=$('summaryCopyStatus');
  if(!currentSummaryText||currentSummaryText.startsWith('記録を')){status.textContent='コピーできる総括がありません';return}
  try{await navigator.clipboard.writeText(currentSummaryText);status.textContent='総括をコピーしました ✓'}catch(e){status.textContent='コピーできませんでした。文章を長押しして選択してください'}
+}
+function openScoreConsult(){
+ const t=recs().find(r=>r.date===today())||recs().slice(-1)[0],s=sets();
+ $('coachQuestion').value=t?`今日の${scoreRecord(t,s)}点について、点数の内訳と、無理なく改善できる優先順位を詳しく教えて。`:'今日の点数を上げる具体策を教えて。';
+ const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('相談'));if(tab)show('chat',tab);
+ $('coachQuestion').focus();
 }
 
 function forecast(last,a,s){
