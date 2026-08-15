@@ -229,6 +229,13 @@ test('v18.4 does not mistake workout notes containing rest-day words for a rest 
   assert.equal(api.isRestDay({restDay:true,strength:'胸トレ'}),true);
 });
 
+test('v18.5 preserves unfinished exercise input in drafts', () => {
+  assert.match(html,/function collectRecord\(normalizeRest=true\)/);
+  assert.match(html,/const record=collectRecord\(false\)/);
+  assert.match(html,/if\(normalizeRest&&isRestDay\(r\)\)/);
+  assert.match(html,/const r=collectRecord\(\),all=recs\(\)/);
+});
+
 test('each signed-in user has a separate local storage namespace', () => {
   assert.match(html, /shinDiet:\${id}:\${kind\.toLowerCase\(\)}/);
   assert.match(html, /activateUserStorage\(nextUser\.id\)/);
