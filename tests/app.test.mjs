@@ -164,7 +164,7 @@ test('v17.9 estimates cardio separately and keeps strength calories separate', (
   assert.equal(cardioApi.cardioCalories('bike','hard',45,113.8),717);
   assert.match(html,/前回の有酸素・強度をそのまま使う/);
   assert.match(html,/筋トレ消費 kcal（任意・上書き）/);
-  assert.match(html,/有酸素：\$\{x\.cardio\}kcal/);
+  assert.match(html,/有酸素小計：\$\{x\.cardio\}kcal/);
   assert.match(html,/r\.cardioCalories=breakdown\.cardio/);
   assert.match(html,/r\.strengthCalories=breakdown\.strength/);
   assert.match(html,/r\.accessoryCalories=breakdown\.accessory/);
@@ -173,11 +173,11 @@ test('v17.9 estimates cardio separately and keeps strength calories separate', (
 test('v18.0 accepts a current machine calorie reading without copying an old reading', () => {
   assert.match(html,/id="cardioManualCalories"/);
   assert.match(html,/機器表示 kcal（任意）/);
-  assert.match(html,/manualEntered\?'machine':'met'/);
+  assert.match(html,/manual\?'machine':'met'/);
   assert.match(html,/機器表示を優先/);
   assert.match(html,/\$\('cardioManualCalories'\)\.value=''/);
   assert.match(html,/cardioCalorieSource=breakdown\.source/);
-  assert.match(html,/r\.cardioCalorieSource==='machine'/);
+  assert.match(html,/source==='machine'/);
 });
 
 test('v18.1 estimates strength training from intensity, duration and current weight', () => {
@@ -234,6 +234,23 @@ test('v18.5 preserves unfinished exercise input in drafts', () => {
   assert.match(html,/const record=collectRecord\(false\)/);
   assert.match(html,/if\(normalizeRest&&isRestDay\(r\)\)/);
   assert.match(html,/const r=collectRecord\(\),all=recs\(\)/);
+});
+
+test('v19.0 supports two separately calculated cardio activities', () => {
+  assert.match(html,/id="cardio2"/);
+  assert.match(html,/id="cardio2Type"/);
+  assert.match(html,/id="cardio2Intensity"/);
+  assert.match(html,/id="cardio2Min"/);
+  assert.match(html,/id="cardio2ManualCalories"/);
+  assert.match(html,/function cardioEntryFromForm\(prefix\)/);
+  assert.match(html,/cardio=first\.calories\+second\.calories/);
+  assert.match(html,/cardio1Calories=breakdown\.cardio1/);
+  assert.match(html,/cardio2Calories=breakdown\.cardio2/);
+  assert.match(html,/additional|追加の有酸素を行った場合は、追加種目の分数を入力してください/);
+  assert.match(html,/if\(r\.cardio\|\|r\.cardio2\)exercise\+=8/);
+  assert.match(html,/cardioItem\('cardio2'\)/);
+  assert.match(html,/id="cardio2Fields" style="display:none"/);
+  assert.match(html,/\$\('cardio2Fields'\)\.style\.display=\$\('cardio2'\)\.checked\?'block':'none'/);
 });
 
 test('each signed-in user has a separate local storage namespace', () => {
