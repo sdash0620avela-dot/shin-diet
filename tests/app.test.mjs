@@ -513,6 +513,20 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
   assert.match(html,/setInterval\(renderRecordReminder,60000\)/);
 });
 
+test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
+  assert.match(html,/id="appDiagnostics"/);
+  assert.match(html,/const APP_VERSION='19\.5'/);
+  assert.match(html,/function appDiagnosticState\(\)/);
+  assert.match(html,/navigator\.storage\?\.persisted/);
+  assert.match(html,/navigator\.storage\?\.estimate/);
+  assert.match(html,/navigator\.serviceWorker\?\.controller/);
+  assert.match(html,/display-mode: standalone/);
+  assert.match(html,/function requestPersistentStorage\(\)/);
+  assert.match(html,/navigator\.storage\?\.persist/);
+  assert.match(html,/storageKey\('LastExport'\)/);
+  assert.match(html,/クラウド同期またはデータ書き出し/);
+});
+
 test('v16.6 stores and compares optional body measurements', () => {
   const stats=measurementApi.measurementStats([
     {date:'2026-08-01',waistCm:110,chestCm:120},
