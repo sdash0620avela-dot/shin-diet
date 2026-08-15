@@ -264,6 +264,17 @@ test('v19.1 copies one complete previous workout without stale calorie overrides
   assert.match(html,/消費kcalは今回の体重・時間・強度で再計算します/);
 });
 
+test('v19.2 offers safe one-tap favorite meals from saved history', () => {
+  assert.match(html, /function mealFavoritesFor\(id,currentDate\)/);
+  assert.match(html, /r\.date<currentDate/);
+  assert.match(html, /\.sort\(\(a,b\)=>b\.count-a\.count/);
+  assert.match(html, /\.slice\(0,3\)/);
+  assert.match(html, /name\.textContent=latest\[id\]/);
+  assert.match(html, /button\.addEventListener\('click',\(\)=>applyMealFavorite/);
+  assert.match(html, /scheduleDraftSave\(\)/);
+  assert.doesNotMatch(html, /meal-favorite-name[^\n]*innerHTML/);
+});
+
 test('each signed-in user has a separate local storage namespace', () => {
   assert.match(html, /shinDiet:\${id}:\${kind\.toLowerCase\(\)}/);
   assert.match(html, /activateUserStorage\(nextUser\.id\)/);
