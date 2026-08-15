@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.5 アプリ状態チェック版</title>
+<title>AI Diet v19.6 休養日保存修正版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -264,7 +264,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.5 アプリ状態チェック版</div>
+  <div class="version-pill">v19.6 休養日保存修正版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -599,7 +599,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.5';
+const APP_VERSION='19.6';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
@@ -805,6 +805,7 @@ function loadRecordForDate(){
   mealTypes.forEach(([id])=>{if(!r[id+'Source'])$(id+'Source').value='manual';updateMealSummary(id)});
   checkIds().forEach(id=>$(id).checked=!!r[id]);
   $('restDay').checked=!!r.restDay||isRestDay(r);
+  if($('restDay').checked)clearExerciseForRest(false);
   renderExerciseEstimate();
   clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);
   mealTypes.forEach(([id])=>clearPhoto(id+'Photo',id+'Preview',id+'Clear',false));
@@ -820,6 +821,8 @@ $('date').addEventListener('change',loadRecordForDate);
 const exerciseEstimateIds=new Set(['weight','cardio','cardioType','cardioIntensity','cardioMin','cardioManualCalories','cardio2','cardio2Type','cardio2Intensity','cardio2Min','cardio2ManualCalories','strengthIntensity','exerciseCal','workoutMinutes','strength','legRaise','plank','powerplate','drawin','restDay']);
 $('record').addEventListener('input',e=>{if(e.target.id!=='date'&&e.target.type!=='file')scheduleDraftSave();if(exerciseEstimateIds.has(e.target.id))renderExerciseEstimate()});
 $('record').addEventListener('change',e=>{if(e.target.id!=='date'&&e.target.type!=='file')scheduleDraftSave();if(exerciseEstimateIds.has(e.target.id))renderExerciseEstimate()});
+$('restDay').addEventListener('change',()=>{if($('restDay').checked)clearExerciseForRest(true)});
+$('strength').addEventListener('input',()=>{if(isRestDay({strength:$('strength').value})){$('restDay').checked=true;clearExerciseForRest(true)}});
 
 function fillMeal(id,text){const el=$(id);if(el)el.value=text}
 function renderMealEntries(){
@@ -835,7 +838,7 @@ function calculateMealTotals(){
   $('fatG').value=+sum('Fat').toFixed(1);
   $('carbsG').value=+sum('Carbs').toFixed(1);
 }
-function quickCardio(){const min=sets().cardioGoal||35;$('cardio').checked=true;if(!$('cardioMin').value)$('cardioMin').value=min;if(!$('cardioType').value)$('cardioType').value='bike';if(!$('cardioIntensity').value)$('cardioIntensity').value='moderate';renderExerciseEstimate()}
+function quickCardio(){const min=sets().cardioGoal||35;$('restDay').checked=false;$('cardio').checked=true;if(!$('cardioMin').value)$('cardioMin').value=min;if(!$('cardioType').value)$('cardioType').value='bike';if(!$('cardioIntensity').value)$('cardioIntensity').value='moderate';renderExerciseEstimate()}
 function applyProteinGoal(){$('protein').value=sets().proteinGoal||120}
 function applyCalorieGoal(){$('intake').value=sets().calorieGoal||2000}
 function quickFull(){quickCardio();$('drawin').checked=true;$('legRaise').checked=true;$('plank').checked=true}
@@ -875,13 +878,13 @@ function copyPreviousCardio(){
  const current=$('date').value,previous=recs().filter(r=>r.date<current&&r.cardio).slice(-1)[0];
  if(!previous){setStatus('過去の有酸素記録がありません',false);return}
  const legacy=!previous.cardioType||!previous.cardioIntensity;
- $('cardio').checked=true;$('cardioType').value=previous.cardioType||'other';$('cardioIntensity').value=previous.cardioIntensity||'moderate';$('cardioMin').value=previous.cardioMin||'';$('cardioDetails').value=previous.cardioDetails||'';$('cardioManualCalories').value='';$('cardio2').checked=!!previous.cardio2;$('cardio2Type').value=previous.cardio2Type||'walk';$('cardio2Intensity').value=previous.cardio2Intensity||'moderate';$('cardio2Min').value=previous.cardio2Min||'';$('cardio2Details').value=previous.cardio2Details||'';$('cardio2ManualCalories').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'旧記録から時間をコピーしました。種類は「その他」、強度は「普通」に仮設定したので今回の内容に合わせて確認してください':'前回の有酸素・強度・時間をコピーしました。機器表示kcalは今回の値を入れてください',true)
+ $('restDay').checked=false;$('cardio').checked=true;$('cardioType').value=previous.cardioType||'other';$('cardioIntensity').value=previous.cardioIntensity||'moderate';$('cardioMin').value=previous.cardioMin||'';$('cardioDetails').value=previous.cardioDetails||'';$('cardioManualCalories').value='';$('cardio2').checked=!!previous.cardio2;$('cardio2Type').value=previous.cardio2Type||'walk';$('cardio2Intensity').value=previous.cardio2Intensity||'moderate';$('cardio2Min').value=previous.cardio2Min||'';$('cardio2Details').value=previous.cardio2Details||'';$('cardio2ManualCalories').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'旧記録から時間をコピーしました。種類は「その他」、強度は「普通」に仮設定したので今回の内容に合わせて確認してください':'前回の有酸素・強度・時間をコピーしました。機器表示kcalは今回の値を入れてください',true)
 }
 function copyPreviousStrength(){
  const current=$('date').value,previous=recs().filter(r=>r.date<current&&(String(r.strength||'').trim()||+r.workoutMinutes>0)).slice(-1)[0];
  if(!previous){setStatus('過去の筋トレ記録がありません',false);return}
  const legacy=!previous.strengthIntensity;
- $('strengthIntensity').value=previous.strengthIntensity||'moderate';$('workoutMinutes').value=previous.workoutMinutes||'';$('strength').value=previous.strength||'';$('exerciseCal').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'旧記録から筋トレ内容・時間をコピーしました。強度は「普通」に仮設定したので今回の強度に合わせて確認してください':'前回の筋トレ内容・強度・時間をコピーしました。消費kcalは今回の条件で再計算します',true)
+ $('restDay').checked=false;$('strengthIntensity').value=previous.strengthIntensity||'moderate';$('workoutMinutes').value=previous.workoutMinutes||'';$('strength').value=previous.strength||'';$('exerciseCal').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'旧記録から筋トレ内容・時間をコピーしました。強度は「普通」に仮設定したので今回の強度に合わせて確認してください':'前回の筋トレ内容・強度・時間をコピーしました。消費kcalは今回の条件で再計算します',true)
 }
 function copyPreviousWorkout(){
  const current=$('date').value,previous=recs().filter(r=>r.date<current&&!isRestDay(r)&&hasExerciseInput(r)).slice(-1)[0];
@@ -961,8 +964,14 @@ function exerciseBreakdownFromForm(){
  const strength=strengthPerformed?(strengthManual?Math.max(0,Math.round(+$('exerciseCal').value||0)):strengthEstimated):0,strengthSource=strengthPerformed?(strengthManual?'manual':'met'):'none',accessory=accessoryCaloriesFromForm();
  return {cardio,source,cardio1:first.calories,cardio1Source:first.source,cardio2:second.calories,cardio2Source:second.source,strength,strengthSource,accessory,total:cardio+strength+accessory}
 }
+function formIsRestDay(){return $('restDay').checked||isRestDay({strength:$('strength').value})}
+function clearExerciseForRest(showMsg=true){
+ const hadExercise=checkIds().some(id=>$(id).checked)||['cardioMin','cardioManualCalories','cardioDetails','cardio2Min','cardio2ManualCalories','cardio2Details','exerciseCal','workoutMinutes'].some(id=>hasValue($(id).value))||String($('strength').value||'').trim();
+ checkIds().forEach(id=>$(id).checked=false);['cardioMin','cardioManualCalories','cardioDetails','cardio2Min','cardio2ManualCalories','cardio2Details','exerciseCal','workoutMinutes','strength'].forEach(id=>$(id).value='');
+ $('cardio2Fields').style.display='none';renderExerciseEstimate();scheduleDraftSave();if(showMsg&&hadExercise)setStatus('休養日を優先し、残っていた運動入力を外しました',true)
+}
 function renderExerciseEstimate(){
- const el=$('exerciseEstimate');if(!el)return;$('cardio2Fields').style.display=$('cardio2').checked?'block':'none';const x=exerciseBreakdownFromForm(),weight=cardioWeight(),entryText=(prefix,calories,source)=>!$(prefix).checked?'':source==='machine'?`${cardioLabels[$(prefix+'Type').value]}：${calories}kcal（機器表示を優先）`:!weight?`${cardioLabels[$(prefix+'Type').value]}：体重を入力すると推定できます`:`${cardioLabels[$(prefix+'Type').value]}：${calories}kcal（${cardioIntensityLabels[$(prefix+'Intensity').value]}・${+$(prefix+'Min').value||0}分・${weight.toFixed(1)}kgで推定）`,cardioLines=[entryText('cardio',x.cardio1,x.cardio1Source),entryText('cardio2',x.cardio2,x.cardio2Source)].filter(Boolean);
+ const el=$('exerciseEstimate');if(!el)return;if(formIsRestDay()){el.innerHTML='<b>休養日：運動消費 0kcal</b><br><span class="small">休養日は、有酸素・筋トレ・補助運動を加算しません。</span>';return}$('cardio2Fields').style.display=$('cardio2').checked?'block':'none';const x=exerciseBreakdownFromForm(),weight=cardioWeight(),entryText=(prefix,calories,source)=>!$(prefix).checked?'':source==='machine'?`${cardioLabels[$(prefix+'Type').value]}：${calories}kcal（機器表示を優先）`:!weight?`${cardioLabels[$(prefix+'Type').value]}：体重を入力すると推定できます`:`${cardioLabels[$(prefix+'Type').value]}：${calories}kcal（${cardioIntensityLabels[$(prefix+'Intensity').value]}・${+$(prefix+'Min').value||0}分・${weight.toFixed(1)}kgで推定）`,cardioLines=[entryText('cardio',x.cardio1,x.cardio1Source),entryText('cardio2',x.cardio2,x.cardio2Source)].filter(Boolean);
  const cardioText=cardioLines.length?cardioLines.join('<br>'):'有酸素：0kcal';
  const strengthText=x.strengthSource==='none'?'筋トレ：0kcal':x.strengthSource==='manual'?`筋トレのみ：${x.strength}kcal（手入力を優先）`:`筋トレのみ：${x.strength}kcal（${cardioIntensityLabels[$('strengthIntensity').value]}・${+$('workoutMinutes').value||0}分・${weight?weight.toFixed(1):'--'}kgで推定）`;
  el.innerHTML=`<b>加算内容</b><br>${cardioText}<br>${cardioLines.length>1?`有酸素小計：${x.cardio}kcal<br>`:''}${strengthText}<br>補助運動：${x.accessory}kcal<br><b>合計：約${x.total}kcal</b><br><span class="small">有酸素・筋トレの自動計算はMETによる一般的な推定値です。機器表示や個別に算出した値がある場合は手入力を優先できます。</span>`
@@ -1185,8 +1194,8 @@ function recordMissingFields(r){
  const missing=[];if(!hasValue(r.weight))missing.push('体重');assessmentStatus(r).missing.forEach(x=>missing.push(x));return missing;
 }
 function exerciseInputErrors(){
- const errors=[],rest=$('restDay').checked,cardio=$('cardio').checked,cardioMin=+$('cardioMin').value||0,cardioExtra=cardioMin>0||hasValue($('cardioManualCalories').value)||String($('cardioDetails').value||'').trim(),cardio2=$('cardio2').checked,cardio2Min=+$('cardio2Min').value||0,cardio2Extra=cardio2Min>0||hasValue($('cardio2ManualCalories').value)||String($('cardio2Details').value||'').trim(),strengthText=String($('strength').value||'').trim(),strengthMin=+$('workoutMinutes').value||0,strengthExtra=strengthText||strengthMin>0||hasValue($('exerciseCal').value),accessory=checkIds().filter(id=>!['cardio','cardio2'].includes(id)).some(id=>$(id).checked);
- if(rest&&(cardio||cardioExtra||cardio2||cardio2Extra||strengthExtra||accessory))errors.push('休養日と運動内容は同時に保存できません。どちらかを選んでください。');
+ const errors=[],rest=formIsRestDay(),cardio=$('cardio').checked,cardioMin=+$('cardioMin').value||0,cardioExtra=cardioMin>0||hasValue($('cardioManualCalories').value)||String($('cardioDetails').value||'').trim(),cardio2=$('cardio2').checked,cardio2Min=+$('cardio2Min').value||0,cardio2Extra=cardio2Min>0||hasValue($('cardio2ManualCalories').value)||String($('cardio2Details').value||'').trim(),strengthText=String($('strength').value||'').trim(),strengthMin=+$('workoutMinutes').value||0;
+ if(rest)return [];
  if(!rest&&cardio&&cardioMin<=0)errors.push('有酸素を行った場合は、有酸素の分数を入力してください。');
  if(!rest&&!cardio&&cardioExtra)errors.push('有酸素の内容があります。有酸素へチェックを入れるか、内容を消してください。');
  if(!rest&&cardio2&&cardio2Min<=0)errors.push('追加の有酸素を行った場合は、追加種目の分数を入力してください。');
@@ -1207,7 +1216,7 @@ function saveRecord(){
  try{
   clearTimeout(draftTimer);
   if(!$('date').value)throw new Error('日付を入力してください。');
-  const exerciseErrors=exerciseInputErrors();if(exerciseErrors.length){setStatus(exerciseErrors.join(' '),false);$('record').scrollIntoView({behavior:'smooth',block:'start'});return}
+  const exerciseErrors=exerciseInputErrors();if(exerciseErrors.length){setStatus(exerciseErrors.join(' '),false);return}
   const r=collectRecord(),all=recs(),existing=all.find(x=>x.date===r.date);
   if(!confirmRecordSave(r,existing))return;
   const a=all.filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));removeDeletedRecord(r.date);setRecs(a);removeDraft(r.date);update();
