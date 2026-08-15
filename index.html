@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.2 よく使う食事版</title>
+<title>AI Diet v19.3 月間分析版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -263,7 +263,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.2 よく使う食事版</div>
+  <div class="version-pill">v19.3 月間分析版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -475,6 +475,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
   <div class="card"><h3 id="chartTitle">体重推移</h3><div class="summary-switch" style="grid-template-columns:repeat(3,1fr)"><button id="graphWeightBtn" type="button" onclick="selectGraphMode('weight')">体重</button><button id="graphFatBtn" type="button" class="off" onclick="selectGraphMode('fat')">体脂肪</button><button id="graphMuscleBtn" type="button" class="off" onclick="selectGraphMode('muscle')">骨格筋</button></div><canvas id="chart" class="chart-canvas" width="380" height="260"></canvas><div id="chartNote" class="small">実線：実測値｜点線：7日平均</div></div>
   <div class="card"><h3>身体サイズの変化</h3><div id="measurementProgress" class="muted">サイズを記録すると開始時と現在を比較します</div></div>
   <div class="card"><h3>AI週間レポート</h3><div id="weekly" class="muted">記録が増えると表示します</div><button type="button" class="sub copyReport" onclick="copyWeeklyReport()">週間総括をコピー</button><div id="weeklyCopyStatus" class="small" role="status" aria-live="polite"></div></div>
+  <div class="card"><h3>AI月間レポート</h3><div id="monthly" class="muted">記録が増えると表示します</div><button type="button" class="sub copyReport" onclick="copyMonthlyReport()">月間総括をコピー</button><div id="monthlyCopyStatus" class="small" role="status" aria-live="polite"></div></div>
   <div class="card"><h3>最近の記録</h3><div id="list"></div></div>
 </section>
 
@@ -1239,7 +1240,7 @@ function update(){
  $('motivation').innerHTML=motivationText(last,s);
  motivationMessage(a,s,last,t);
  forecast(last,a,s);
- renderWeekly(a,s);renderList();drawChart();drawForecastChart();renderMeasurementProgress(a);
+ renderWeekly(a,s);renderMonthly(a,s);renderList();drawChart();drawForecastChart();renderMeasurementProgress(a);
 }
 
 function dayNumber(date){return Date.parse(date+'T00:00:00Z')/86400000}
@@ -1542,6 +1543,72 @@ function renderWeekly(a,s){
 async function copyWeeklyReport(){
  const status=$('weeklyCopyStatus');if(!currentWeeklyReport){status.textContent='コピーできる週間総括がありません';return}
  try{await navigator.clipboard.writeText(currentWeeklyReport);status.textContent='週間総括をコピーしました ✓'}catch(e){status.textContent='コピーできませんでした。文章を選択してコピーしてください'}
+}
+
+let currentMonthlyReport='';
+function monthlyWindow(a){
+ const sorted=(Array.isArray(a)?a:[]).filter(r=>r&&r.date).slice().sort((x,y)=>x.date.localeCompare(y.date));
+ if(!sorted.length)return [];
+ const lastDay=dayNumber(sorted[sorted.length-1].date);
+ return sorted.filter(r=>dayNumber(r.date)>=lastDay-29&&dayNumber(r.date)<=lastDay)
+}
+function monthlyStats(a,s){
+ const recent=monthlyWindow(a),values=key=>recent.filter(r=>hasValue(r[key])).map(r=>+r[key]),avg=v=>v.length?v.reduce((p,c)=>p+c,0)/v.length:null;
+ const weights=recent.filter(r=>hasValue(r.weight)),lastDay=recent.length?dayNumber(recent[recent.length-1].date):0;
+ const firstWeightWeek=weights.filter(r=>dayNumber(r.date)<=dayNumber(recent[0]?.date)+6).map(r=>+r.weight),lastWeightWeek=weights.filter(r=>dayNumber(r.date)>=lastDay-6).map(r=>+r.weight);
+ const intakes=values('intake'),proteins=values('protein'),complete=recent.filter(r=>assessmentStatus(r).complete),scored=complete.map(r=>scoreRecord(r,s)),sleep=recent.filter(hasSleepInput).map(sleepStar);
+ const exercise=recent.reduce((sum,r)=>sum+effectiveExercise(r),0),latestMuscle=recent.filter(r=>hasValue(r.muscle)).slice(-1)[0],muscleType=latestMuscle?muscleTypeOf(latestMuscle):null;
+ const muscles=recent.filter(r=>hasValue(r.muscle)&&muscleTypeOf(r)===muscleType).map(r=>+r.muscle),edge=Math.min(3,muscles.length);
+ const weightAverageChange=firstWeightWeek.length>=2&&lastWeightWeek.length>=2?avg(lastWeightWeek)-avg(firstWeightWeek):null;
+ const muscleAverageChange=edge>=2?avg(muscles.slice(-edge))-avg(muscles.slice(0,edge)):null;
+ return {recent,complete,exercise,latestMuscle,avgWeight:avg(weights.map(r=>+r.weight)),avgIntake:avg(intakes),avgProtein:avg(proteins),avgSleep:avg(sleep),avgScore:avg(scored),weightAverageChange,muscleAverageChange,weightDays:weights.length,proteinDays:proteins.length,sleepDays:sleep.length}
+}
+function monthlyPriority(m,s){
+ if(m.proteinDays>=3&&m.avgProtein<(s.proteinGoal||120)*.85)return `翌月は、平均たんぱく質を${s.proteinGoal||120}gへ近づける。`;
+ if(m.sleepDays>=3&&m.avgSleep<4)return '翌月は運動量を増やさず、睡眠★★★★☆以上の日を増やす。';
+ if(m.recent.length>=7&&m.complete.length<m.recent.length*.6)return '翌月は食事・運動または休養・睡眠をそろえ、評価を確定できる日を増やす。';
+ return '翌月も現在の食事・運動・睡眠の流れを維持する。'
+}
+function buildMonthlyReport(a,s){
+ const m=monthlyStats(a,s);if(!m.recent.length)return '月間レポートを作れる記録がありません。';
+ const start=m.recent[0].date.replaceAll('-','/'),end=m.recent[m.recent.length-1].date.replaceAll('-','/');
+ const weight=m.weightAverageChange===null?'比較なし':(m.weightAverageChange>0?'+':'')+m.weightAverageChange.toFixed(1)+'kg';
+ const muscle=m.muscleAverageChange===null?'比較なし':(m.muscleAverageChange>0?'+':'')+m.muscleAverageChange.toFixed(1)+'kg';
+ return `${start}〜${end} AI月間総括
+
+【確認できた事実】
+記録：${m.recent.length}日（評価確定 ${m.complete.length}日）
+平均体重：${m.avgWeight===null?'未入力':m.avgWeight.toFixed(1)+'kg'}
+前半・後半7日平均体重差：${weight}
+平均摂取：${m.avgIntake===null?'未入力':Math.round(m.avgIntake)+'kcal'}
+平均たんぱく質：${m.avgProtein===null?'未入力':Math.round(m.avgProtein)+'g'}
+運動消費合計：${Math.round(m.exercise)}kcal
+平均睡眠：${m.avgSleep===null?'未入力':m.avgSleep.toFixed(1)+' / 5'}
+${m.latestMuscle?muscleMeta(m.latestMuscle).label:'骨格筋量'}平均差：${muscle}
+平均評価：${m.avgScore===null?'未確定':Math.round(m.avgScore)+'点'}
+
+【翌月の最優先】
+${monthlyPriority(m,s)}
+
+【注意】
+体重と体組成は、単日の値ではなく期間平均で比較しています。脂肪・筋肉の増減とは断定しません。
+
+【情報源】
+アプリに保存された本人入力記録
+
+【回答日時】
+${end}`
+}
+function renderMonthly(a,s){
+ const m=monthlyStats(a,s);currentMonthlyReport=buildMonthlyReport(a,s);
+ if(!m.recent.length){$('monthly').textContent='記録が増えると表示します';return}
+ const weight=m.weightAverageChange===null?'比較待ち':(m.weightAverageChange>0?'+':'')+m.weightAverageChange.toFixed(1)+' kg';
+ const muscle=m.muscleAverageChange===null?'比較待ち':Math.abs(m.muscleAverageChange)<=.5?'維持範囲':(m.muscleAverageChange>0?'+':'')+m.muscleAverageChange.toFixed(1)+' kg';
+ $('monthly').innerHTML=`<div class="miniReport"><div><span class="small">30日平均体重</span><br><b>${m.avgWeight===null?'--':m.avgWeight.toFixed(1)+' kg'}</b></div><div><span class="small">前半・後半平均差</span><br><b>${weight}</b></div><div><span class="small">平均P</span><br><b>${m.avgProtein===null?'--':Math.round(m.avgProtein)+' g'}</b></div><div><span class="small">${m.latestMuscle?muscleMeta(m.latestMuscle).label:'骨格筋量'}</span><br><b>${muscle}</b></div></div><p class="muted">記録 ${m.recent.length}日｜評価確定 ${m.complete.length}日<br>運動消費合計 ${Math.round(m.exercise)}kcal｜平均睡眠 ${m.avgSleep===null?'--':m.avgSleep.toFixed(1)}/5<br>平均評価 ${m.avgScore===null?'--':Math.round(m.avgScore)}点</p><div class="diary"><b>翌月の最優先</b><br>${monthlyPriority(m,s)}</div>`
+}
+async function copyMonthlyReport(){
+ const status=$('monthlyCopyStatus');if(!currentMonthlyReport){status.textContent='コピーできる月間総括がありません';return}
+ try{await navigator.clipboard.writeText(currentMonthlyReport);status.textContent='月間総括をコピーしました ✓'}catch(e){status.textContent='コピーできませんでした。文章を選択してコピーしてください'}
 }
 
 function editRecord(date){$('date').value=date;const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('記録'));if(tab)show('record',tab);else loadRecordForDate();setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),50)}
