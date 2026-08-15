@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v18.5 下書き保護版</title>
+<title>AI Diet v19.0 複数有酸素対応版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v18.5 下書き保護版</div>
+  <div class="version-pill">v19.0 複数有酸素対応版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -442,6 +442,16 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <div><div class="label">筋トレ時間 分</div><input id="workoutMinutes" type="number" inputmode="numeric" placeholder="60"></div>
     </div>
     <div class="label">有酸素の負荷・速度など</div><input id="cardioDetails" placeholder="例：バイク負荷13、ウォーキング速度5.5km/h">
+    <label class="check"><input id="cardio2" type="checkbox">追加の有酸素（任意）</label>
+    <div id="cardio2Fields" style="display:none">
+    <div class="grid">
+      <div><div class="label">追加種目</div><select id="cardio2Type"><option value="walk">ウォーキング</option><option value="bike">バイク</option><option value="treadmill">トレッドミル</option><option value="elliptical">クロストレーナー</option><option value="stairs">階段・ステッパー</option><option value="rowing">ローイング</option><option value="other">その他</option></select></div>
+      <div><div class="label">追加種目の強度</div><select id="cardio2Intensity"><option value="light">軽め</option><option value="moderate" selected>普通</option><option value="hard">強め</option></select></div>
+      <div><div class="label">追加種目の分数</div><input id="cardio2Min" type="number" inputmode="numeric" placeholder="10"></div>
+      <div><div class="label">追加種目の機器表示 kcal（任意）</div><input id="cardio2ManualCalories" type="number" inputmode="numeric" placeholder="未入力なら自動推定"></div>
+    </div>
+    <div class="label">追加種目の負荷・速度など</div><input id="cardio2Details" placeholder="例：速度5.5km/h、傾斜3%">
+    </div>
     <div id="exerciseEstimate" class="hint" style="margin-top:12px">種類・強度・時間から有酸素消費を推定します。</div>
     <label class="check"><input id="legRaise" type="checkbox">足上げ腹筋50回</label>
     <label class="check"><input id="plank" type="checkbox">プランク3分</label>
@@ -728,7 +738,7 @@ async function refreshServerClock(){
  }catch(e){}
 }
 function coachContext(records,settings){
- const allowed=['date','weight','fat','fatType','muscle','muscleType','visceralFat','sleep','hunger','fatigue','condition','breakfast','breakfastSource','lunch','lunchSource','dinner','dinnerSource','snack','snackSource','intake','protein','fatG','carbsG','waterL','restDay','cardio','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioManualCalories','cardioCalories','cardioCalorieSource','strengthIntensity','strengthCalories','strengthCalorieSource','accessoryCalories','exerciseTotal','workoutMinutes','strength','legRaise','plank','powerplate','drawin'];
+ const allowed=['date','weight','fat','fatType','muscle','muscleType','visceralFat','sleep','hunger','fatigue','condition','breakfast','breakfastSource','lunch','lunchSource','dinner','dinnerSource','snack','snackSource','intake','protein','fatG','carbsG','waterL','restDay','cardio','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioManualCalories','cardioCalories','cardioCalorieSource','cardio1Calories','cardio1CalorieSource','cardio2','cardio2Type','cardio2Intensity','cardio2Details','cardio2Min','cardio2ManualCalories','cardio2Calories','cardio2CalorieSource','strengthIntensity','strengthCalories','strengthCalorieSource','accessoryCalories','exerciseTotal','workoutMinutes','strength','legRaise','plank','powerplate','drawin'];
  const list=(Array.isArray(records)?records:[]).filter(r=>r&&r.date).slice().sort((a,b)=>a.date.localeCompare(b.date)).slice(-14).map(r=>Object.fromEntries(allowed.filter(key=>r[key]!==undefined&&r[key]!=='').map(key=>[key,typeof r[key]==='string'?r[key].slice(0,200):r[key]])));
  const settingKeys=['displayName','startWeight','goalWeight','proteinGoal','calorieGoal','cardioGoal'];
  return {settings:Object.fromEntries(settingKeys.filter(key=>settings&&settings[key]!==undefined).map(key=>[key,settings[key]])),records:list};
@@ -755,8 +765,8 @@ function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REA
 const mealTypes=[['breakfast','朝食'],['lunch','昼食'],['dinner','夕食'],['snack','間食']];
 const mealSuffixes=['Source','Kcal','Protein','Fat','Carbs'];
 function mealFieldIds(){return mealTypes.flatMap(([id])=>[id,...mealSuffixes.map(s=>id+s)])}
-function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','visceralFat','bmi','basalMetabolism','totalEnergy','waistCm','chestCm','hipCm','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioManualCalories','strengthIntensity','exerciseCal','workoutMinutes','strength']}
-function checkIds(){return ['cardio','legRaise','plank','powerplate','drawin']}
+function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','visceralFat','bmi','basalMetabolism','totalEnergy','waistCm','chestCm','hipCm','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioManualCalories','cardio2Type','cardio2Intensity','cardio2Details','cardio2Min','cardio2ManualCalories','strengthIntensity','exerciseCal','workoutMinutes','strength']}
+function checkIds(){return ['cardio','cardio2','legRaise','plank','powerplate','drawin']}
 function fatTypeOf(r){return r&&r.fatType==='fatMass'?'fatMass':'fatPercent'}
 function muscleTypeOf(r){return r&&r.muscleType==='skeletalMuscleMass'?'skeletalMuscleMass':'muscleMass'}
 function fatMeta(r){return fatTypeOf(r)==='fatMass'?{label:'体脂肪量',unit:'kg'}:{label:'体脂肪率',unit:'%'}}
@@ -770,6 +780,8 @@ function loadRecordForDate(){
   if(!r.muscleType)$('muscleType').value='muscleMass';
   if(!r.cardioType)$('cardioType').value='bike';
   if(!r.cardioIntensity)$('cardioIntensity').value='moderate';
+  if(!r.cardio2Type)$('cardio2Type').value='walk';
+  if(!r.cardio2Intensity)$('cardio2Intensity').value='moderate';
   if(!r.strengthIntensity)$('strengthIntensity').value='moderate';
   mealTypes.forEach(([id])=>{if(!r[id+'Source'])$(id+'Source').value='manual';updateMealSummary(id)});
   checkIds().forEach(id=>$(id).checked=!!r[id]);
@@ -785,7 +797,7 @@ function loadRecordForDate(){
   setStatus(draft?'前回の入力途中データを復元しました':editing?'保存済みの記録を読み込みました':'新しい日の記録です',true);
 }
 $('date').addEventListener('change',loadRecordForDate);
-const exerciseEstimateIds=new Set(['weight','cardio','cardioType','cardioIntensity','cardioMin','cardioManualCalories','strengthIntensity','exerciseCal','workoutMinutes','strength','legRaise','plank','powerplate','drawin','restDay']);
+const exerciseEstimateIds=new Set(['weight','cardio','cardioType','cardioIntensity','cardioMin','cardioManualCalories','cardio2','cardio2Type','cardio2Intensity','cardio2Min','cardio2ManualCalories','strengthIntensity','exerciseCal','workoutMinutes','strength','legRaise','plank','powerplate','drawin','restDay']);
 $('record').addEventListener('input',e=>{if(e.target.id!=='date'&&e.target.type!=='file')scheduleDraftSave();if(exerciseEstimateIds.has(e.target.id))renderExerciseEstimate()});
 $('record').addEventListener('change',e=>{if(e.target.id!=='date'&&e.target.type!=='file')scheduleDraftSave();if(exerciseEstimateIds.has(e.target.id))renderExerciseEstimate()});
 
@@ -813,7 +825,7 @@ function copyPreviousCardio(){
  const current=$('date').value,previous=recs().filter(r=>r.date<current&&r.cardio).slice(-1)[0];
  if(!previous){setStatus('過去の有酸素記録がありません',false);return}
  const legacy=!previous.cardioType||!previous.cardioIntensity;
- $('cardio').checked=true;$('cardioType').value=previous.cardioType||'other';$('cardioIntensity').value=previous.cardioIntensity||'moderate';$('cardioMin').value=previous.cardioMin||'';$('cardioDetails').value=previous.cardioDetails||'';$('cardioManualCalories').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'旧記録から時間をコピーしました。種類は「その他」、強度は「普通」に仮設定したので今回の内容に合わせて確認してください':'前回の有酸素・強度・時間をコピーしました。機器表示kcalは今回の値を入れてください',true)
+ $('cardio').checked=true;$('cardioType').value=previous.cardioType||'other';$('cardioIntensity').value=previous.cardioIntensity||'moderate';$('cardioMin').value=previous.cardioMin||'';$('cardioDetails').value=previous.cardioDetails||'';$('cardioManualCalories').value='';$('cardio2').checked=!!previous.cardio2;$('cardio2Type').value=previous.cardio2Type||'walk';$('cardio2Intensity').value=previous.cardio2Intensity||'moderate';$('cardio2Min').value=previous.cardio2Min||'';$('cardio2Details').value=previous.cardio2Details||'';$('cardio2ManualCalories').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'旧記録から時間をコピーしました。種類は「その他」、強度は「普通」に仮設定したので今回の内容に合わせて確認してください':'前回の有酸素・強度・時間をコピーしました。機器表示kcalは今回の値を入れてください',true)
 }
 function copyPreviousStrength(){
  const current=$('date').value,previous=recs().filter(r=>r.date<current&&(String(r.strength||'').trim()||+r.workoutMinutes>0)).slice(-1)[0];
@@ -879,17 +891,20 @@ function strengthEstimatedCalories(intensity,minutes,weight){
  const met=strengthMets[intensity],min=+minutes,kg=+weight;return met&&min>0&&kg>0?Math.round(met*3.5*kg/200*min):0
 }
 function accessoryCaloriesFromForm(){let c=0;if($('powerplate').checked)c+=40;if($('legRaise').checked)c+=20;if($('plank').checked)c+=20;if($('drawin').checked)c+=15;return c}
+function cardioEntryFromForm(prefix){
+ const checked=$(prefix).checked,manual=hasValue($(prefix+'ManualCalories').value),estimated=checked?cardioCalories($(prefix+'Type').value,$(prefix+'Intensity').value,$(prefix+'Min').value,cardioWeight()):0;
+ return {calories:checked?(manual?Math.max(0,Math.round(+$(prefix+'ManualCalories').value||0)):estimated):0,source:checked?(manual?'machine':'met'):'none'};
+}
 function exerciseBreakdownFromForm(){
- const manualEntered=hasValue($('cardioManualCalories').value),estimated=$('cardio').checked?cardioCalories($('cardioType').value,$('cardioIntensity').value,$('cardioMin').value,cardioWeight()):0;
- const cardio=$('cardio').checked?(manualEntered?Math.max(0,Math.round(+$('cardioManualCalories').value||0)):estimated):0;
- const source=$('cardio').checked?(manualEntered?'machine':'met'):'none',strengthPerformed=(+$('workoutMinutes').value>0||String($('strength').value||'').trim()),strengthManual=hasValue($('exerciseCal').value),strengthEstimated=strengthPerformed?strengthEstimatedCalories($('strengthIntensity').value,$('workoutMinutes').value,cardioWeight()):0;
- const strength=strengthPerformed?(strengthManual?Math.max(0,Math.round(+$('exerciseCal').value||0)):strengthEstimated):0,strengthSource=strengthPerformed?(strengthManual?'manual':'met'):'none',accessory=accessoryCaloriesFromForm();return {cardio,source,strength,strengthSource,accessory,total:cardio+strength+accessory}
+ const first=cardioEntryFromForm('cardio'),second=cardioEntryFromForm('cardio2'),cardio=first.calories+second.calories,activeSources=[first.source,second.source].filter(x=>x!=='none'),source=activeSources.length?new Set(activeSources).size>1?'mixed':activeSources[0]:'none',strengthPerformed=(+$('workoutMinutes').value>0||String($('strength').value||'').trim()),strengthManual=hasValue($('exerciseCal').value),strengthEstimated=strengthPerformed?strengthEstimatedCalories($('strengthIntensity').value,$('workoutMinutes').value,cardioWeight()):0;
+ const strength=strengthPerformed?(strengthManual?Math.max(0,Math.round(+$('exerciseCal').value||0)):strengthEstimated):0,strengthSource=strengthPerformed?(strengthManual?'manual':'met'):'none',accessory=accessoryCaloriesFromForm();
+ return {cardio,source,cardio1:first.calories,cardio1Source:first.source,cardio2:second.calories,cardio2Source:second.source,strength,strengthSource,accessory,total:cardio+strength+accessory}
 }
 function renderExerciseEstimate(){
- const el=$('exerciseEstimate');if(!el)return;const x=exerciseBreakdownFromForm(),weight=cardioWeight(),checked=$('cardio').checked;
- const cardioText=!checked?'有酸素：0kcal':x.source==='machine'?`有酸素：${x.cardio}kcal（機器表示を優先）`:!weight?'有酸素：体重を入力すると推定できます':`有酸素：${x.cardio}kcal（${cardioLabels[$('cardioType').value]}・${cardioIntensityLabels[$('cardioIntensity').value]}・${+$('cardioMin').value||0}分・${weight.toFixed(1)}kgで推定）`;
+ const el=$('exerciseEstimate');if(!el)return;$('cardio2Fields').style.display=$('cardio2').checked?'block':'none';const x=exerciseBreakdownFromForm(),weight=cardioWeight(),entryText=(prefix,calories,source)=>!$(prefix).checked?'':source==='machine'?`${cardioLabels[$(prefix+'Type').value]}：${calories}kcal（機器表示を優先）`:!weight?`${cardioLabels[$(prefix+'Type').value]}：体重を入力すると推定できます`:`${cardioLabels[$(prefix+'Type').value]}：${calories}kcal（${cardioIntensityLabels[$(prefix+'Intensity').value]}・${+$(prefix+'Min').value||0}分・${weight.toFixed(1)}kgで推定）`,cardioLines=[entryText('cardio',x.cardio1,x.cardio1Source),entryText('cardio2',x.cardio2,x.cardio2Source)].filter(Boolean);
+ const cardioText=cardioLines.length?cardioLines.join('<br>'):'有酸素：0kcal';
  const strengthText=x.strengthSource==='none'?'筋トレ：0kcal':x.strengthSource==='manual'?`筋トレのみ：${x.strength}kcal（手入力を優先）`:`筋トレのみ：${x.strength}kcal（${cardioIntensityLabels[$('strengthIntensity').value]}・${+$('workoutMinutes').value||0}分・${weight?weight.toFixed(1):'--'}kgで推定）`;
- el.innerHTML=`<b>加算内容</b><br>${cardioText}<br>${strengthText}<br>補助運動：${x.accessory}kcal<br><b>合計：約${x.total}kcal</b><br><span class="small">有酸素・筋トレの自動計算はMETによる一般的な推定値です。機器表示や個別に算出した値がある場合は手入力を優先できます。</span>`
+ el.innerHTML=`<b>加算内容</b><br>${cardioText}<br>${cardioLines.length>1?`有酸素小計：${x.cardio}kcal<br>`:''}${strengthText}<br>補助運動：${x.accessory}kcal<br><b>合計：約${x.total}kcal</b><br><span class="small">有酸素・筋トレの自動計算はMETによる一般的な推定値です。機器表示や個別に算出した値がある場合は手入力を優先できます。</span>`
 }
 function exCal(){return exerciseBreakdownFromForm().total}
 function sleepScore(s){return s==='★★★★★'?20:s==='★★★★☆'?16:s==='★★★☆☆'?11:s==='★★☆☆☆'?6:s==='★☆☆☆☆'?2:8}
@@ -903,7 +918,7 @@ function isRestDay(r){
  return !!(r&&r.restDay)||/^(?:今日は)?(?:完全)?休養日(?:[（(]?(?:運動)?0分[）)]?)?$|^(?:休養|オフ日|運動休み)$/.test(text)
 }
 function effectiveExercise(r){return isRestDay(r)?0:(+r.exerciseTotal||0)}
-function hasExerciseInput(r){return isRestDay(r)||!!(r&&(r.cardio||r.legRaise||r.plank||r.powerplate||r.drawin||+r.cardioMin>0||+r.exerciseCal>0||+r.workoutMinutes>0||String(r.strength||'').trim()))}
+function hasExerciseInput(r){return isRestDay(r)||!!(r&&(r.cardio||r.cardio2||r.legRaise||r.plank||r.powerplate||r.drawin||+r.cardioMin>0||+r.cardio2Min>0||+r.exerciseCal>0||+r.workoutMinutes>0||String(r.strength||'').trim()))}
 function hasMealInput(r){return !!(r&&(hasValue(r.intake)||hasValue(r.protein)||r.breakfast||r.lunch||r.dinner||r.snack))}
 function hasSleepInput(r){return !!(r&&r.sleep)}
 function assessmentStatus(r){const missing=[];if(!hasMealInput(r))missing.push('食事');if(!hasExerciseInput(r))missing.push('運動・休養');if(!hasSleepInput(r))missing.push('睡眠');return {complete:missing.length===0,missing}}
@@ -914,7 +929,7 @@ function scoreBreakdown(r,s){
   let calorie=0;if(intake){if(calorieDiff<=200)calorie=20;else if(calorieDiff<=400)calorie=14;else if(calorieDiff<=600)calorie=8;else calorie=2}
   const proteinGoal=+s.proteinGoal||120;
   let proteinPoints=0;if(protein>=proteinGoal)proteinPoints=20;else if(protein>=proteinGoal*.85)proteinPoints=16;else if(protein>=proteinGoal*.7)proteinPoints=11;else if(protein>0)proteinPoints=5;
-  let exercise=0;if(rest)exercise=25;else{if(r.cardio)exercise+=8;if(ex>=350)exercise+=10;else if(ex>=200)exercise+=7;else if(ex>0)exercise+=3;if(r.strength&&r.strength.trim())exercise+=7}
+  let exercise=0;if(rest)exercise=25;else{if(r.cardio||r.cardio2)exercise+=8;if(ex>=350)exercise+=10;else if(ex>=200)exercise+=7;else if(ex>0)exercise+=3;if(r.strength&&r.strength.trim())exercise+=7}
   const sleep=sleepScore(r.sleep);
   const waterEntered=hasValue(r.waterL),water=!waterEntered?5:+r.waterL>=2?5:+r.waterL>=1.5?3:+r.waterL>0?1:0;
   const fatigueEntered=hasValue(r.fatigue)&&+r.fatigue>0,fatigue=!fatigueEntered?10:+r.fatigue<=2?10:+r.fatigue===3?6:+r.fatigue===4?3:0;
@@ -1101,18 +1116,20 @@ function collectRecord(normalizeRest=true){
  const r={date:$('date').value,restDay:$('restDay').checked,updatedAt:appNowIso()};
  fieldIds().forEach(id=>{const el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});
  checkIds().forEach(id=>r[id]=$(id).checked);
- const breakdown=exerciseBreakdownFromForm();r.cardioCalories=breakdown.cardio;r.cardioCalorieSource=breakdown.source;r.strengthCalories=breakdown.strength;r.strengthCalorieSource=breakdown.strengthSource;r.accessoryCalories=breakdown.accessory;
- if(normalizeRest&&isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.cardioManualCalories=null;r.cardioCalories=0;r.cardioCalorieSource='none';r.exerciseCal=null;r.strengthCalories=0;r.strengthCalorieSource='none';r.accessoryCalories=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=breakdown.total;
+ const breakdown=exerciseBreakdownFromForm();r.cardio1Calories=breakdown.cardio1;r.cardio1CalorieSource=breakdown.cardio1Source;r.cardio2Calories=breakdown.cardio2;r.cardio2CalorieSource=breakdown.cardio2Source;r.cardioCalories=breakdown.cardio;r.cardioCalorieSource=breakdown.source;r.strengthCalories=breakdown.strength;r.strengthCalorieSource=breakdown.strengthSource;r.accessoryCalories=breakdown.accessory;
+ if(normalizeRest&&isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.cardioManualCalories=null;r.cardio1Calories=0;r.cardio1CalorieSource='none';r.cardio2Min=0;r.cardio2ManualCalories=null;r.cardio2Calories=0;r.cardio2CalorieSource='none';r.cardioCalories=0;r.cardioCalorieSource='none';r.exerciseCal=null;r.strengthCalories=0;r.strengthCalorieSource='none';r.accessoryCalories=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=breakdown.total;
  return r;
 }
 function recordMissingFields(r){
  const missing=[];if(!hasValue(r.weight))missing.push('体重');assessmentStatus(r).missing.forEach(x=>missing.push(x));return missing;
 }
 function exerciseInputErrors(){
- const errors=[],rest=$('restDay').checked,cardio=$('cardio').checked,cardioMin=+$('cardioMin').value||0,cardioExtra=cardioMin>0||hasValue($('cardioManualCalories').value)||String($('cardioDetails').value||'').trim(),strengthText=String($('strength').value||'').trim(),strengthMin=+$('workoutMinutes').value||0,strengthExtra=strengthText||strengthMin>0||hasValue($('exerciseCal').value),accessory=checkIds().filter(id=>id!=='cardio').some(id=>$(id).checked);
- if(rest&&(cardio||cardioExtra||strengthExtra||accessory))errors.push('休養日と運動内容は同時に保存できません。どちらかを選んでください。');
+ const errors=[],rest=$('restDay').checked,cardio=$('cardio').checked,cardioMin=+$('cardioMin').value||0,cardioExtra=cardioMin>0||hasValue($('cardioManualCalories').value)||String($('cardioDetails').value||'').trim(),cardio2=$('cardio2').checked,cardio2Min=+$('cardio2Min').value||0,cardio2Extra=cardio2Min>0||hasValue($('cardio2ManualCalories').value)||String($('cardio2Details').value||'').trim(),strengthText=String($('strength').value||'').trim(),strengthMin=+$('workoutMinutes').value||0,strengthExtra=strengthText||strengthMin>0||hasValue($('exerciseCal').value),accessory=checkIds().filter(id=>!['cardio','cardio2'].includes(id)).some(id=>$(id).checked);
+ if(rest&&(cardio||cardioExtra||cardio2||cardio2Extra||strengthExtra||accessory))errors.push('休養日と運動内容は同時に保存できません。どちらかを選んでください。');
  if(!rest&&cardio&&cardioMin<=0)errors.push('有酸素を行った場合は、有酸素の分数を入力してください。');
  if(!rest&&!cardio&&cardioExtra)errors.push('有酸素の内容があります。有酸素へチェックを入れるか、内容を消してください。');
+ if(!rest&&cardio2&&cardio2Min<=0)errors.push('追加の有酸素を行った場合は、追加種目の分数を入力してください。');
+ if(!rest&&!cardio2&&cardio2Extra)errors.push('追加の有酸素内容があります。追加の有酸素へチェックを入れるか、内容を消してください。');
  if(!rest&&strengthText&&strengthMin<=0&&!hasValue($('exerciseCal').value))errors.push('筋トレ内容がある場合は、筋トレ時間を入力してください。');
  if(!rest&&!strengthText&&hasValue($('exerciseCal').value)&&strengthMin<=0)errors.push('筋トレ消費kcalを入力した場合は、筋トレ時間または内容も入力してください。');
  return errors;
@@ -1138,7 +1155,7 @@ function saveRecord(){
   $('recordSaveBtn').textContent='保存済み ✓';setTimeout(()=>{$('recordSaveBtn').textContent='この日の記録を上書き'},1800)
  }catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
 }
-function clearForm(){clearTimeout(draftTimer);removeDraft($('date').value);fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';$('cardioType').value='bike';$('cardioIntensity').value='moderate';$('strengthIntensity').value='moderate';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';renderExerciseEstimate();setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
+function clearForm(){clearTimeout(draftTimer);removeDraft($('date').value);fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';$('cardioType').value='bike';$('cardioIntensity').value='moderate';$('cardio2Type').value='walk';$('cardio2Intensity').value='moderate';$('strengthIntensity').value='moderate';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';renderExerciseEstimate();setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
 function profileComplete(s){return !!(s.displayName&&s.startDate&&s.startWeight&&s.goalWeight&&s.baseBurn&&s.age&&s.sex&&s.heightCm&&s.activityLevel)}
 function calculateRecommendations(){
  const age=+$('age').value,height=+$('heightCm').value,latest=recs().filter(r=>+r.weight>0).slice(-1)[0],weight=latest?+latest.weight:+$('startWeight').value,goal=+$('goalWeight').value,sex=$('sex').value,activity=+$('activityLevel').value,deficit=+$('weightLossPace').value||500;
@@ -1251,14 +1268,14 @@ function signedChange(current,previous,digits=1,suffix=''){
 }
 function exerciseItems(r){
  if(isRestDay(r))return ['休養日'];
- const cardioName=cardioLabels[r.cardioType]||'有酸素',intensity=cardioIntensityLabels[r.cardioIntensity],detail=String(r.cardioDetails||'').trim();
- return [r.cardio?`${cardioName} ${r.cardioMin||35}分${intensity?'・'+intensity:''}${detail?'（'+detail+'）':''}${hasValue(r.cardioCalories)?`・約${Math.round(+r.cardioCalories)}kcal${r.cardioCalorieSource==='machine'?'【機器表示】':'【推定】'}`:''}`:'',hasValue(r.strengthCalories)?`筋トレのみ 約${Math.round(+r.strengthCalories)}kcal${r.strengthCalorieSource==='manual'?'【手入力】':'【推定】'}`:'',r.legRaise?'足上げ腹筋':'',r.plank?'プランク':'',r.powerplate?'Power Plate 4セット':'',r.drawin?'ドローイン':'',String(r.strength||'').trim()].filter(Boolean);
+ const cardioItem=(prefix,legacy=false)=>{if(!r[prefix])return '';const type=r[prefix+'Type'],intensity=cardioIntensityLabels[r[prefix+'Intensity']],detail=String(r[prefix+'Details']||'').trim(),calories=legacy&&!hasValue(r.cardio1Calories)?r.cardioCalories:r[prefix+'Calories'],source=legacy&&!r.cardio1CalorieSource?r.cardioCalorieSource:r[prefix+'CalorieSource'];return `${cardioLabels[type]||'有酸素'} ${r[prefix+'Min']||35}分${intensity?'・'+intensity:''}${detail?'（'+detail+'）':''}${hasValue(calories)?`・約${Math.round(+calories)}kcal${source==='machine'?'【機器表示】':'【推定】'}`:''}`};
+ return [cardioItem('cardio',true),cardioItem('cardio2'),hasValue(r.strengthCalories)?`筋トレのみ 約${Math.round(+r.strengthCalories)}kcal${r.strengthCalorieSource==='manual'?'【手入力】':'【推定】'}`:'',r.legRaise?'足上げ腹筋':'',r.plank?'プランク':'',r.powerplate?'Power Plate 4セット':'',r.drawin?'ドローイン':'',String(r.strength||'').trim()].filter(Boolean);
 }
 function savedExerciseBreakdown(r){
  const cardio=Math.max(0,Math.round(+r.cardioCalories||0)),strength=Math.max(0,Math.round(+r.strengthCalories||0)),accessory=Math.max(0,Math.round(+r.accessoryCalories||0));
- const cardioSource=r.cardioCalorieSource==='machine'?'機器表示':r.cardioCalorieSource==='met'?'推定':'',strengthSource=r.strengthCalorieSource==='manual'?'手入力':r.strengthCalorieSource==='met'?'推定':'';
+ const cardioSource=r.cardioCalorieSource==='machine'?'機器表示':r.cardioCalorieSource==='met'?'推定':r.cardioCalorieSource==='mixed'?'機器表示＋推定':'',strengthSource=r.strengthCalorieSource==='manual'?'手入力':r.strengthCalorieSource==='met'?'推定':'';
  const parts=[];if(cardio>0)parts.push(`有酸素 ${cardio}kcal${cardioSource?'【'+cardioSource+'】':''}`);if(strength>0)parts.push(`筋トレ ${strength}kcal${strengthSource?'【'+strengthSource+'】':''}`);if(accessory>0)parts.push(`補助運動 ${accessory}kcal【目安】`);
- const manual=r.cardioCalorieSource==='machine'||r.strengthCalorieSource==='manual',estimated=r.cardioCalorieSource==='met'||r.strengthCalorieSource==='met'||accessory>0;
+ const manual=['machine','mixed'].includes(r.cardioCalorieSource)||r.strengthCalorieSource==='manual',estimated=['met','mixed'].includes(r.cardioCalorieSource)||r.strengthCalorieSource==='met'||accessory>0;
  return {parts,total:effectiveExercise(r),label:manual&&estimated?'一部実測・手入力＋推定':manual?'実測・手入力':'推定'};
 }
 function morningReportScore(r){
