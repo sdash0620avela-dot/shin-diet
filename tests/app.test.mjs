@@ -223,9 +223,8 @@ test('v18.3 preserves calorie sources in the saved daily summary', () => {
   assert.doesNotMatch(html,/運動消費 約\$\{Math\.round\(exCalories\)\}kcal【推定】/);
 });
 
-test('v18.4 blocks contradictory or incomplete exercise input before saving', () => {
+test('v18.4 blocks incomplete exercise input before saving', () => {
   assert.match(html,/function exerciseInputErrors\(\)/);
-  assert.match(html,/休養日と運動内容は同時に保存できません/);
   assert.match(html,/有酸素を行った場合は、有酸素の分数を入力してください/);
   assert.match(html,/有酸素の内容があります。有酸素へチェックを入れるか/);
   assert.match(html,/筋トレ内容がある場合は、筋トレ時間を入力してください/);
@@ -515,7 +514,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.5'/);
+  assert.match(html,/const APP_VERSION='19\.6'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -525,6 +524,18 @@ test('v19.5 diagnostics reports actual app and storage state without changing da
   assert.match(html,/navigator\.storage\?\.persist/);
   assert.match(html,/storageKey\('LastExport'\)/);
   assert.match(html,/クラウド同期またはデータ書き出し/);
+});
+
+test('v19.6 rest day overrides stale exercise fields and save errors do not jump to top', () => {
+  assert.match(html,/function formIsRestDay\(\)/);
+  assert.match(html,/function clearExerciseForRest\(showMsg=true\)/);
+  assert.match(html,/休養日を優先し、残っていた運動入力を外しました/);
+  assert.match(html,/休養日：運動消費 0kcal/);
+  assert.match(html,/if\(rest\)return \[\]/);
+  assert.match(html,/\$\('restDay'\)\.addEventListener\('change'/);
+  assert.match(html,/\$\('strength'\)\.addEventListener\('input'/);
+  assert.match(html,/const exerciseErrors=exerciseInputErrors\(\);if\(exerciseErrors\.length\)\{setStatus\(exerciseErrors\.join\(' '\),false\);return\}/);
+  assert.doesNotMatch(html,/exerciseErrors\.length[^\n]*scrollIntoView/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
