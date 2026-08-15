@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.4 記録リマインダー版</title>
+<title>AI Diet v19.5 アプリ状態チェック版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -264,7 +264,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.4 記録リマインダー版</div>
+  <div class="version-pill">v19.5 アプリ状態チェック版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -568,6 +568,12 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div style="margin-top:12px"><button class="danger" onclick="resetAll()">全データ削除</button></div>
     <p class="small" style="margin-top:14px">ログイン前は端末内保存です。ログイン後は端末内と本人専用クラウドの両方へ保存します。</p>
   </div>
+  <div class="card"><h3>アプリ状態チェック</h3>
+    <div id="appDiagnostics" class="diary">確認中…</div>
+    <button type="button" class="sub" onclick="renderAppDiagnostics()">状態を再確認</button>
+    <button type="button" class="sub" onclick="requestPersistentStorage()">端末保存の保護を依頼</button>
+    <p class="small">端末・ブラウザが対応している範囲で確認します。「保護済み」でも、機種変更に備えてクラウド同期またはデータ書き出しを併用してください。</p>
+  </div>
 </section>
 </main>
 
@@ -593,6 +599,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
+const APP_VERSION='19.5';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
@@ -1228,7 +1235,7 @@ function saveSettings(){
  writeSettings(s);update();alert('個人設定を保存しました')
 }
 function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('設定'));if(tab)show('settings',tab)}
-function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}}
+function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings')renderAppDiagnostics()}
 
 function update(){
  const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';
@@ -1639,6 +1646,23 @@ function openTodayRecord(){
 }
 function dismissReminderToday(){localStorage.setItem(storageKey('ReminderDismissed'),today());renderRecordReminder()}
 
+function formatStorageBytes(bytes){if(!Number.isFinite(+bytes))return '確認不可';if(+bytes<1024)return `${Math.round(+bytes)}B`;if(+bytes<1048576)return `${(+bytes/1024).toFixed(1)}KB`;return `${(+bytes/1048576).toFixed(1)}MB`}
+async function appDiagnosticState(){
+ const installed=!!(window.matchMedia?.('(display-mode: standalone)').matches||window.navigator.standalone),online=navigator.onLine!==false,controlled=!!navigator.serviceWorker?.controller;
+ let persistent=null,usage=null,quota=null;
+ try{if(navigator.storage?.persisted)persistent=await navigator.storage.persisted();if(navigator.storage?.estimate){const estimate=await navigator.storage.estimate();usage=estimate.usage;quota=estimate.quota}}catch(e){}
+ return {version:APP_VERSION,installed,online,controlled,persistent,usage,quota,records:recs().length,signedIn:!!cloudUser,lastSync:lastSyncAt||null,lastExport:localStorage.getItem(storageKey('LastExport'))||null}
+}
+async function renderAppDiagnostics(){
+ const root=$('appDiagnostics');if(!root)return;root.textContent='確認中…';const x=await appDiagnosticState(),storage=x.usage===null?'確認不可':`${formatStorageBytes(x.usage)} / ${formatStorageBytes(x.quota)}`;
+ const sync=x.signedIn?(x.lastSync?`ログイン済み・最終同期 ${x.lastSync}`:'ログイン済み・同期確認中'):'未ログイン・この端末だけに保存';
+ root.textContent=`版：v${x.version}\n起動：${x.installed?'ホーム画面アプリ':'ブラウザ表示'}\n通信：${x.online?'オンライン':'オフライン'}\n更新機能：${x.controlled?'動作中':'初回読込または確認不可'}\n保存記録：${x.records}日分\nクラウド：${sync}\n端末保存：${x.persistent===true?'保護済み':x.persistent===false?'通常保存':'確認不可'}\n使用容量：${storage}\n最終書き出し：${x.lastExport||'未実施'}`
+}
+async function requestPersistentStorage(){
+ if(!navigator.storage?.persist){alert('この端末・ブラウザでは保存保護の依頼機能を利用できません。クラウド同期またはデータ書き出しを使ってください。');return}
+ try{const granted=await navigator.storage.persist();await renderAppDiagnostics();alert(granted?'端末から保存保護が許可されました。':'端末から保存保護は許可されませんでした。クラウド同期またはデータ書き出しを併用してください。')}catch(e){alert('保存保護を確認できませんでした。クラウド同期またはデータ書き出しを使ってください。')}
+}
+
 function editRecord(date){$('date').value=date;const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('記録'));if(tab)show('record',tab);else loadRecordForDate();setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),50)}
 async function deleteRecord(date){
  if(!confirm(`${date}の記録を削除しますか？\nこの操作は元に戻せません。`))return;
@@ -1726,7 +1750,7 @@ function drawChart(){
 
 function exportData(){
  const payload={version:'15.3',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),deletedRecords:deletedRecords(),settings:sets()};
- const b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)
+ const b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href);localStorage.setItem(storageKey('LastExport'),new Date().toLocaleString('ja-JP'));renderAppDiagnostics()
 }
 function backupStates(data){
  const records=Array.isArray(data)?data:data&&data.records,deleted=Array.isArray(data&&data.deletedRecords)?data.deletedRecords:[];
