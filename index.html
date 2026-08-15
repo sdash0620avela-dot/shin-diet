@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v18.4 運動入力チェック版</title>
+<title>AI Diet v18.5 下書き保護版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,7 +262,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v18.4 運動入力チェック版</div>
+  <div class="version-pill">v18.5 下書き保護版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -608,7 +608,7 @@ function removeDraft(date){if(date)localStorage.removeItem(draftKey(date))}
 let draftTimer=null,recordLoading=false;
 function saveDraft(){
  if(recordLoading||!$('date').value)return;
- try{const record=collectRecord();localStorage.setItem(draftKey(record.date),JSON.stringify({record,savedAt:new Date().toISOString()}));setStatus('入力内容をこの端末へ下書き保存しました',true)}catch(e){}
+ try{const record=collectRecord(false);localStorage.setItem(draftKey(record.date),JSON.stringify({record,savedAt:new Date().toISOString()}));setStatus('入力内容をこの端末へ下書き保存しました',true)}catch(e){}
 }
 function scheduleDraftSave(){if(recordLoading)return;clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,500)}
 function activateUserStorage(uid){
@@ -1096,13 +1096,13 @@ function diaryText(r,s,last,prev){
  return msg;
 }
 
-function collectRecord(){
+function collectRecord(normalizeRest=true){
  calculateMealTotals();
  const r={date:$('date').value,restDay:$('restDay').checked,updatedAt:appNowIso()};
  fieldIds().forEach(id=>{const el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});
  checkIds().forEach(id=>r[id]=$(id).checked);
  const breakdown=exerciseBreakdownFromForm();r.cardioCalories=breakdown.cardio;r.cardioCalorieSource=breakdown.source;r.strengthCalories=breakdown.strength;r.strengthCalorieSource=breakdown.strengthSource;r.accessoryCalories=breakdown.accessory;
- if(isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.cardioManualCalories=null;r.cardioCalories=0;r.cardioCalorieSource='none';r.exerciseCal=null;r.strengthCalories=0;r.strengthCalorieSource='none';r.accessoryCalories=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=breakdown.total;
+ if(normalizeRest&&isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.cardioManualCalories=null;r.cardioCalories=0;r.cardioCalorieSource='none';r.exerciseCal=null;r.strengthCalories=0;r.strengthCalorieSource='none';r.accessoryCalories=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=breakdown.total;
  return r;
 }
 function recordMissingFields(r){
