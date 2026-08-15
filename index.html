@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.3 月間分析版</title>
+<title>AI Diet v19.4 記録リマインダー版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -245,6 +245,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 .coach-speech{font-size:15px;font-weight:750;line-height:1.55}.coach-detail{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.coach-detail summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px}.coach-detail-body{margin-top:12px}
 .coach-question{min-height:112px}.coach-answer{display:none;white-space:pre-wrap;margin-top:14px}.coach-answer.show{display:block}.coach-privacy{margin-top:10px}.quick-coach{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.quick-coach button{margin:0;padding:11px 8px;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line);font-size:13px}.quick-coach button:disabled{opacity:.55}
 .meal-favorites{margin:10px 0 14px}.meal-favorites-title{font-size:13px;color:var(--muted);font-weight:750;margin-bottom:7px}.meal-favorites-list{display:flex;gap:7px;overflow-x:auto;padding:1px 1px 5px;scrollbar-width:thin}.meal-favorite{flex:0 0 auto;width:auto;max-width:220px;margin:0;padding:9px 12px;background:#F2F2F7;color:var(--ink2);border:1px solid var(--line);box-shadow:none;font-size:13px;text-align:left}.meal-favorite-name{display:block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.meal-favorite-count{display:block;margin-top:2px;color:var(--muted);font-size:11px;font-weight:650}
+.record-reminder{display:none;border-color:rgba(255,149,0,.38);background:#FFF9E6}.record-reminder.show{display:block}.record-reminder-actions{display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:12px}.record-reminder-actions button{margin:0}.record-reminder-actions .dismiss{background:#fff;color:var(--ink2);border:1px solid var(--line);box-shadow:none}
 @keyframes coachCelebrate{0%{transform:scale(.88) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
 
 @media(max-width:380px){
@@ -263,13 +264,18 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.3 月間分析版</div>
+  <div class="version-pill">v19.4 記録リマインダー版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
 
 <main class="wrap">
 <section id="home" class="page active">
+  <div id="recordReminder" class="card record-reminder" role="status" aria-live="polite">
+    <h3>今日の記録が残っています</h3>
+    <p id="recordReminderText" class="muted"></p>
+    <div class="record-reminder-actions"><button type="button" onclick="openTodayRecord()">今日の記録を開く</button><button type="button" class="dismiss" onclick="dismissReminderToday()">今日は閉じる</button></div>
+  </div>
   <div id="onboardingNotice" class="card" style="display:none;border-color:rgba(255,149,0,.35);background:#FFF9E6">
     <h3>最初に自分の目標を設定</h3>
     <p class="muted">年齢・身長・活動量から、消費カロリーと減量目標の目安を計算します。</p>
@@ -531,6 +537,9 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div class="label">1日の目標たんぱく質 g（編集可）</div><input id="proteinGoal" type="number" step="1" inputmode="numeric" value="120">
     <div class="label">1日の目標摂取 kcal（編集可）</div><input id="calorieGoal" type="number" step="10" inputmode="numeric" value="2000">
     <div class="label">有酸素の基準時間 分</div><input id="cardioGoal" type="number" step="1" inputmode="numeric" value="35">
+    <label class="check"><input id="reminderEnabled" type="checkbox">毎日の記録忘れをアプリ内で知らせる</label>
+    <div class="label">確認する時刻</div><input id="reminderTime" type="time" value="21:00">
+    <p class="small">指定時刻以降にアプリを開くと、未入力項目をホームに表示します。アプリを閉じている間のプッシュ通知ではありません。</p>
     <div class="label">既往・痛み・運動上の注意</div><textarea id="healthNotes" placeholder="例：腰痛、膝痛、服薬など。緊急時の診断には使用しません。"></textarea>
     <p class="small">自動計算は一般的な推定値です。持病・服薬・妊娠中・摂食障害の既往がある場合は、医療専門職の指示を優先してください。</p>
     <div style="margin-top:16px"><button onclick="saveSettings()">設定を保存</button></div>
@@ -589,8 +598,8 @@ const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
 $('date').value=today();
 
-const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35};
-const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35};
+const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35,reminderEnabled:false,reminderTime:'21:00'};
+const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35,reminderEnabled:false,reminderTime:'21:00'};
 let activeStorageId='legacy';
 let serverClockOffsetMs=Number(localStorage.getItem('shinDietServerClockOffsetMs')||0);
 const appNowMs=()=>Date.now()+serverClockOffsetMs;
@@ -1212,17 +1221,17 @@ function calculateRecommendations(){
  out.textContent=`${latest?'最新体重 '+weight.toFixed(1)+'kg':'開始体重 '+weight.toFixed(1)+'kg'}を使用｜推定基礎代謝 ${Math.round(bmr)}kcal｜推定1日消費 ${tdee}kcal｜目標摂取 ${calorie}kcal｜目標P ${protein}g`;out.style.color='var(--good)'
 }
 function saveSettings(){
- const s={displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,updatedAt:appNowIso()};
+ const s={displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
  const existing=sets(),legacyAllowed=recs().length>0&&!existing.age;
  if(!s.displayName||!s.startDate||!s.startWeight||!s.baseBurn||!s.goalWeight)return alert('名前・開始日・開始体重・消費kcal・目標体重を入力してください。');
  if(!legacyAllowed&&(!s.age||!s.sex||!s.heightCm||!s.activityLevel))return alert('年齢・性別・身長・活動量を入力し、自動計算してください。');
  writeSettings(s);update();alert('個人設定を保存しました')
 }
 function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('設定'));if(tab)show('settings',tab)}
-function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home')drawForecastChart()}
+function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}}
 
 function update(){
- const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;
+ const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';
  $('onboardingNotice').style.display=profileComplete(s)||recs().length?'none':'block';
  $('appTitle').textContent=s.displayName?`${s.displayName}のAI Diet`:'AI Diet';$('appSubhead').textContent=s.startDate?`${s.startDate.replaceAll('-','/')}開始｜目標P ${s.proteinGoal||120}g｜有酸素 ${s.cardioGoal||35}分`:'個人設定を入力してください';
  $('calorieGoalChip').textContent=`${s.calorieGoal||2000}kcal`;$('proteinGoalChip').textContent=`${s.proteinGoal||120}g P`;$('cardioGoalChip').textContent=`有酸素${s.cardioGoal||35}分`;$('cardioGoalLabel').textContent=`有酸素（${s.cardioGoal||35}分）`;
@@ -1237,6 +1246,7 @@ function update(){
  renderCompositionAnalysis(a,t);
  renderBodyProgressComment(a,s);
  renderDailySummary(a,s,t);
+ renderRecordReminder();
  $('motivation').innerHTML=motivationText(last,s);
  motivationMessage(a,s,last,t);
  forecast(last,a,s);
@@ -1611,6 +1621,24 @@ async function copyMonthlyReport(){
  try{await navigator.clipboard.writeText(currentMonthlyReport);status.textContent='月間総括をコピーしました ✓'}catch(e){status.textContent='コピーできませんでした。文章を選択してコピーしてください'}
 }
 
+function reminderMinutes(value){const match=/^(\d{2}):(\d{2})$/.exec(String(value||''));return match?(+match[1])*60+(+match[2]):21*60}
+function reminderState(records,settings,now=new Date(appNowMs())){
+ if(!settings.reminderEnabled)return {show:false,reason:'disabled'};
+ const date=dateKey(now),dismissed=localStorage.getItem(storageKey('ReminderDismissed'))===date;
+ if(dismissed)return {show:false,reason:'dismissed'};
+ if(now.getHours()*60+now.getMinutes()<reminderMinutes(settings.reminderTime))return {show:false,reason:'early'};
+ const saved=(Array.isArray(records)?records:[]).find(r=>r.date===date),draft=readDraft(date)?.record,record=draft||saved||{date};
+ const missing=recordMissingFields(record);return {show:missing.length>0,reason:missing.length?'incomplete':'complete',missing}
+}
+function renderRecordReminder(){
+ const root=$('recordReminder');if(!root)return;const state=reminderState(recs(),sets());root.classList.toggle('show',state.show);
+ if(state.show)$('recordReminderText').textContent=`未入力：${state.missing.join('・')}。入力済みの内容は残したまま続きから記録できます。`
+}
+function openTodayRecord(){
+ $('date').value=today();const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('記録'));if(tab)show('record',tab);else loadRecordForDate()
+}
+function dismissReminderToday(){localStorage.setItem(storageKey('ReminderDismissed'),today());renderRecordReminder()}
+
 function editRecord(date){$('date').value=date;const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('記録'));if(tab)show('record',tab);else loadRecordForDate();setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),50)}
 async function deleteRecord(date){
  if(!confirm(`${date}の記録を削除しますか？\nこの操作は元に戻せません。`))return;
@@ -1724,7 +1752,8 @@ async function resetAll(){
  setDeletedRecords(mergeSyncStates(deletedRecords(),tombstones).filter(r=>r._deleted));localStorage.removeItem(storageKey('Records'));update();loadRecordForDate();alert('現在の利用者の記録をすべて削除しました')
 }
 window.addEventListener('online',()=>{if(cloudUser)syncNow(true)});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&cloudUser&&Date.now()-lastSyncEpoch>300000)syncNow(true)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){renderRecordReminder();if(cloudUser&&Date.now()-lastSyncEpoch>300000)syncNow(true)}});
+setInterval(renderRecordReminder,60000);
 update();loadRecordForDate();initCloud();
 </script>
 </body>
