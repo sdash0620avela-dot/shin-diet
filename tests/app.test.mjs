@@ -55,6 +55,11 @@ const weeklyApi = new Function(
   '\nreturn { weeklyWindow, weeklyStats, buildWeeklyReport };'
 )();
 
+const monthlyApi = new Function(
+  ['sleepScore','hasValue','isRestDay','effectiveExercise','hasExerciseInput','hasMealInput','hasSleepInput','assessmentStatus','scoreBreakdown','scoreRecord','sleepStar','dayNumber','muscleTypeOf','muscleMeta','monthlyWindow','monthlyStats','monthlyPriority','buildMonthlyReport'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { monthlyWindow, monthlyStats, monthlyPriority, buildMonthlyReport };'
+)();
+
 const graphApi = new Function(
   ['hasValue','fatTypeOf','muscleTypeOf','dayNumber','graphSeries','rollingSevenDay'].map(name => extractFunction(html, name)).join('\n') +
   '\nreturn { graphSeries, rollingSevenDay };'
@@ -467,6 +472,24 @@ test('v16.5 chart switches metrics without mixing measurement types and uses cal
   assert.equal(rolling.at(-1).value,(114+113.8+113.5)/3);
   assert.match(html,/selectGraphMode\('weight'\)/);
   assert.match(html,/実線：実測値｜点線：7日平均/);
+});
+
+test('v19.3 monthly report compares first and last seven-day averages', () => {
+  const records=Array.from({length:30},(_,i)=>({
+    date:`2026-08-${String(i+1).padStart(2,'0')}`,weight:115-i*.1,intake:2000,protein:120,
+    restDay:true,sleep:'★★★★☆',waterL:2,fatigue:2,muscle:47,muscleType:'skeletalMuscleMass'
+  }));
+  assert.equal(monthlyApi.monthlyWindow(records).length,30);
+  const stats=monthlyApi.monthlyStats(records,settings);
+  assert.ok(stats.weightAverageChange < -2);
+  assert.equal(stats.avgProtein,120);
+  const report=monthlyApi.buildMonthlyReport(records,settings);
+  assert.match(report,/AI月間総括/);
+  assert.match(report,/前半・後半7日平均体重差/);
+  assert.match(report,/【翌月の最優先】/);
+  assert.match(report,/単日の値ではなく期間平均/);
+  assert.match(html,/id="monthly"/);
+  assert.match(html,/copyMonthlyReport/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
