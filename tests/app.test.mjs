@@ -253,6 +253,17 @@ test('v19.0 supports two separately calculated cardio activities', () => {
   assert.match(html,/\$\('cardio2Fields'\)\.style\.display=\$\('cardio2'\)\.checked\?'block':'none'/);
 });
 
+test('v19.1 copies one complete previous workout without stale calorie overrides', () => {
+  assert.match(html,/onclick="copyPreviousWorkout\(\)">前回の運動一式/);
+  assert.match(html,/function copyPreviousWorkout\(\)/);
+  assert.match(html,/r\.date<current&&!isRestDay\(r\)&&hasExerciseInput\(r\)/);
+  assert.match(html,/\$\('cardioManualCalories'\)\.value=''/);
+  assert.match(html,/\$\('cardio2ManualCalories'\)\.value=''/);
+  assert.match(html,/\$\('exerciseCal'\)\.value=''/);
+  assert.match(html,/\['legRaise','plank','powerplate','drawin'\]\.forEach/);
+  assert.match(html,/消費kcalは今回の体重・時間・強度で再計算します/);
+});
+
 test('each signed-in user has a separate local storage namespace', () => {
   assert.match(html, /shinDiet:\${id}:\${kind\.toLowerCase\(\)}/);
   assert.match(html, /activateUserStorage\(nextUser\.id\)/);
