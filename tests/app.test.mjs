@@ -60,6 +60,12 @@ const monthlyApi = new Function(
   '\nreturn { monthlyWindow, monthlyStats, monthlyPriority, buildMonthlyReport };'
 )();
 
+const reminderApi = new Function(
+  "const localStorage={getItem:()=>null};const storageKey=x=>x;const appNowMs=()=>Date.now();const readDraft=()=>null;const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};"+
+  ['hasValue','isRestDay','hasExerciseInput','hasMealInput','hasSleepInput','assessmentStatus','recordMissingFields','reminderMinutes','reminderState'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { reminderMinutes, reminderState };'
+)();
+
 const graphApi = new Function(
   ['hasValue','fatTypeOf','muscleTypeOf','dayNumber','graphSeries','rollingSevenDay'].map(name => extractFunction(html, name)).join('\n') +
   '\nreturn { graphSeries, rollingSevenDay };'
@@ -490,6 +496,21 @@ test('v19.3 monthly report compares first and last seven-day averages', () => {
   assert.match(report,/単日の値ではなく期間平均/);
   assert.match(html,/id="monthly"/);
   assert.match(html,/copyMonthlyReport/);
+});
+
+test('v19.4 reminder appears only after its time when today is incomplete', () => {
+  const now=new Date(2026,7,15,21,30);
+  assert.equal(reminderApi.reminderState([], {reminderEnabled:false,reminderTime:'21:00'}, now).show,false);
+  assert.equal(reminderApi.reminderState([], {reminderEnabled:true,reminderTime:'22:00'}, now).reason,'early');
+  const incomplete=reminderApi.reminderState([{date:'2026-08-15',weight:113}], {reminderEnabled:true,reminderTime:'21:00'}, now);
+  assert.equal(incomplete.show,true);
+  assert.deepEqual(incomplete.missing,['食事','運動・休養','睡眠']);
+  const complete={date:'2026-08-15',weight:113,intake:2000,restDay:true,sleep:'★★★★☆'};
+  assert.equal(reminderApi.reminderState([complete], {reminderEnabled:true,reminderTime:'21:00'}, now).reason,'complete');
+  assert.match(html,/アプリを閉じている間のプッシュ通知ではありません/);
+  assert.match(html,/function openTodayRecord\(\)/);
+  assert.match(html,/function dismissReminderToday\(\)/);
+  assert.match(html,/setInterval\(renderRecordReminder,60000\)/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
