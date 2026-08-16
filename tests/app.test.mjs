@@ -515,7 +515,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.13'/);
+  assert.match(html,/const APP_VERSION='19\.15'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -612,8 +612,28 @@ test('v19.13 shows pending offline changes and syncs after reconnecting', () => 
   assert.match(html,/if\(navigator\.onLine===false\)return/);
   assert.match(html,/通信が戻ると自動同期します/);
   assert.match(html,/renderSyncQueueState\(\)/);
-  assert.match(serviceWorker,/shin-diet-v19-13-sync-status/);
-  assert.match(serviceWorker,/version:'19\.13'/);
+});
+
+test('v19.14 retries transient sync failures and pending changes on resume', () => {
+  assert.match(html,/function transientSyncError\(error\)/);
+  assert.match(html,/function scheduleCloudRetry\(\)/);
+  assert.match(html,/cloudRetryAttempt>=3/);
+  assert.match(html,/15\*Math\.pow\(2,cloudRetryAttempt-1\)/);
+  assert.match(html,/クラウド同期を再試行します/);
+  assert.match(html,/if\(transientSyncError\(e\)\)scheduleCloudRetry\(\)/);
+  assert.match(html,/pendingCloudChanges\(\)>0\|\|appNowMs\(\)-lastSyncEpoch>300000/);
+});
+
+test('v19.15 makes iPhone photo loading resilient and translates network failures', () => {
+  assert.match(html,/typeof createImageBitmap==='function'/);
+  assert.match(html,/URL\.createObjectURL\(file\)/);
+  assert.match(html,/const img=new Image\(\)/);
+  assert.match(html,/const max=1024/);
+  assert.match(html,/\.78\)/);
+  assert.match(html,/load failed\|failed to fetch\|networkerror\|network request failed/i);
+  assert.match(html,/写真は消えていません/);
+  assert.match(serviceWorker,/shin-diet-v19-15-photo-reliability/);
+  assert.match(serviceWorker,/version:'19\.15'/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
