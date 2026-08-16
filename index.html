@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.7 運動日区分改善版</title>
+<title>AI Diet v19.8 初回案内改善版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -264,7 +264,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.7 運動日区分改善版</div>
+  <div class="version-pill">v19.8 初回案内改善版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -506,6 +506,14 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 </section>
 
 <section id="settings" class="page">
+  <div class="card"><h3>初めて使う人へ</h3>
+    <ol class="small" style="line-height:1.9;padding-left:22px;margin-bottom:0">
+      <li>下の「個人設定」を入力して「設定を保存」</li>
+      <li>同じ設定画面でメールの数字コードを使ってログイン</li>
+      <li>下の「記録」から、その日の体重・食事・運動・睡眠を保存</li>
+    </ol>
+    <p class="small" style="margin-bottom:0">ログインすると端末内と本人専用クラウドの両方へ保存します。ホーム画面アプリを追加し直す必要はありません。</p>
+  </div>
   <div class="card"><h3>個人設定</h3>
     <div class="label">名前</div><input id="displayName" type="text" autocomplete="name" placeholder="名前">
     <div class="label">開始日</div><input id="startDate" type="date">
@@ -551,11 +559,11 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <div class="label">メールアドレス</div><input id="authEmail" type="email" autocomplete="email" placeholder="example@email.com">
       <button id="loginEmailBtn" style="margin-top:12px" onclick="sendLoginCode()">ログインコードを送る</button>
       <div id="otpBox" style="display:none;margin-top:16px">
-        <div class="label">メールに届いた8桁コード</div>
-        <input id="authOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" pattern="[0-9]{6,10}" placeholder="123456">
+        <div class="label">メールに届いた数字コード（6〜10桁）</div>
+        <input id="authOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" pattern="[0-9]{6,10}" placeholder="届いた数字をすべて入力">
         <button id="verifyOtpBtn" type="button" style="margin-top:12px" onclick="verifyLoginCode()">コードを確認してログイン</button>
       </div>
-      <p class="small">メールに届いた8桁コードを、この画面へ入力します。ホーム画面アプリを追加し直す必要はありません。</p>
+      <p class="small">メールに届いた数字コードを省略せず、この画面へ入力します。ホーム画面アプリを追加し直す必要はありません。</p>
     </div>
     <div id="signedInBox" class="cloud-box" style="display:none">
       <div id="signedInEmail" class="small"></div>
@@ -600,7 +608,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.7';
+const APP_VERSION='19.8';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
@@ -696,11 +704,11 @@ function startLoginCooldown(seconds=60){
 async function sendLoginCode(){
  if(!cloudClient){cloudMessage('クラウドの接続設定がまだ完了していません。',false);return}
  const email=$('authEmail').value.trim();if(!email){cloudMessage('メールアドレスを入力してください。',false);return}
- cloudMessage('6桁のログインコードを送信しています。');
+ cloudMessage('ログインコードを送信しています。');
  const {error}=await cloudClient.auth.signInWithOtp({email});
  if(error){cloudMessage('送信できませんでした：'+authErrorMessage(error),false);return}
  localStorage.setItem('shinDietPendingEmail',email);$('otpBox').style.display='block';$('authOtp').focus();
- startLoginCooldown(60);cloudMessage('8桁コードを送信しました。メールを確認し、この画面へ入力してください。',true)
+ startLoginCooldown(60);cloudMessage('数字コードを送信しました。メールを確認し、届いた数字をすべて入力してください。',true)
 }
 async function verifyLoginCode(){
  if(!cloudClient)return;
