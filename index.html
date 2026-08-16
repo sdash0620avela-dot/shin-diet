@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.10 共有機能追加版</title>
+<title>AI Diet v19.11 初回準備チェック版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -264,7 +264,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.10 共有機能追加版</div>
+  <div class="version-pill">v19.11 初回準備チェック版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -513,6 +513,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <li>下の「記録」から、その日の体重・食事・運動・睡眠を保存</li>
     </ol>
     <p class="small" style="margin-bottom:0">ログインすると端末内と本人専用クラウドの両方へ保存します。ホーム画面アプリを追加し直す必要はありません。</p>
+    <div class="hint" style="margin-top:14px"><b>初回準備の状況</b><div id="firstUseSettings" class="small"></div><div id="firstUseLogin" class="small"></div><div id="firstUseRecord" class="small"></div></div>
     <details class="coach-detail"><summary>iPhoneのホーム画面へ追加する手順</summary><div class="coach-detail-body small">
       <ol style="line-height:1.9;padding-left:22px;margin:0">
         <li>このページをSafariで開く</li>
@@ -619,7 +620,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.10';
+const APP_VERSION='19.11';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
@@ -678,6 +679,10 @@ function cloudMessage(message,ok=true){const el=$('cloudState');if(el){el.textCo
 async function shareApp(){
  const status=$('shareAppStatus'),data={title:'AI Diet',text:'食事・運動・睡眠・体組成を記録できるAI減量アプリです。',url:APP_PUBLIC_URL};
  try{if(navigator.share){await navigator.share(data);status.textContent='共有画面を開きました ✓'}else{await navigator.clipboard.writeText(APP_PUBLIC_URL);status.textContent='アプリのURLをコピーしました ✓'}}catch(error){if(error&&error.name==='AbortError'){status.textContent='共有をキャンセルしました';return}try{await navigator.clipboard.writeText(APP_PUBLIC_URL);status.textContent='アプリのURLをコピーしました ✓'}catch(copyError){status.textContent='共有できませんでした。URLを長押ししてコピーしてください：'+APP_PUBLIC_URL}}
+}
+function renderFirstUseProgress(s=sets()){
+ const rows=[[$('firstUseSettings'),profileComplete(s),'個人設定'],[$('firstUseLogin'),!!cloudUser,'クラウドログイン'],[$('firstUseRecord'),recs().length>0,'最初の記録']];
+ rows.forEach(([el,done,label])=>{if(!el)return;el.textContent=`${done?'✓':'○'} ${label}：${done?'完了':'未完了'}`;el.style.color=done?'var(--good)':'var(--ink2)'});
 }
 function scheduleCloudSync(){if(!cloudUser||cloudSyncing)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>syncNow(true),700)}
 async function initCloud(){
@@ -1276,6 +1281,7 @@ function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.r
 
 function update(){
  const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';
+ renderFirstUseProgress(s);
  $('onboardingNotice').style.display=profileComplete(s)||recs().length?'none':'block';
  $('appTitle').textContent=s.displayName?`${s.displayName}のAI Diet`:'AI Diet';$('appSubhead').textContent=s.startDate?`${s.startDate.replaceAll('-','/')}開始｜目標P ${s.proteinGoal||120}g｜有酸素 ${s.cardioGoal||35}分`:'個人設定を入力してください';
  $('calorieGoalChip').textContent=`${s.calorieGoal||2000}kcal`;$('proteinGoalChip').textContent=`${s.proteinGoal||120}g P`;$('cardioGoalChip').textContent=`有酸素${s.cardioGoal||35}分`;$('cardioGoalLabel').textContent=`有酸素（${s.cardioGoal||35}分）`;
