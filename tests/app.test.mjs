@@ -515,7 +515,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.12'/);
+  assert.match(html,/const APP_VERSION='19\.13'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -601,6 +601,19 @@ test('v19.12 launches from the app shell offline and explains local saving', () 
   assert.match(html,/if\(cloudUser\)syncNow\(true\)/);
   assert.match(serviceWorker,/caches\.match\('\.\/index\.html'\)\.then\(cached=>cached\|\|fetch/);
   assert.doesNotMatch(serviceWorker,/if\(e\.request\.mode==='navigate'\)\{\s*e\.respondWith\(fetch/);
+});
+
+test('v19.13 shows pending offline changes and syncs after reconnecting', () => {
+  assert.match(html,/id="syncQueueState"/);
+  assert.match(html,/function pendingCloudChanges\(\)/);
+  assert.match(html,/オフライン保存済み・同期待ち/);
+  assert.match(html,/クラウド同期待ち/);
+  assert.match(html,/クラウド同期済み/);
+  assert.match(html,/if\(navigator\.onLine===false\)return/);
+  assert.match(html,/通信が戻ると自動同期します/);
+  assert.match(html,/renderSyncQueueState\(\)/);
+  assert.match(serviceWorker,/shin-diet-v19-13-sync-status/);
+  assert.match(serviceWorker,/version:'19\.13'/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
