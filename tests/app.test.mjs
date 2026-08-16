@@ -514,7 +514,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.7'/);
+  assert.match(html,/const APP_VERSION='19\.8'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -546,6 +546,17 @@ test('v19.7 distinguishes complete rest from cardio-only days', () => {
   assert.match(html,/\['exerciseCal','workoutMinutes','strength'\]\.forEach/);
   assert.match(html,/有酸素のみの日にしました。種類・強度・時間を確認して保存してください/);
   assert.match(html,/筋トレ内容（しなかった日は空欄でOK）/);
+});
+
+test('v19.8 gives first-time users one guide and accepts the full emailed code length', () => {
+  assert.match(html,/初めて使う人へ/);
+  assert.match(html,/個人設定.*設定を保存/s);
+  assert.match(html,/本人専用クラウド/);
+  assert.match(html,/数字コード（6〜10桁）/);
+  assert.match(html,/pattern="\[0-9\]\{6,10\}"/);
+  assert.match(html,/届いた数字をすべて入力/);
+  assert.doesNotMatch(html,/6桁のログインコードを送信しています/);
+  assert.doesNotMatch(html,/8桁コードを送信しました/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
