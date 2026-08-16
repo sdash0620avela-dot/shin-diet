@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.8 初回案内改善版</title>
+<title>AI Diet v19.9 iPhone追加案内版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -264,7 +264,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.8 初回案内改善版</div>
+  <div class="version-pill">v19.9 iPhone追加案内版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -513,6 +513,15 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <li>下の「記録」から、その日の体重・食事・運動・睡眠を保存</li>
     </ol>
     <p class="small" style="margin-bottom:0">ログインすると端末内と本人専用クラウドの両方へ保存します。ホーム画面アプリを追加し直す必要はありません。</p>
+    <details class="coach-detail"><summary>iPhoneのホーム画面へ追加する手順</summary><div class="coach-detail-body small">
+      <ol style="line-height:1.9;padding-left:22px;margin:0">
+        <li>このページをSafariで開く</li>
+        <li>「共有」を押し、「ホーム画面に追加」を選ぶ</li>
+        <li>「Webアプリとして開く」をオンにする</li>
+        <li>右上の「追加」を押す</li>
+      </ol>
+      <p style="margin-bottom:0">追加はこのiPhoneで最初の1回だけです。ログインや更新のたびに、古いアイコンを消したり追加し直したりする必要はありません。</p>
+    </div></details>
   </div>
   <div class="card"><h3>個人設定</h3>
     <div class="label">名前</div><input id="displayName" type="text" autocomplete="name" placeholder="名前">
@@ -608,7 +617,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.8';
+const APP_VERSION='19.9';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
