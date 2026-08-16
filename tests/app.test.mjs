@@ -514,7 +514,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.9'/);
+  assert.match(html,/const APP_VERSION='19\.10'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -566,6 +566,17 @@ test('v19.9 explains the current iPhone web-app installation flow without re-add
   assert.match(html,/「Webアプリとして開く」をオンにする/);
   assert.match(html,/追加はこのiPhoneで最初の1回だけ/);
   assert.match(html,/古いアイコンを消したり追加し直したりする必要はありません/);
+});
+
+test('v19.10 shares the canonical public app URL with a clipboard fallback', () => {
+  assert.match(html,/onclick="shareApp\(\)">このアプリを友達に送る/);
+  assert.match(html,/id="shareAppStatus"/);
+  assert.match(html,/const APP_PUBLIC_URL='https:\/\/sdash0620avela-dot\.github\.io\/shin-diet\/'/);
+  assert.match(html,/function shareApp\(\)/);
+  assert.match(html,/navigator\.share/);
+  assert.match(html,/navigator\.clipboard\.writeText\(APP_PUBLIC_URL\)/);
+  assert.match(html,/共有をキャンセルしました/);
+  assert.match(html,/アプリのURLをコピーしました/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
