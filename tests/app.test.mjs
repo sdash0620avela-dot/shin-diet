@@ -514,7 +514,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.6'/);
+  assert.match(html,/const APP_VERSION='19\.7'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -536,6 +536,16 @@ test('v19.6 rest day overrides stale exercise fields and save errors do not jump
   assert.match(html,/\$\('strength'\)\.addEventListener\('input'/);
   assert.match(html,/const exerciseErrors=exerciseInputErrors\(\);if\(exerciseErrors\.length\)\{setStatus\(exerciseErrors\.join\(' '\),false\);return\}/);
   assert.doesNotMatch(html,/exerciseErrors\.length[^\n]*scrollIntoView/);
+});
+
+test('v19.7 distinguishes complete rest from cardio-only days', () => {
+  assert.match(html,/今日は完全休養日（有酸素・筋トレ・腹筋など全部0）/);
+  assert.match(html,/onclick="quickCardioOnly\(\)">有酸素のみの日/);
+  assert.match(html,/function quickCardioOnly\(\)/);
+  assert.match(html,/\['legRaise','plank','powerplate','drawin'\]\.forEach/);
+  assert.match(html,/\['exerciseCal','workoutMinutes','strength'\]\.forEach/);
+  assert.match(html,/有酸素のみの日にしました。種類・強度・時間を確認して保存してください/);
+  assert.match(html,/筋トレ内容（しなかった日は空欄でOK）/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
