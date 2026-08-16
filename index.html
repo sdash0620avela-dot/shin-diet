@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.9 iPhone追加案内版</title>
+<title>AI Diet v19.10 共有機能追加版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -264,7 +264,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.9 iPhone追加案内版</div>
+  <div class="version-pill">v19.10 共有機能追加版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -522,6 +522,8 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       </ol>
       <p style="margin-bottom:0">追加はこのiPhoneで最初の1回だけです。ログインや更新のたびに、古いアイコンを消したり追加し直したりする必要はありません。</p>
     </div></details>
+    <button type="button" class="sub" style="margin-top:14px" onclick="shareApp()">このアプリを友達に送る</button>
+    <div id="shareAppStatus" class="small" role="status" aria-live="polite"></div>
   </div>
   <div class="card"><h3>個人設定</h3>
     <div class="label">名前</div><input id="displayName" type="text" autocomplete="name" placeholder="名前">
@@ -617,7 +619,8 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.9';
+const APP_VERSION='19.10';
+const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
@@ -672,6 +675,10 @@ function activateGuestStorage(){activeStorageId='guest'}
 let cloudClient=null,cloudUser=null,cloudSyncTimer=null,cloudSyncing=false,lastSyncAt=null,lastSyncEpoch=0,loginCooldownTimer=null;
 function cloudConfigured(){const c=window.SHIN_DIET_SUPABASE||{};return /^https:\/\/.+\.supabase\.co$/.test(c.url||'')&&!String(c.publishableKey||'').startsWith('REPLACE_')}
 function cloudMessage(message,ok=true){const el=$('cloudState');if(el){el.textContent=message;el.style.color=ok?'var(--good)':'var(--bad)'}}
+async function shareApp(){
+ const status=$('shareAppStatus'),data={title:'AI Diet',text:'食事・運動・睡眠・体組成を記録できるAI減量アプリです。',url:APP_PUBLIC_URL};
+ try{if(navigator.share){await navigator.share(data);status.textContent='共有画面を開きました ✓'}else{await navigator.clipboard.writeText(APP_PUBLIC_URL);status.textContent='アプリのURLをコピーしました ✓'}}catch(error){if(error&&error.name==='AbortError'){status.textContent='共有をキャンセルしました';return}try{await navigator.clipboard.writeText(APP_PUBLIC_URL);status.textContent='アプリのURLをコピーしました ✓'}catch(copyError){status.textContent='共有できませんでした。URLを長押ししてコピーしてください：'+APP_PUBLIC_URL}}
+}
 function scheduleCloudSync(){if(!cloudUser||cloudSyncing)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>syncNow(true),700)}
 async function initCloud(){
  if(!cloudConfigured()){cloudMessage('クラウドの接続設定前です。端末内保存はそのまま使えます。',false);$('signedOutBox').style.display='none';return}
