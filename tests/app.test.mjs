@@ -514,7 +514,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.8'/);
+  assert.match(html,/const APP_VERSION='19\.9'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -557,6 +557,15 @@ test('v19.8 gives first-time users one guide and accepts the full emailed code l
   assert.match(html,/届いた数字をすべて入力/);
   assert.doesNotMatch(html,/6桁のログインコードを送信しています/);
   assert.doesNotMatch(html,/8桁コードを送信しました/);
+});
+
+test('v19.9 explains the current iPhone web-app installation flow without re-adding', () => {
+  assert.match(html,/iPhoneのホーム画面へ追加する手順/);
+  assert.match(html,/このページをSafariで開く/);
+  assert.match(html,/「共有」を押し、「ホーム画面に追加」を選ぶ/);
+  assert.match(html,/「Webアプリとして開く」をオンにする/);
+  assert.match(html,/追加はこのiPhoneで最初の1回だけ/);
+  assert.match(html,/古いアイコンを消したり追加し直したりする必要はありません/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
