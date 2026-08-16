@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const worker = readFileSync(new URL('../api/analyze-meal.js', import.meta.url), 'utf8');
+const serviceWorker = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const wrangler = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
 
 function extractFunction(source, name) {
@@ -514,7 +515,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.11'/);
+  assert.match(html,/const APP_VERSION='19\.12'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -589,6 +590,17 @@ test('v19.11 shows first-use completion from actual settings, login and records'
   assert.match(html,/!!cloudUser/);
   assert.match(html,/recs\(\)\.length>0/);
   assert.match(html,/renderFirstUseProgress\(s\)/);
+});
+
+test('v19.12 launches from the app shell offline and explains local saving', () => {
+  assert.match(html,/id="offlineNotice"/);
+  assert.match(html,/記録はこの端末へ保存できます。通信が戻ったらクラウド同期します/);
+  assert.match(html,/function renderConnectivity\(\)/);
+  assert.match(html,/window\.addEventListener\('offline',renderConnectivity\)/);
+  assert.match(html,/window\.addEventListener\('online'/);
+  assert.match(html,/if\(cloudUser\)syncNow\(true\)/);
+  assert.match(serviceWorker,/caches\.match\('\.\/index\.html'\)\.then\(cached=>cached\|\|fetch/);
+  assert.doesNotMatch(serviceWorker,/if\(e\.request\.mode==='navigate'\)\{\s*e\.respondWith\(fetch/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
