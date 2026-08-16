@@ -514,7 +514,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.10'/);
+  assert.match(html,/const APP_VERSION='19\.11'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -577,6 +577,18 @@ test('v19.10 shares the canonical public app URL with a clipboard fallback', () 
   assert.match(html,/navigator\.clipboard\.writeText\(APP_PUBLIC_URL\)/);
   assert.match(html,/共有をキャンセルしました/);
   assert.match(html,/アプリのURLをコピーしました/);
+});
+
+test('v19.11 shows first-use completion from actual settings, login and records', () => {
+  assert.match(html,/初回準備の状況/);
+  assert.match(html,/id="firstUseSettings"/);
+  assert.match(html,/id="firstUseLogin"/);
+  assert.match(html,/id="firstUseRecord"/);
+  assert.match(html,/function renderFirstUseProgress\(s=sets\(\)\)/);
+  assert.match(html,/profileComplete\(s\)/);
+  assert.match(html,/!!cloudUser/);
+  assert.match(html,/recs\(\)\.length>0/);
+  assert.match(html,/renderFirstUseProgress\(s\)/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
