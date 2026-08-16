@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.6 休養日保存修正版</title>
+<title>AI Diet v19.7 運動日区分改善版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -264,7 +264,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.6 休養日保存修正版</div>
+  <div class="version-pill">v19.7 運動日区分改善版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -434,10 +434,11 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div class="section-head"><div class="section-icon">💪</div><h3>運動</h3></div>
     <div class="quick-chips">
       <span id="cardioGoalChip" class="chip" onclick="quickCardio()">有酸素</span>
+      <span class="chip" onclick="quickCardioOnly()">有酸素のみの日</span>
       <span class="chip" onclick="quickFull()">今日の定番</span>
       <span class="chip" onclick="copyPreviousWorkout()">前回の運動一式</span>
     </div>
-    <label class="check"><input id="restDay" type="checkbox">今日は休養日（運動0分）</label>
+    <label class="check"><input id="restDay" type="checkbox">今日は完全休養日（有酸素・筋トレ・腹筋など全部0）</label>
     <label class="check"><input id="cardio" type="checkbox"><span id="cardioGoalLabel">有酸素</span></label>
     <button type="button" class="sub" onclick="copyPreviousCardio()">前回の有酸素・強度をそのまま使う</button>
     <div class="grid">
@@ -445,9 +446,9 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <div><div class="label">強度</div><select id="cardioIntensity"><option value="light">軽め</option><option value="moderate" selected>普通</option><option value="hard">強め</option></select></div>
       <div><div class="label">有酸素の分数</div><input id="cardioMin" type="number" inputmode="numeric" placeholder="40"></div>
       <div><div class="label">機器表示 kcal（任意）</div><input id="cardioManualCalories" type="number" inputmode="numeric" placeholder="未入力なら自動推定"></div>
-      <div><div class="label">筋トレ強度</div><select id="strengthIntensity"><option value="light">軽め</option><option value="moderate" selected>普通</option><option value="hard">強め</option></select></div>
+      <div><div class="label">筋トレ強度（しなかった日は空欄でOK）</div><select id="strengthIntensity"><option value="light">軽め</option><option value="moderate" selected>普通</option><option value="hard">強め</option></select></div>
       <div><div class="label">筋トレ消費 kcal（任意・上書き）</div><input id="exerciseCal" type="number" inputmode="numeric" placeholder="未入力なら自動推定"></div>
-      <div><div class="label">筋トレ時間 分</div><input id="workoutMinutes" type="number" inputmode="numeric" placeholder="60"></div>
+      <div><div class="label">筋トレ時間 分（しなかった日は空欄）</div><input id="workoutMinutes" type="number" inputmode="numeric" placeholder="60"></div>
     </div>
     <div class="label">有酸素の負荷・速度など</div><input id="cardioDetails" placeholder="例：バイク負荷13、ウォーキング速度5.5km/h">
     <label class="check"><input id="cardio2" type="checkbox">追加の有酸素（任意）</label>
@@ -465,7 +466,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <label class="check"><input id="plank" type="checkbox">プランク3分</label>
     <label class="check"><input id="powerplate" type="checkbox">Power Plate 4セット</label>
     <label class="check"><input id="drawin" type="checkbox">ドローイン5セット</label>
-    <div class="label">筋トレ内容</div><textarea id="strength" placeholder="胸25セット　1時間"></textarea>
+    <div class="label">筋トレ内容（しなかった日は空欄でOK）</div><textarea id="strength" placeholder="胸25セット　1時間"></textarea>
     <button type="button" class="sub" onclick="copyPreviousStrength()">前回の筋トレ・強度をそのまま使う</button>
   </div>
 
@@ -599,7 +600,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.6';
+const APP_VERSION='19.7';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
@@ -839,6 +840,9 @@ function calculateMealTotals(){
   $('carbsG').value=+sum('Carbs').toFixed(1);
 }
 function quickCardio(){const min=sets().cardioGoal||35;$('restDay').checked=false;$('cardio').checked=true;if(!$('cardioMin').value)$('cardioMin').value=min;if(!$('cardioType').value)$('cardioType').value='bike';if(!$('cardioIntensity').value)$('cardioIntensity').value='moderate';renderExerciseEstimate()}
+function quickCardioOnly(){
+ quickCardio();['legRaise','plank','powerplate','drawin'].forEach(id=>$(id).checked=false);['exerciseCal','workoutMinutes','strength'].forEach(id=>$(id).value='');$('strengthIntensity').value='moderate';renderExerciseEstimate();scheduleDraftSave();setStatus('有酸素のみの日にしました。種類・強度・時間を確認して保存してください',true)
+}
 function applyProteinGoal(){$('protein').value=sets().proteinGoal||120}
 function applyCalorieGoal(){$('intake').value=sets().calorieGoal||2000}
 function quickFull(){quickCardio();$('drawin').checked=true;$('legRaise').checked=true;$('plank').checked=true}
