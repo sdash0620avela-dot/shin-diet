@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.11 初回準備チェック版</title>
+<title>AI Diet v19.12 オフライン起動改善版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -264,13 +264,14 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.11 初回準備チェック版</div>
+  <div class="version-pill">v19.12 オフライン起動改善版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
 
 <main class="wrap">
 <section id="home" class="page active">
+  <div id="offlineNotice" class="card" style="display:none;border-color:rgba(255,149,0,.35);background:#FFF9E6" role="status" aria-live="polite"><b>オフラインです</b><p class="muted" style="margin-bottom:0">記録はこの端末へ保存できます。通信が戻ったらクラウド同期します。</p></div>
   <div id="recordReminder" class="card record-reminder" role="status" aria-live="polite">
     <h3>今日の記録が残っています</h3>
     <p id="recordReminderText" class="muted"></p>
@@ -620,12 +621,14 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.11';
+const APP_VERSION='19.12';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
 $('date').value=today();
+function renderConnectivity(){const notice=$('offlineNotice');if(notice)notice.style.display=navigator.onLine===false?'block':'none'}
+window.addEventListener('offline',renderConnectivity);window.addEventListener('online',()=>{renderConnectivity();if(cloudUser)syncNow(true)});
 
 const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35,reminderEnabled:false,reminderTime:'21:00'};
 const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35,reminderEnabled:false,reminderTime:'21:00'};
@@ -1281,6 +1284,7 @@ function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.r
 
 function update(){
  const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';
+ renderConnectivity();
  renderFirstUseProgress(s);
  $('onboardingNotice').style.display=profileComplete(s)||recs().length?'none':'block';
  $('appTitle').textContent=s.displayName?`${s.displayName}のAI Diet`:'AI Diet';$('appSubhead').textContent=s.startDate?`${s.startDate.replaceAll('-','/')}開始｜目標P ${s.proteinGoal||120}g｜有酸素 ${s.cardioGoal||35}分`:'個人設定を入力してください';
