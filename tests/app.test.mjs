@@ -86,6 +86,10 @@ const consultApi = new Function(
   extractFunction(html, 'coachContext') + '\nreturn { coachContext };'
 )();
 
+const mealAdditionApi = new Function(
+  extractFunction(html, 'combineMealEntry') + '\nreturn { combineMealEntry };'
+)();
+
 const ideal = {
   intake: 2000,
   protein: 120,
@@ -515,7 +519,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.15'/);
+  assert.match(html,/const APP_VERSION='19\.16'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -632,8 +636,19 @@ test('v19.15 makes iPhone photo loading resilient and translates network failure
   assert.match(html,/\.78\)/);
   assert.match(html,/load failed\|failed to fetch\|networkerror\|network request failed/i);
   assert.match(html,/写真は消えていません/);
-  assert.match(serviceWorker,/shin-diet-v19-15-photo-reliability/);
-  assert.match(serviceWorker,/version:'19\.15'/);
+});
+
+test('v19.16 adds saved meals and photo estimates without overwriting either one', () => {
+  const protein={text:'プロテイン',kcal:127,protein:22,fat:2,carbs:5,source:'manual'};
+  const edamame={text:'枝豆 125g',kcal:172,protein:14.7,fat:7.6,carbs:11.1,source:'ai'};
+  assert.deepEqual(mealAdditionApi.combineMealEntry(protein,edamame),{text:'プロテイン、枝豆 125g',kcal:299,protein:36.7,fat:9.6,carbs:16.1,source:'mixed'});
+  assert.deepEqual(mealAdditionApi.combineMealEntry(edamame,protein),{text:'枝豆 125g、プロテイン',kcal:299,protein:36.7,fat:9.6,carbs:16.1,source:'mixed'});
+  assert.match(html,/function addMealEntry\(id,entry\)/);
+  assert.match(html,/mealAnalysisBase\[id\]=combineMealEntry/);
+  assert.match(html,/if\(!mealAnalysisItems\[id\]\)mealAnalysisBase\[id\]=mealFormEntry\(id\)/);
+  assert.match(html,/保存履歴と写真解析は、この食事へ順番に追加されます/);
+  assert.match(serviceWorker,/shin-diet-v19-16-meal-addition/);
+  assert.match(serviceWorker,/version:'19\.16'/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
