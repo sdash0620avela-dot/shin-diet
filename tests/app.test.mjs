@@ -284,7 +284,7 @@ test('v19.2 offers safe one-tap favorite meals from saved history', () => {
   assert.match(html, /r\.date<currentDate/);
   assert.match(html, /\.sort\(\(a,b\)=>b\.count-a\.count/);
   assert.match(html, /\.slice\(0,3\)/);
-  assert.match(html, /name\.textContent=latest\[id\]/);
+  assert.match(html, /name\.textContent=entry\.text/);
   assert.match(html, /button\.addEventListener\('click',\(\)=>applyMealFavorite/);
   assert.match(html, /scheduleDraftSave\(\)/);
   assert.doesNotMatch(html, /meal-favorite-name[^\n]*innerHTML/);
@@ -519,7 +519,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.16'/);
+  assert.match(html,/const APP_VERSION='19\.17'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -647,8 +647,19 @@ test('v19.16 adds saved meals and photo estimates without overwriting either one
   assert.match(html,/mealAnalysisBase\[id\]=combineMealEntry/);
   assert.match(html,/if\(!mealAnalysisItems\[id\]\)mealAnalysisBase\[id\]=mealFormEntry\(id\)/);
   assert.match(html,/保存履歴と写真解析は、この食事へ順番に追加されます/);
-  assert.match(serviceWorker,/shin-diet-v19-16-meal-addition/);
-  assert.match(serviceWorker,/version:'19\.16'/);
+});
+
+test('v19.17 remembers editable favorite meals and prevents same-meal doubling', () => {
+  assert.match(html,/現在の内容を「いつもの食事」に登録・更新/);
+  assert.match(html,/function saveCurrentMealFavorite\(id,label\)/);
+  assert.match(html,/savedMealFavorites:all/);
+  assert.match(html,/list\.slice\(0,8\)/);
+  assert.match(html,/mealNutritionScore\(entry\)>mealNutritionScore\(existing\.entry\)/);
+  assert.match(html,/const same=normalizedMealName\(mealFormEntry\(id\)\.text\)===normalizedMealName\(entry\.text\)/);
+  assert.match(html,/同じ\$\{label\}なので二重加算せず/);
+  assert.match(html,/const existing=sets\(\),s=\{\.\.\.existing/);
+  assert.match(serviceWorker,/shin-diet-v19-17-custom-meals/);
+  assert.match(serviceWorker,/version:'19\.17'/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
