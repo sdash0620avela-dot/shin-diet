@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.16 食事加算対応版</title>
+<title>AI Diet v19.17 いつもの食事登録版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -264,7 +264,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.16 食事加算対応版</div>
+  <div class="version-pill">v19.17 いつもの食事登録版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -622,7 +622,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.16';
+const APP_VERSION='19.17';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
@@ -880,7 +880,10 @@ $('strength').addEventListener('input',()=>{if(isRestDay({strength:$('strength')
 function fillMeal(id,text){const el=$(id);if(el)el.value=text}
 function renderMealEntries(){
   $('mealEntries').innerHTML=mealTypes.map(([id,label],index)=>`<details id="${id}Block" class="mealBlock" ${index===0?'open':''}><summary><span>${label}</span><span id="${id}Summary" class="mealDone">未入力</span></summary><div class="mealBody"><button type="button" class="sub" onclick="copyPreviousMeal('${id}','${label}')">前回の${label}を追加</button><div id="${id}Favorites" class="meal-favorites"></div><div id="${id}AddGuide" class="analysisStatus">保存履歴と写真解析は、この食事へ順番に追加されます。</div><div class="label">${label}写真（撮影・保存済み写真・フォルダーから選択できます）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><textarea id="${id}PortionNote" class="portionNote" placeholder="任意：ご飯は半分、唐揚げ3個、味噌汁は飲まない など"></textarea><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析して追加</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div id="${id}PortionEditor" class="portionEditor"></div><div class="label">内容（確認・修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option><option value="mixed">本人入力＋AI推定</option></select></div><div><div class="label">kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label">P g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">F g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">C g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div></details>`).join('');
-  mealTypes.forEach(([id])=>{pv($(id+'Photo'),$(id+'Preview'),$(id+'Clear'));[id,...mealSuffixes.slice(1).map(s=>id+s)].forEach(fid=>$(fid).addEventListener('input',()=>{calculateMealTotals();updateMealSummary(id)}))});
+  mealTypes.forEach(([id,label])=>{
+   pv($(id+'Photo'),$(id+'Preview'),$(id+'Clear'));[id,...mealSuffixes.slice(1).map(s=>id+s)].forEach(fid=>$(fid).addEventListener('input',()=>{calculateMealTotals();updateMealSummary(id)}));
+   const saveFavorite=document.createElement('button');saveFavorite.type='button';saveFavorite.className='sub';saveFavorite.textContent='現在の内容を「いつもの食事」に登録・更新';saveFavorite.addEventListener('click',()=>saveCurrentMealFavorite(id,label));$(id+'Block').querySelector('.mealBody').append(saveFavorite)
+  });
 }
 function mealNumbersEntered(){return mealTypes.some(([id])=>mealSuffixes.slice(1).some(s=>hasValue($(id+s).value)))}
 function calculateMealTotals(){
@@ -915,30 +918,42 @@ function addMealEntry(id,entry){
 }
 function copyPreviousMeal(id,label){const current=$('date').value,previous=recs().filter(r=>r.date<current&&String(r[id]||'').trim()).slice(-1)[0];if(!previous){setStatus(`前回の${label}記録がありません`,false);return}addMealEntry(id,mealRecordEntry(id,previous));setStatus(`前回の${label}を追加しました。量が違う場合だけ直してください`,true)}
 function normalizedMealName(value){return String(value||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('ja-JP')}
+function mealNutritionScore(entry){return ['kcal','protein','fat','carbs'].reduce((n,key)=>n+(Number(entry&&entry[key])>0?1:0),0)}
+function savedMealFavorites(id){const value=sets().savedMealFavorites?.[id];return Array.isArray(value)?value.filter(x=>x&&normalizedMealName(x.text)):[]}
+function saveCurrentMealFavorite(id,label){
+ const entry=mealFormEntry(id),key=normalizedMealName(entry.text);if(!key){setStatus(`${label}の内容を先に入力してください`,false);return}
+ const s=sets(),all={...(s.savedMealFavorites||{})},list=savedMealFavorites(id),saved={...entry,kcal:+entry.kcal||0,protein:+entry.protein||0,fat:+entry.fat||0,carbs:+entry.carbs||0,savedAt:appNowIso()};
+ const oldIndex=list.findIndex(x=>normalizedMealName(x.text)===key);if(oldIndex>=0)list.splice(oldIndex,1);list.unshift(saved);all[id]=list.slice(0,8);
+ writeSettings({...s,savedMealFavorites:all,updatedAt:appNowIso()});renderMealFavorites();setStatus(`${entry.text}を「いつもの${label}」に${oldIndex>=0?'更新':'登録'}しました。次回から入力値ごと呼び出せます`,true)
+}
 function mealFavoritesFor(id,currentDate){
  const groups=new Map();
  recs().filter(r=>r.date<currentDate&&normalizedMealName(r[id])).forEach(r=>{
-  const key=normalizedMealName(r[id]),existing=groups.get(key);
-  if(!existing)groups.set(key,{count:1,latest:r});
-  else{existing.count+=1;if(String(r.date)>String(existing.latest.date))existing.latest=r}
+  const key=normalizedMealName(r[id]),entry=mealRecordEntry(id,r),existing=groups.get(key);
+  if(!existing)groups.set(key,{count:1,entry,date:r.date,custom:false});
+  else{existing.count+=1;const better=mealNutritionScore(entry)>mealNutritionScore(existing.entry)||(mealNutritionScore(entry)===mealNutritionScore(existing.entry)&&String(r.date)>String(existing.date));if(better){existing.entry=entry;existing.date=r.date}}
  });
- return [...groups.values()].sort((a,b)=>b.count-a.count||String(b.latest.date).localeCompare(String(a.latest.date))).slice(0,3)
+ const custom=savedMealFavorites(id).map(entry=>({count:0,entry,custom:true,date:entry.savedAt||''})),customKeys=new Set(custom.map(x=>normalizedMealName(x.entry.text)));
+ const history=[...groups.values()].filter(x=>!customKeys.has(normalizedMealName(x.entry.text))).sort((a,b)=>b.count-a.count||String(b.date).localeCompare(String(a.date)));
+ return [...custom,...history].slice(0,8)
 }
-function applyMealFavorite(id,label,record){
- addMealEntry(id,mealRecordEntry(id,record));setStatus(`よく使う${label}を追加しました。量が違う場合だけ直してください`,true)
+function applyMealFavorite(id,label,entry){
+ const same=normalizedMealName(mealFormEntry(id).text)===normalizedMealName(entry.text);
+ if(same){delete mealAnalysisItems[id];delete mealAnalysisBase[id];$(id+'PortionEditor').replaceChildren();writeMealEntry(id,entry);calculateMealTotals();updateMealSummary(id);scheduleDraftSave();setStatus(`同じ${label}なので二重加算せず、登録値へ置き換えました`,true);return}
+ addMealEntry(id,entry);setStatus(`よく使う${label}を追加しました。別の料理なので栄養値も合計しています`,true)
 }
 function renderMealFavorites(){
  const current=$('date').value||today();
  mealTypes.forEach(([id,label])=>{
   const root=$(id+'Favorites');if(!root)return;root.replaceChildren();
   const favorites=mealFavoritesFor(id,current);if(!favorites.length)return;
-  const title=document.createElement('div');title.className='meal-favorites-title';title.textContent='よく使う食事（保存履歴）';
+  const title=document.createElement('div');title.className='meal-favorites-title';title.textContent='よく使う食事（登録・保存履歴）';
   const list=document.createElement('div');list.className='meal-favorites-list';
-  favorites.forEach(({count,latest})=>{
+  favorites.forEach(({count,entry,custom})=>{
    const button=document.createElement('button');button.type='button';button.className='meal-favorite';
-   const name=document.createElement('span');name.className='meal-favorite-name';name.textContent=latest[id];
-   const meta=document.createElement('span');meta.className='meal-favorite-count';meta.textContent=`${count}回・${latest[id+'Kcal']||0}kcal`;
-   button.append(name,meta);button.addEventListener('click',()=>applyMealFavorite(id,label,latest));list.append(button)
+   const name=document.createElement('span');name.className='meal-favorite-name';name.textContent=entry.text;
+   const meta=document.createElement('span');meta.className='meal-favorite-count';meta.textContent=`${custom?'登録済み':count+'回'}・${entry.kcal||0}kcal`;
+   button.append(name,meta);button.addEventListener('click',()=>applyMealFavorite(id,label,entry));list.append(button)
   });
   root.append(title,list)
  })
@@ -1327,8 +1342,8 @@ function calculateRecommendations(){
  out.textContent=`${latest?'最新体重 '+weight.toFixed(1)+'kg':'開始体重 '+weight.toFixed(1)+'kg'}を使用｜推定基礎代謝 ${Math.round(bmr)}kcal｜推定1日消費 ${tdee}kcal｜目標摂取 ${calorie}kcal｜目標P ${protein}g`;out.style.color='var(--good)'
 }
 function saveSettings(){
- const s={displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
- const existing=sets(),legacyAllowed=recs().length>0&&!existing.age;
+ const existing=sets(),s={...existing,displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
+ const legacyAllowed=recs().length>0&&!existing.age;
  if(!s.displayName||!s.startDate||!s.startWeight||!s.baseBurn||!s.goalWeight)return alert('名前・開始日・開始体重・消費kcal・目標体重を入力してください。');
  if(!legacyAllowed&&(!s.age||!s.sex||!s.heightCm||!s.activityLevel))return alert('年齢・性別・身長・活動量を入力し、自動計算してください。');
  writeSettings(s);update();alert('個人設定を保存しました')
