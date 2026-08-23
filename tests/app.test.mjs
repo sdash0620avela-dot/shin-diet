@@ -519,7 +519,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.17'/);
+  assert.match(html,/const APP_VERSION='19\.18'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -658,8 +658,20 @@ test('v19.17 remembers editable favorite meals and prevents same-meal doubling',
   assert.match(html,/const same=normalizedMealName\(mealFormEntry\(id\)\.text\)===normalizedMealName\(entry\.text\)/);
   assert.match(html,/同じ\$\{label\}なので二重加算せず/);
   assert.match(html,/const existing=sets\(\),s=\{\.\.\.existing/);
-  assert.match(serviceWorker,/shin-diet-v19-17-custom-meals/);
-  assert.match(serviceWorker,/version:'19\.17'/);
+});
+
+test('v19.18 hides onboarding until storage is resolved and adds clear nutrition and workout guidance', () => {
+  assert.match(html,/const APP_VERSION='19\.18'/);
+  assert.match(html,/let bootStorageReady=false/);
+  assert.match(html,/bootStorageReady&&!profileComplete\(s\)&&!recs\(\)\.length/);
+  assert.match(html,/たんぱく質（P）/);
+  assert.match(html,/脂質（F）/);
+  assert.match(html,/炭水化物（C）/);
+  assert.match(html,/function openWorkoutConsult\(\)/);
+  assert.match(html,/別店舗・別マシンの重量は流用せず/);
+  assert.match(html,/質問、減量目標と直近最大14日の記録/);
+  assert.match(serviceWorker,/shin-diet-v19-18-clear-coaching/);
+  assert.match(serviceWorker,/version:'19\.18'/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
