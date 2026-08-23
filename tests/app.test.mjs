@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const worker = readFileSync(new URL('../api/analyze-meal.js', import.meta.url), 'utf8');
 const serviceWorker = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+const manifest = readFileSync(new URL('../manifest.json', import.meta.url), 'utf8');
 const wrangler = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
 
 function extractFunction(source, name) {
@@ -519,7 +520,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.18'/);
+  assert.match(html,/const APP_VERSION='19\.19'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -661,7 +662,6 @@ test('v19.17 remembers editable favorite meals and prevents same-meal doubling',
 });
 
 test('v19.18 hides onboarding until storage is resolved and adds clear nutrition and workout guidance', () => {
-  assert.match(html,/const APP_VERSION='19\.18'/);
   assert.match(html,/let bootStorageReady=false/);
   assert.match(html,/bootStorageReady&&!profileComplete\(s\)&&!recs\(\)\.length/);
   assert.match(html,/たんぱく質（P）/);
@@ -670,8 +670,24 @@ test('v19.18 hides onboarding until storage is resolved and adds clear nutrition
   assert.match(html,/function openWorkoutConsult\(\)/);
   assert.match(html,/別店舗・別マシンの重量は流用せず/);
   assert.match(html,/質問、減量目標と直近最大14日の記録/);
-  assert.match(serviceWorker,/shin-diet-v19-18-clear-coaching/);
-  assert.match(serviceWorker,/version:'19\.18'/);
+});
+
+test('v19.19 lets one coach use three consistent personalities in a warmer companion UI', () => {
+  assert.match(html,/const APP_VERSION='19\.19'/);
+  assert.match(html,/id="coachStyle"/);
+  assert.match(html,/相棒タイプ（標準）/);
+  assert.match(html,/やさしい応援タイプ/);
+  assert.match(html,/厳しいトレーナータイプ/);
+  assert.match(html,/function coachStyledQuestion\(question,s=sets\(\)\)/);
+  assert.match(html,/message:coachStyledQuestion\(question\)/);
+  assert.match(html,/function coachSummaryLine\(r,s,mode\)/);
+  assert.match(html,/coach-state-achievement/);
+  assert.match(html,/class="coach-style-name"/);
+  assert.match(html,/coachStyle:'partner'/);
+  assert.match(html,/coachStyle:COACH_STYLES\[\$\('coachStyle'\)\.value\]/);
+  assert.match(serviceWorker,/shin-diet-v19-19-coach-personality/);
+  assert.match(serviceWorker,/version:'19\.19'/);
+  assert.match(manifest,/v19\.19 選べる相棒コーチ版/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
