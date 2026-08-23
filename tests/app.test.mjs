@@ -520,7 +520,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.19'/);
+  assert.match(html,/const APP_VERSION='19\.20'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -673,7 +673,7 @@ test('v19.18 hides onboarding until storage is resolved and adds clear nutrition
 });
 
 test('v19.19 lets one coach use three consistent personalities in a warmer companion UI', () => {
-  assert.match(html,/const APP_VERSION='19\.19'/);
+  assert.match(html,/const APP_VERSION='19\.20'/);
   assert.match(html,/id="coachStyle"/);
   assert.match(html,/相棒タイプ（標準）/);
   assert.match(html,/やさしい応援タイプ/);
@@ -685,9 +685,24 @@ test('v19.19 lets one coach use three consistent personalities in a warmer compa
   assert.match(html,/class="coach-style-name"/);
   assert.match(html,/coachStyle:'partner'/);
   assert.match(html,/coachStyle:COACH_STYLES\[\$\('coachStyle'\)\.value\]/);
-  assert.match(serviceWorker,/shin-diet-v19-19-coach-personality/);
-  assert.match(serviceWorker,/version:'19\.19'/);
-  assert.match(manifest,/v19\.19 選べる相棒コーチ版/);
+});
+
+test('v19.20 switches beginner and detailed nutrition labels without changing recorded fields', () => {
+  assert.match(html,/id="displayMode"/);
+  assert.match(html,/初心者表示（日本語中心）/);
+  assert.match(html,/詳しい表示（P・F・C併記）/);
+  assert.match(html,/displayMode:'detailed'/);
+  assert.match(html,/displayMode:'beginner'/);
+  assert.match(html,/function displayModeKey\(value\)/);
+  assert.match(html,/function nutritionLabel\(name,code,mode=/);
+  assert.match(html,/function applyDisplayMode\(value=/);
+  assert.match(html,/displayMode:displayModeKey\(\$\('displayMode'\)\.value\)/);
+  assert.match(html,/applyDisplayMode\(s\.displayMode\)/);
+  assert.match(html,/data-nutrition-name="たんぱく質"/);
+  assert.match(html,/栄養項目の意味を見る/);
+  assert.match(serviceWorker,/shin-diet-v19-20-beginner-display/);
+  assert.match(serviceWorker,/version:'19\.20'/);
+  assert.match(manifest,/v19\.20 初心者表示仕上げ版/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
