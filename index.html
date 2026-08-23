@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.18 わかりやすい提案版</title>
+<title>AI Diet v19.19 選べる相棒コーチ版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -50,10 +50,13 @@ body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,
   animation:fadeUp .45s ease both
 }
 .card.hero-coach{
-  background:linear-gradient(145deg,#fff 0%,#F8FAFF 100%);
+  background:linear-gradient(145deg,#FFFDF8 0%,#F1F7FF 100%);
   border:1px solid rgba(0,122,255,.15);box-shadow:var(--shadow-lg);
   padding:22px;margin-top:-12px;position:relative;z-index:2
 }
+.card.hero-coach.coach-state-good{background:linear-gradient(145deg,#F1FFF5 0%,#EFF8FF 100%);border-color:rgba(52,199,89,.24)}
+.card.hero-coach.coach-state-warning{background:linear-gradient(145deg,#FFF8EC 0%,#FFFDF8 100%);border-color:rgba(255,149,0,.3)}
+.card.hero-coach.coach-state-achievement{background:linear-gradient(145deg,#FFF8D8 0%,#FFFDF5 55%,#F2F8FF 100%);border-color:rgba(255,184,0,.34)}
 .card-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px}
 .card h3{margin:0 0 12px;font-size:17px;font-weight:700;letter-spacing:-.3px}
 
@@ -238,11 +241,12 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 }
 .forecast-chart-wrap{margin-top:12px;background:#FAFAFA;border-radius:var(--radius-sm);padding:8px;border:1px solid var(--line)}
 .summary-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.summary-switch button{margin:0;box-shadow:none}.summary-switch button.off{background:#F2F2F7;color:var(--ink2);border:1px solid var(--line)}.reportText{white-space:pre-wrap;margin:0;font:inherit;line-height:1.75;color:var(--ink2)}.copyReport{margin-top:12px}
-.anime-coach{display:grid;grid-template-columns:132px 1fr;gap:14px;align-items:center}
-.coach-sprite{width:132px;aspect-ratio:1/1;background-image:url('./assets/ai-coach-sprite.png');background-repeat:no-repeat;background-size:200% 200%;background-position:0 0;filter:drop-shadow(0 8px 12px rgba(28,28,30,.12));transition:background-position .2s ease,transform .25s ease}
+.anime-coach{display:grid;grid-template-columns:148px 1fr;gap:12px;align-items:end}
+.coach-sprite{width:148px;aspect-ratio:1/1;background-image:url('./assets/ai-coach-sprite.png');background-repeat:no-repeat;background-size:200% 200%;background-position:0 0;filter:drop-shadow(0 8px 12px rgba(28,28,30,.12));transition:background-position .2s ease,transform .25s ease}
 .coach-sprite.good{background-position:100% 0}.coach-sprite.warning{background-position:0 100%}.coach-sprite.achievement{background-position:100% 100%;animation:coachCelebrate .55s cubic-bezier(.34,1.56,.64,1)}
 .coach-dialogue{min-width:0}.coach-mood{display:inline-flex;border-radius:999px;padding:5px 10px;background:#F2F2F7;color:var(--ink2);font-size:12px;font-weight:800;margin-bottom:8px}.coach-mood.good{background:#EAF8EE;color:#248A3D}.coach-mood.warning{background:#FFF4E5;color:#A35D00}.coach-mood.achievement{background:#FFF6D9;color:#8B6914}
-.coach-speech{font-size:15px;font-weight:750;line-height:1.55}.coach-detail{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.coach-detail summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px}.coach-detail-body{margin-top:12px}
+.coach-speech{position:relative;background:rgba(255,255,255,.92);border:1px solid rgba(60,60,67,.14);border-radius:18px;padding:14px;font-size:15px;font-weight:750;line-height:1.55;box-shadow:0 5px 18px rgba(0,0,0,.06)}.coach-speech:before{content:'';position:absolute;left:-8px;bottom:22px;width:14px;height:14px;background:#fff;border-left:1px solid rgba(60,60,67,.14);border-bottom:1px solid rgba(60,60,67,.14);transform:rotate(45deg)}.coach-style-name{display:block;margin-top:7px;color:var(--muted);font-size:11px;font-weight:700}.coach-detail{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.coach-detail summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px}.coach-detail-body{margin-top:12px}
+.coach-chat-intro{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;margin:0 0 14px;padding:10px;border-radius:16px;background:rgba(255,255,255,.7);border:1px solid var(--line)}.coach-avatar-mini{width:72px;aspect-ratio:1/1;background:url('./assets/ai-coach-sprite.png') 0 0/200% 200% no-repeat;filter:drop-shadow(0 5px 8px rgba(28,28,30,.1))}.coach-chat-intro b{display:block;margin-bottom:4px}.coach-personality-note{margin-top:8px;padding:10px 12px;border-radius:12px;background:#F8FAFF;border:1px solid rgba(0,122,255,.13);font-size:13px;line-height:1.55;color:var(--ink2)}
 .coach-question{min-height:112px}.coach-answer{display:none;white-space:pre-wrap;margin-top:14px}.coach-answer.show{display:block}.coach-privacy{margin-top:10px}.quick-coach{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.quick-coach button{margin:0;padding:11px 8px;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line);font-size:13px}.quick-coach button:disabled{opacity:.55}
 .meal-favorites{margin:10px 0 14px}.meal-favorites-title{font-size:13px;color:var(--muted);font-weight:750;margin-bottom:7px}.meal-favorites-list{display:flex;gap:7px;overflow-x:auto;padding:1px 1px 5px;scrollbar-width:thin}.meal-favorite{flex:0 0 auto;width:auto;max-width:220px;margin:0;padding:9px 12px;background:#F2F2F7;color:var(--ink2);border:1px solid var(--line);box-shadow:none;font-size:13px;text-align:left}.meal-favorite-name{display:block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.meal-favorite-count{display:block;margin-top:2px;color:var(--muted);font-size:11px;font-weight:650}
 .nutrition-guide{margin:10px 0 14px}.nutrition-guide summary{cursor:pointer;color:var(--accent);font-weight:750}.nutrition-guide-grid{display:grid;gap:8px;margin-top:10px}.nutrition-guide-grid div{padding:10px 12px;border-radius:12px;background:#F8FAFF;border:1px solid rgba(0,122,255,.13);font-size:13px;line-height:1.55}
@@ -250,7 +254,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 @keyframes coachCelebrate{0%{transform:scale(.88) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
 
 @media(max-width:380px){
-  .anime-coach{grid-template-columns:108px 1fr}.coach-sprite{width:108px}
+  .anime-coach{grid-template-columns:112px 1fr}.coach-sprite{width:112px}
   .stat-grid{grid-template-columns:1fr 1fr}
   .stat-grid .stat-tile:first-child{grid-column:1/-1}
   .big{font-size:32px}
@@ -265,7 +269,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.18 わかりやすい提案版</div>
+  <div class="version-pill">v19.19 選べる相棒コーチ版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -287,7 +291,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div class="card-title">AI ダイエットコーチ</div>
     <div class="anime-coach">
       <div id="animeCoach" class="coach-sprite waiting" role="img" aria-label="記録を待っているAIコーチ"></div>
-      <div class="coach-dialogue"><div id="animeCoachMood" class="coach-mood">記録待ち</div><div id="animeCoachSpeech" class="coach-speech">まず今日の体重か食事を1つ記録しましょう。</div></div>
+      <div class="coach-dialogue"><div id="animeCoachMood" class="coach-mood">記録待ち</div><div id="animeCoachSpeech" class="coach-speech">まず今日の体重か食事を1つ記録しましょう。<span id="homeCoachStyle" class="coach-style-name">相棒タイプ</span></div></div>
     </div>
     <details class="coach-detail"><summary>点数の内訳・上げ方を見る</summary><div id="coach" class="coach-detail-body">記録するとAIコーチが評価します</div></details>
     <button type="button" class="sub" style="margin-top:10px" onclick="openScoreConsult()">この点数をAIコーチに詳しく聞く</button>
@@ -493,6 +497,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <section id="chat" class="page">
   <div class="card hero-coach">
     <div class="card-title">AIコーチに相談</div>
+    <div class="coach-chat-intro"><div class="coach-avatar-mini" role="img" aria-label="AIコーチ"></div><div><b id="chatCoachStyle">相棒タイプで回答します</b><span class="small">選んだ話し方で、記録を根拠に一緒に考えます。</span></div></div>
     <p class="muted">本人の保存記録（直近最大14日）を踏まえて、今日の最優先を一緒に考えます。</p>
     <div class="quick-coach">
       <button type="button" onclick="askQuickCoach('今日の食事で最優先して気をつけることは？')">今日の食事</button>
@@ -501,8 +506,8 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <button type="button" onclick="askQuickCoach('今日は運動を増やすべき？それとも休養を優先すべき？')">運動か休養か</button>
       <button type="button" onclick="askQuickCoach('今週の記録から改善点を1つ教えて')">今週の改善点</button>
     </div>
-    <div class="label">相談内容（500文字以内）</div>
-    <textarea id="coachQuestion" class="coach-question" maxlength="500" placeholder="例：体重が3日動かないけど、食事をさらに減らすべき？"></textarea>
+    <div class="label">相談内容（450文字以内）</div>
+    <textarea id="coachQuestion" class="coach-question" maxlength="450" placeholder="例：体重が3日動かないけど、食事をさらに減らすべき？"></textarea>
     <button id="askCoachBtn" type="button" onclick="askCoach()">記録を踏まえて相談する</button>
     <div id="coachConsultStatus" class="status" role="status" aria-live="polite"></div>
     <div id="coachAnswer" class="diary coach-answer" aria-live="polite"></div>
@@ -568,6 +573,14 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <p class="small">指定時刻以降にアプリを開くと、未入力項目をホームに表示します。アプリを閉じている間のプッシュ通知ではありません。</p>
     <div class="label">既往・痛み・運動上の注意</div><textarea id="healthNotes" placeholder="例：腰痛、膝痛、服薬など。緊急時の診断には使用しません。"></textarea>
     <p class="small">自動計算は一般的な推定値です。持病・服薬・妊娠中・摂食障害の既往がある場合は、医療専門職の指示を優先してください。</p>
+    <div class="label">AIコーチの話し方</div>
+    <select id="coachStyle" onchange="renderCoachStyleDescription()">
+      <option value="partner">相棒タイプ（標準）</option>
+      <option value="gentle">やさしい応援タイプ</option>
+      <option value="strict">厳しいトレーナータイプ</option>
+    </select>
+    <div id="coachStyleDescription" class="coach-personality-note">率直だけど責めず、良い点と最優先の改善を1つ伝えます。</div>
+    <p class="small">同じAIコーチの話し方だけが変わります。後からいつでも変更できます。</p>
     <div style="margin-top:16px"><button onclick="saveSettings()">設定を保存</button></div>
   </div>
   <div class="card"><h3>ログイン・クラウド保存</h3>
@@ -626,7 +639,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.18';
+const APP_VERSION='19.19';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
@@ -635,8 +648,8 @@ $('date').value=today();
 function renderConnectivity(){const notice=$('offlineNotice');if(notice)notice.style.display=navigator.onLine===false?'block':'none';renderSyncQueueState()}
 window.addEventListener('offline',renderConnectivity);window.addEventListener('online',()=>{clearTimeout(cloudRetryTimer);cloudRetryAttempt=0;renderConnectivity();if(cloudUser)syncNow(true)});
 
-const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35,reminderEnabled:false,reminderTime:'21:00'};
-const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35,reminderEnabled:false,reminderTime:'21:00'};
+const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35,coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
+const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35,coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
 let activeStorageId='legacy';
 let bootStorageReady=false;
 let serverClockOffsetMs=Number(localStorage.getItem('shinDietServerClockOffsetMs')||0);
@@ -820,6 +833,16 @@ function coachContext(records,settings){
  const settingKeys=['displayName','startWeight','goalWeight','proteinGoal','calorieGoal','cardioGoal'];
  return {settings:Object.fromEntries(settingKeys.filter(key=>settings&&settings[key]!==undefined).map(key=>[key,settings[key]])),records:list};
 }
+const COACH_STYLES={
+ partner:{label:'相棒タイプ',description:'率直だけど責めず、良い点と最優先の改善を1つ伝えます。',instruction:'相棒のように率直で親しみやすく、良い点と最優先の改善を1つ伝えてください。'},
+ gentle:{label:'やさしい応援タイプ',description:'できたことを先に認め、無理なく続けられる改善を提案します。',instruction:'やさしく励まし、できたことを先に認めてから、無理なく続けられる改善を1つ伝えてください。'},
+ strict:{label:'厳しいトレーナータイプ',description:'数値と記録を率直に確認し、直すべきことを明確に伝えます。',instruction:'厳しいトレーナーとして数値と記録を率直に評価し、直すべきことを明確に1つ伝えてください。ただし責めず、無理な減食や過剰運動は勧めないでください。'}
+};
+function coachStyleKey(s=sets()){return COACH_STYLES[s&&s.coachStyle]?s.coachStyle:'partner'}
+function coachStyleInfo(s=sets()){return COACH_STYLES[coachStyleKey(s)]}
+function coachStyledQuestion(question,s=sets()){const info=coachStyleInfo(s),prefix=`【希望する話し方】${info.instruction}\n【相談】`;return prefix+String(question||'').slice(0,Math.max(0,500-prefix.length))}
+function coachSummaryLine(r,s,mode){const style=coachStyleKey(s),action=todayActionText(r,s);if(style==='gentle')return `AIコーチ（やさしい応援）：ここまで記録できたことが前進です。${action}`;if(style==='strict')return `AIコーチ（厳しいトレーナー）：記録を基準に率直に判断します。${action}`;return `AIコーチ（相棒）：今日も一緒に整理します。${action}`}
+function renderCoachStyleDescription(){const s=sets(),key=$('coachStyle')&&COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:coachStyleKey(s),info=COACH_STYLES[key];if($('coachStyleDescription'))$('coachStyleDescription').textContent=info.description;if($('chatCoachStyle'))$('chatCoachStyle').textContent=info.label+'で回答します';if($('homeCoachStyle'))$('homeCoachStyle').textContent=info.label}
 function coachStatus(message,ok=true){const el=$('coachConsultStatus');if(!el)return;el.textContent=message;el.className='status '+(ok?'ok':'ng')}
 async function askQuickCoach(question){$('coachQuestion').value=question;await askCoach()}
 async function openWorkoutConsult(){
@@ -837,7 +860,7 @@ async function askCoach(){
  try{
   const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();
   if(sessionError||!sessionData.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
-  const response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({kind:'coach_chat',message:question,context:coachContext(recs(),sets())})});
+  const response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({kind:'coach_chat',message:coachStyledQuestion(question),context:coachContext(recs(),sets())})});
   const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'相談に回答できませんでした。');
   answer.textContent=body.answer||'回答がありませんでした。';answer.classList.add('show');coachStatus('回答しました。相談内容と回答は保存していません。',true);
  }catch(error){coachStatus(error.message||'相談中にエラーが発生しました。時間を置いて再度お試しください。',false)}
@@ -1168,17 +1191,21 @@ function animeCoachState(r,s){
   return 'good';
 }
 function animeCoachMessage(r,s){
-  const state=animeCoachState(r,s);
-  if(state==='waiting')return 'まず今日の体重か食事を1つ記録。入力した分だけ分析が正確になります。';
-  if(state==='achievement')return `今日の評価は${scoreRecord(r,s)}点。積み上げが結果につながっています。この流れを守りましょう。`;
-  return todayActionText(r,s);
+  const state=animeCoachState(r,s),style=coachStyleKey(s),action=todayActionText(r,s);
+  if(state==='waiting')return style==='gentle'?'できるところからで大丈夫。まず今日の体重か食事を1つ記録しましょう。':style==='strict'?'まず記録です。今日の体重か食事を1つ入力して、判断材料をそろえましょう。':'まず今日の体重か食事を1つ記録。入力した分だけ分析が正確になります。';
+  if(state==='achievement')return style==='gentle'?`今日の評価は${scoreRecord(r,s)}点。今日もよく積み上げました。この流れを無理なく続けましょう。`:style==='strict'?`今日の評価は${scoreRecord(r,s)}点。結果は良好です。気を緩めず、今の基準を維持しましょう。`:`今日の評価は${scoreRecord(r,s)}点。積み上げが結果につながっています。この流れを守りましょう。`;
+  if(style==='gentle')return 'できていることを土台に、'+action;
+  if(style==='strict')return '率直にいきます。'+action;
+  return action;
 }
 function renderAnimeCoach(r,s){
   const state=animeCoachState(r,s),labels={waiting:'記録待ち',good:'好調',warning:'注意',achievement:'達成'};
-  const sprite=$('animeCoach'),mood=$('animeCoachMood');
+  const sprite=$('animeCoach'),mood=$('animeCoachMood'),card=$('coachCard');
   sprite.className='coach-sprite '+state;sprite.setAttribute('aria-label',labels[state]+'のAIコーチ');
   mood.className='coach-mood '+state;mood.textContent=labels[state];
-  $('animeCoachSpeech').textContent=animeCoachMessage(r,s);
+  card.className='card hero-coach coach-state-'+state;
+  $('animeCoachSpeech').childNodes[0].nodeValue=animeCoachMessage(r,s);
+  renderCoachStyleDescription();
 }
 function mealStar(r,s){let p=+r.protein||0,i=+r.intake||0,g=+s.proteinGoal||120,c=+s.calorieGoal||2000;if(p>=g&&i>=c-200&&i<=c+200)return 5;if(p>=g*.8)return 4;if(p>=g*.55)return 3;if(p>0||i>0)return 2;return 1}
 function exerciseStar(r){if(isRestDay(r))return 5;if(!hasExerciseInput(r))return 0;let ex=effectiveExercise(r);if(ex>=400&&String(r.strength||'').trim())return 5;if(ex>=300)return 4;if(ex>0)return 3;return 2}
@@ -1189,6 +1216,7 @@ function coachText(r,s,last,prev){
   const rest=isRestDay(r), status=assessmentStatus(r), score=scoreRecord(r,s), intake=+r.intake||0, protein=+r.protein||0, bal=estimatedBalance(r,s);
   const balanceWarning=largeDeficitWarning(r,s);
   let lead=!status.complete?`${status.missing.join('・')}が未入力のため、評価は暫定です。`:balanceWarning?'運動量は十分ですが、概算収支の赤字が大きいため安全確認を優先します。':rest?'今日は計画どおりの休養日。運動0分で問題ありません。':score>=90?'今日はかなり理想的です。筋肉を残しながら脂肪を落としやすい一日。':score>=80?'今日はかなり良い流れです。あと少し整えれば90点台が狙えます。':score>=70?'今日は合格ラインです。継続としては十分価値があります。':score>=60?'今日は修正ポイントあり。でも崩れてはいません。':'今日は回復と食事の立て直しを優先したい日です。';
+  const style=coachStyleKey(s);if(style==='gentle')lead='できたことを大切にしながら確認します。'+lead;else if(style==='strict')lead='記録を基準に率直に評価します。'+lead;
   const proteinGoal=+s.proteinGoal||120,name=s.displayName||'あなた',safeName=esc(name);
   let food=protein>=proteinGoal?'たんぱく質は目標を達成。筋肉量維持にかなり向いています。':protein>=proteinGoal*.75?`たんぱく質は悪くないです。目標${proteinGoal}gまで、もう一品足すと強いです。`:protein>0?`たんぱく質が少なめ。まず目標${proteinGoal}gを意識しましょう。`:`たんぱく質が未入力。${safeName}さんの基準は${proteinGoal}gです。`;
   let balance=bal===null?'摂取カロリー未入力なので収支は未判定。':bal< -900?`収支はかなり大きなマイナス（推定1日消費${estimatedDailyBurn(r,s)}kcal基準）。疲労と筋肉量低下には注意。`:bal<0?`収支はマイナスで減量向きです（推定1日消費${estimatedDailyBurn(r,s)}kcal基準）。`:bal<300?'ほぼ維持ライン。夜の脂質を控えれば減量側に寄せられます。':'収支はプラス気味。外食や脂質の量を少しだけ調整。';
@@ -1356,7 +1384,7 @@ function calculateRecommendations(){
  out.textContent=`${latest?'最新体重 '+weight.toFixed(1)+'kg':'開始体重 '+weight.toFixed(1)+'kg'}を使用｜推定基礎代謝 ${Math.round(bmr)}kcal｜推定1日消費 ${tdee}kcal｜目標摂取 ${calorie}kcal｜目標P ${protein}g`;out.style.color='var(--good)'
 }
 function saveSettings(){
- const existing=sets(),s={...existing,displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
+ const existing=sets(),s={...existing,displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,coachStyle:COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:'partner',reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
  const legacyAllowed=recs().length>0&&!existing.age;
  if(!s.displayName||!s.startDate||!s.startWeight||!s.baseBurn||!s.goalWeight)return alert('名前・開始日・開始体重・消費kcal・目標体重を入力してください。');
  if(!legacyAllowed&&(!s.age||!s.sex||!s.heightCm||!s.activityLevel))return alert('年齢・性別・身長・活動量を入力し、自動計算してください。');
@@ -1366,7 +1394,7 @@ function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=
 function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings')renderAppDiagnostics()}
 
 function update(){
- const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';
+ const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('coachStyle').value=coachStyleKey(s);$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';renderCoachStyleDescription();
  renderConnectivity();
  renderFirstUseProgress(s);
   $('onboardingNotice').style.display=bootStorageReady&&!profileComplete(s)&&!recs().length?'block':'none';
@@ -1528,6 +1556,8 @@ function buildDailySummary(r,prev,s,mode){
 
 結論
 ${reportConclusion(r,prev,s,mode)}
+
+${coachSummaryLine(r,s,mode)}
 
 【確認できた事実】
 ${facts}
