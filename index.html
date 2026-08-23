@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.19 選べる相棒コーチ版</title>
+<title>AI Diet v19.20 初心者表示仕上げ版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -269,7 +269,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.19 選べる相棒コーチ版</div>
+  <div class="version-pill">v19.20 初心者表示仕上げ版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -422,15 +422,15 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <span id="calorieGoalChip" class="chip" onclick="applyCalorieGoal()">目標kcal</span>
       <span id="proteinGoalChip" class="chip" onclick="applyProteinGoal()">目標たんぱく質</span>
     </div>
-    <details class="nutrition-guide"><summary>カロリー・たんぱく質・脂質・炭水化物の意味</summary><div class="nutrition-guide-grid"><div><b>カロリー（kcal）</b><br>食事全体のエネルギー量。1日の目標と比べます。</div><div><b>たんぱく質（P）</b><br>筋肉を保つ材料。減量中ほど不足しないようにします。</div><div><b>脂質（F）</b><br>身体に必要ですが、少量でもカロリーが高いため摂りすぎに注意します。</div><div><b>炭水化物（C）</b><br>運動や日常生活で使う主なエネルギーです。</div></div></details>
+    <details class="nutrition-guide"><summary id="nutritionGuideSummary">栄養項目の意味を見る</summary><div class="nutrition-guide-grid"><div><b>カロリー（kcal）</b><br>食事全体のエネルギー量。1日の目標と比べます。</div><div><b>たんぱく質<span class="nutrition-code">（P）</span></b><br>筋肉を保つ材料。減量中ほど不足しないようにします。</div><div><b>脂質<span class="nutrition-code">（F）</span></b><br>身体に必要ですが、少量でもカロリーが高いため摂りすぎに注意します。</div><div><b>炭水化物<span class="nutrition-code">（C）</span></b><br>運動や日常生活で使う主なエネルギーです。</div></div></details>
     <div id="mealEntries"></div>
     <button id="finishMealsBtn" type="button" onclick="finishMeals()">食事内容をこれで確定</button>
     <p class="small" style="margin-top:10px">基本は写真を選んで「AIで解析」。料理名とカロリー・たんぱく質・脂質・炭水化物の推定値が入り、違う部分だけ直して保存できます。写真自体は保存しません。</p>
     <div class="grid">
       <div><div class="label">1日合計 kcal</div><input id="intake" type="number" inputmode="numeric" placeholder="1800"></div>
-      <div><div class="label">たんぱく質（P）合計 g</div><input id="protein" type="number" step="0.1" inputmode="decimal" placeholder="120"></div>
-      <div><div class="label">脂質（F）合計 g</div><input id="fatG" type="number" step="0.1" inputmode="decimal" placeholder="50"></div>
-      <div><div class="label">炭水化物（C）合計 g</div><input id="carbsG" type="number" step="0.1" inputmode="decimal" placeholder="220"></div>
+      <div><div id="proteinTotalLabel" class="label">たんぱく質（P）合計 g</div><input id="protein" type="number" step="0.1" inputmode="decimal" placeholder="120"></div>
+      <div><div id="fatTotalLabel" class="label">脂質（F）合計 g</div><input id="fatG" type="number" step="0.1" inputmode="decimal" placeholder="50"></div>
+      <div><div id="carbsTotalLabel" class="label">炭水化物（C）合計 g</div><input id="carbsG" type="number" step="0.1" inputmode="decimal" placeholder="220"></div>
       <div><div class="label">水分 L</div><input id="waterL" type="number" step="0.1" inputmode="decimal" placeholder="2.0"></div>
     </div>
   </div>
@@ -537,6 +537,12 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div id="shareAppStatus" class="small" role="status" aria-live="polite"></div>
   </div>
   <div class="card"><h3>個人設定</h3>
+    <div class="label">栄養表示</div>
+    <select id="displayMode" onchange="applyDisplayMode(this.value)">
+      <option value="beginner">初心者表示（日本語中心）</option>
+      <option value="detailed">詳しい表示（P・F・C併記）</option>
+    </select>
+    <p class="small">記録内容や計算は変えず、栄養項目の呼び方だけを切り替えます。</p>
     <div class="label">名前</div><input id="displayName" type="text" autocomplete="name" placeholder="名前">
     <div class="label">開始日</div><input id="startDate" type="date">
     <div class="grid">
@@ -639,7 +645,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.19';
+const APP_VERSION='19.20';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
@@ -648,8 +654,8 @@ $('date').value=today();
 function renderConnectivity(){const notice=$('offlineNotice');if(notice)notice.style.display=navigator.onLine===false?'block':'none';renderSyncQueueState()}
 window.addEventListener('offline',renderConnectivity);window.addEventListener('online',()=>{clearTimeout(cloudRetryTimer);cloudRetryAttempt=0;renderConnectivity();if(cloudUser)syncNow(true)});
 
-const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35,coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
-const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35,coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
+const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35,displayMode:'detailed',coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
+const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35,displayMode:'beginner',coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
 let activeStorageId='legacy';
 let bootStorageReady=false;
 let serverClockOffsetMs=Number(localStorage.getItem('shinDietServerClockOffsetMs')||0);
@@ -840,6 +846,17 @@ const COACH_STYLES={
 };
 function coachStyleKey(s=sets()){return COACH_STYLES[s&&s.coachStyle]?s.coachStyle:'partner'}
 function coachStyleInfo(s=sets()){return COACH_STYLES[coachStyleKey(s)]}
+function displayModeKey(value){return value==='beginner'?'beginner':'detailed'}
+function nutritionLabel(name,code,mode=displayModeKey(sets().displayMode)){return mode==='beginner'?name:`${name}（${code}）`}
+function applyDisplayMode(value=sets().displayMode){
+ const mode=displayModeKey(value),labels=[['proteinTotalLabel','たんぱく質','P'],['fatTotalLabel','脂質','F'],['carbsTotalLabel','炭水化物','C']];
+ document.body.dataset.displayMode=mode;
+ document.querySelectorAll('.nutrition-code').forEach(el=>el.style.display=mode==='beginner'?'none':'inline');
+ labels.forEach(([id,name,code])=>{const el=$(id);if(el)el.textContent=`${nutritionLabel(name,code,mode)}合計 g`});
+ if($('nutritionGuideSummary'))$('nutritionGuideSummary').textContent=mode==='beginner'?'栄養項目の意味を見る':'P・F・Cなど栄養項目の意味を見る';
+ document.querySelectorAll('[data-nutrition-name]').forEach(el=>{el.textContent=nutritionLabel(el.dataset.nutritionName,el.dataset.nutritionCode,mode)+'g'});
+ if($('displayMode'))$('displayMode').value=mode;
+}
 function coachStyledQuestion(question,s=sets()){const info=coachStyleInfo(s),prefix=`【希望する話し方】${info.instruction}\n【相談】`;return prefix+String(question||'').slice(0,Math.max(0,500-prefix.length))}
 function coachSummaryLine(r,s,mode){const style=coachStyleKey(s),action=todayActionText(r,s);if(style==='gentle')return `AIコーチ（やさしい応援）：ここまで記録できたことが前進です。${action}`;if(style==='strict')return `AIコーチ（厳しいトレーナー）：記録を基準に率直に判断します。${action}`;return `AIコーチ（相棒）：今日も一緒に整理します。${action}`}
 function renderCoachStyleDescription(){const s=sets(),key=$('coachStyle')&&COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:coachStyleKey(s),info=COACH_STYLES[key];if($('coachStyleDescription'))$('coachStyleDescription').textContent=info.description;if($('chatCoachStyle'))$('chatCoachStyle').textContent=info.label+'で回答します';if($('homeCoachStyle'))$('homeCoachStyle').textContent=info.label}
@@ -916,7 +933,8 @@ $('strength').addEventListener('input',()=>{if(isRestDay({strength:$('strength')
 
 function fillMeal(id,text){const el=$(id);if(el)el.value=text}
 function renderMealEntries(){
-  $('mealEntries').innerHTML=mealTypes.map(([id,label],index)=>`<details id="${id}Block" class="mealBlock" ${index===0?'open':''}><summary><span>${label}</span><span id="${id}Summary" class="mealDone">未入力</span></summary><div class="mealBody"><button type="button" class="sub" onclick="copyPreviousMeal('${id}','${label}')">前回の${label}を追加</button><div id="${id}Favorites" class="meal-favorites"></div><div id="${id}AddGuide" class="analysisStatus">保存履歴と写真解析は、この食事へ順番に追加されます。</div><div class="label">${label}写真（撮影・保存済み写真・フォルダーから選択できます）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><textarea id="${id}PortionNote" class="portionNote" placeholder="任意：ご飯は半分、唐揚げ3個、味噌汁は飲まない など"></textarea><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析して追加</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div id="${id}PortionEditor" class="portionEditor"></div><div class="label">内容（確認・修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option><option value="mixed">本人入力＋AI推定</option></select></div><div><div class="label">カロリー kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label">たんぱく質（P）g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">脂質（F）g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label">炭水化物（C）g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div></details>`).join('');
+  const mode=displayModeKey(sets().displayMode);
+  $('mealEntries').innerHTML=mealTypes.map(([id,label],index)=>`<details id="${id}Block" class="mealBlock" ${index===0?'open':''}><summary><span>${label}</span><span id="${id}Summary" class="mealDone">未入力</span></summary><div class="mealBody"><button type="button" class="sub" onclick="copyPreviousMeal('${id}','${label}')">前回の${label}を追加</button><div id="${id}Favorites" class="meal-favorites"></div><div id="${id}AddGuide" class="analysisStatus">保存履歴と写真解析は、この食事へ順番に追加されます。</div><div class="label">${label}写真（撮影・保存済み写真・フォルダーから選択できます）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><textarea id="${id}PortionNote" class="portionNote" placeholder="任意：ご飯は半分、唐揚げ3個、味噌汁は飲まない など"></textarea><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析して追加</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div id="${id}PortionEditor" class="portionEditor"></div><div class="label">内容（確認・修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option><option value="mixed">本人入力＋AI推定</option></select></div><div><div class="label">カロリー kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label" data-nutrition-name="たんぱく質" data-nutrition-code="P">${nutritionLabel('たんぱく質','P',mode)}g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label" data-nutrition-name="脂質" data-nutrition-code="F">${nutritionLabel('脂質','F',mode)}g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label" data-nutrition-name="炭水化物" data-nutrition-code="C">${nutritionLabel('炭水化物','C',mode)}g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div></details>`).join('');
   mealTypes.forEach(([id,label])=>{
    pv($(id+'Photo'),$(id+'Preview'),$(id+'Clear'));[id,...mealSuffixes.slice(1).map(s=>id+s)].forEach(fid=>$(fid).addEventListener('input',()=>{calculateMealTotals();updateMealSummary(id)}));
    const saveFavorite=document.createElement('button');saveFavorite.type='button';saveFavorite.className='sub';saveFavorite.textContent='現在の内容を「いつもの食事」に登録・更新';saveFavorite.addEventListener('click',()=>saveCurrentMealFavorite(id,label));$(id+'Block').querySelector('.mealBody').append(saveFavorite)
@@ -1384,7 +1402,7 @@ function calculateRecommendations(){
  out.textContent=`${latest?'最新体重 '+weight.toFixed(1)+'kg':'開始体重 '+weight.toFixed(1)+'kg'}を使用｜推定基礎代謝 ${Math.round(bmr)}kcal｜推定1日消費 ${tdee}kcal｜目標摂取 ${calorie}kcal｜目標P ${protein}g`;out.style.color='var(--good)'
 }
 function saveSettings(){
- const existing=sets(),s={...existing,displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,coachStyle:COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:'partner',reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
+ const existing=sets(),s={...existing,displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,displayMode:displayModeKey($('displayMode').value),coachStyle:COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:'partner',reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
  const legacyAllowed=recs().length>0&&!existing.age;
  if(!s.displayName||!s.startDate||!s.startWeight||!s.baseBurn||!s.goalWeight)return alert('名前・開始日・開始体重・消費kcal・目標体重を入力してください。');
  if(!legacyAllowed&&(!s.age||!s.sex||!s.heightCm||!s.activityLevel))return alert('年齢・性別・身長・活動量を入力し、自動計算してください。');
@@ -1394,12 +1412,13 @@ function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=
 function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings')renderAppDiagnostics()}
 
 function update(){
- const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('coachStyle').value=coachStyleKey(s);$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';renderCoachStyleDescription();
+ const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('displayMode').value=displayModeKey(s.displayMode);$('coachStyle').value=coachStyleKey(s);$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';renderCoachStyleDescription();applyDisplayMode(s.displayMode);
  renderConnectivity();
  renderFirstUseProgress(s);
   $('onboardingNotice').style.display=bootStorageReady&&!profileComplete(s)&&!recs().length?'block':'none';
- $('appTitle').textContent=s.displayName?`${s.displayName}のAI Diet`:'AI Diet';$('appSubhead').textContent=s.startDate?`${s.startDate.replaceAll('-','/')}開始｜目標P ${s.proteinGoal||120}g｜有酸素 ${s.cardioGoal||35}分`:'個人設定を入力してください';
- $('calorieGoalChip').textContent=`${s.calorieGoal||2000}kcal`;$('proteinGoalChip').textContent=`${s.proteinGoal||120}g P`;$('cardioGoalChip').textContent=`有酸素${s.cardioGoal||35}分`;$('cardioGoalLabel').textContent=`有酸素（${s.cardioGoal||35}分）`;
+ const beginner=displayModeKey(s.displayMode)==='beginner';
+ $('appTitle').textContent=s.displayName?`${s.displayName}のAI Diet`:'AI Diet';$('appSubhead').textContent=s.startDate?`${s.startDate.replaceAll('-','/')}開始｜目標${beginner?'たんぱく質':'P'} ${s.proteinGoal||120}g｜有酸素 ${s.cardioGoal||35}分`:'個人設定を入力してください';
+ $('calorieGoalChip').textContent=`${s.calorieGoal||2000}kcal`;$('proteinGoalChip').textContent=beginner?`たんぱく質 ${s.proteinGoal||120}g`:`${s.proteinGoal||120}g P`;$('cardioGoalChip').textContent=`有酸素${s.cardioGoal||35}分`;$('cardioGoalLabel').textContent=`有酸素（${s.cardioGoal||35}分）`;
  const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];
  if(last){const fm=fatMeta(last),mm=muscleMeta(last);$('cw').textContent=(+last.weight).toFixed(1);$('cf').textContent=last.fat??'--';$('cfLabel').textContent=fm.label;$('cfUnit').textContent=' '+fm.unit;$('cm').textContent=last.muscle??'--';$('cmLabel').textContent=mm.label;$('cmUnit').textContent=' '+mm.unit;$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+' kg';$('loss').className=(last.weight-s.startWeight)<0?'good':'warn'}
  const t=a.find(r=>r.date===today())||a.slice(-1)[0];const prev=t?prevRecord(a,t,'weight'):null;
