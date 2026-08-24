@@ -520,7 +520,7 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='19\.20'/);
+  assert.match(html,/const APP_VERSION='20\.0'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -673,7 +673,7 @@ test('v19.18 hides onboarding until storage is resolved and adds clear nutrition
 });
 
 test('v19.19 lets one coach use three consistent personalities in a warmer companion UI', () => {
-  assert.match(html,/const APP_VERSION='19\.20'/);
+  assert.match(html,/const APP_VERSION='20\.0'/);
   assert.match(html,/id="coachStyle"/);
   assert.match(html,/相棒タイプ（標準）/);
   assert.match(html,/やさしい応援タイプ/);
@@ -700,9 +700,38 @@ test('v19.20 switches beginner and detailed nutrition labels without changing re
   assert.match(html,/applyDisplayMode\(s\.displayMode\)/);
   assert.match(html,/data-nutrition-name="たんぱく質"/);
   assert.match(html,/栄養項目の意味を見る/);
-  assert.match(serviceWorker,/shin-diet-v19-20-beginner-display/);
-  assert.match(serviceWorker,/version:'19\.20'/);
-  assert.match(manifest,/v19\.20 初心者表示仕上げ版/);
+});
+
+test('v20.0 provides simple and pro modes with selectable advice and shared records', () => {
+  assert.match(html,/id="usageMode"/);
+  assert.match(html,/かんたんモード（写真・AIコーチ中心）/);
+  assert.match(html,/しっかり記録モード（すべての項目）/);
+  assert.match(html,/usageMode:'pro'/);
+  assert.match(html,/usageMode:'simple'/);
+  assert.match(html,/id="simpleHome"/);
+  assert.match(html,/function applyUsageMode\(value=/);
+  assert.match(html,/function openSimpleMeal\(\)/);
+  assert.match(html,/function openSimpleBody\(\)/);
+  assert.match(html,/id="adviceSupplement"/);
+  assert.match(html,/function adviceTopics\(s=sets\(\)\)/);
+  assert.match(html,/希望する助言分野/);
+  assert.match(html,/adviceSupplement:\$\('adviceSupplement'\)\.checked/);
+  assert.match(serviceWorker,/shin-diet-v20-simple-pro-advice/);
+  assert.match(serviceWorker,/version:'20\.0'/);
+  assert.match(manifest,/v20\.0 かんたん・しっかり記録版/);
+});
+
+test('v20.0 reads only visible body-composition values and requires confirmation before save', () => {
+  assert.match(html,/id="bodyAnalyze"/);
+  assert.match(html,/function analyzeBodyComposition\(\)/);
+  assert.match(html,/kind:'body_composition'/);
+  assert.match(html,/写真の数値と合っているか確認して保存してください/);
+  assert.match(html,/function applyBodyCompositionAnalysis\(result\)/);
+  assert.match(worker,/const bodyCompositionSchema/);
+  assert.match(worker,/body\.kind === 'body_composition'/);
+  assert.match(worker,/推測・計算・補完をしないでください/);
+  assert.match(worker,/筋肉量と骨格筋量を混同しないでください/);
+  assert.match(worker,/detail: 'high'/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
