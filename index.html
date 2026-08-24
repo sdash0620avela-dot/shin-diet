@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v19.20 初心者表示仕上げ版</title>
+<title>AI Diet v20.0 かんたん・しっかり記録版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -251,6 +251,8 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 .meal-favorites{margin:10px 0 14px}.meal-favorites-title{font-size:13px;color:var(--muted);font-weight:750;margin-bottom:7px}.meal-favorites-list{display:flex;gap:7px;overflow-x:auto;padding:1px 1px 5px;scrollbar-width:thin}.meal-favorite{flex:0 0 auto;width:auto;max-width:220px;margin:0;padding:9px 12px;background:#F2F2F7;color:var(--ink2);border:1px solid var(--line);box-shadow:none;font-size:13px;text-align:left}.meal-favorite-name{display:block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.meal-favorite-count{display:block;margin-top:2px;color:var(--muted);font-size:11px;font-weight:650}
 .nutrition-guide{margin:10px 0 14px}.nutrition-guide summary{cursor:pointer;color:var(--accent);font-weight:750}.nutrition-guide-grid{display:grid;gap:8px;margin-top:10px}.nutrition-guide-grid div{padding:10px 12px;border-radius:12px;background:#F8FAFF;border:1px solid rgba(0,122,255,.13);font-size:13px;line-height:1.55}
 .record-reminder{display:none;border-color:rgba(255,149,0,.38);background:#FFF9E6}.record-reminder.show{display:block}.record-reminder-actions{display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:12px}.record-reminder-actions button{margin:0}.record-reminder-actions .dismiss{background:#fff;color:var(--ink2);border:1px solid var(--line);box-shadow:none}
+.simple-home{display:none}.simple-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.simple-action{min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}.simple-action span{font-size:30px}.simple-coach-actions{display:grid;gap:8px;margin-top:12px}.simple-coach-actions button{margin:0;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line)}
+body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="simple"] #detailedHome{display:none}body[data-usage-mode="simple"] .pro-tab{display:none}body[data-usage-mode="simple"] .tabs{grid-template-columns:repeat(4,1fr)}
 @keyframes coachCelebrate{0%{transform:scale(.88) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
 
 @media(max-width:380px){
@@ -269,7 +271,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v19.20 初心者表示仕上げ版</div>
+  <div class="version-pill">v20.0 かんたん・しっかり記録版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -287,6 +289,12 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <p class="muted">年齢・身長・活動量から、消費カロリーと減量目標の目安を計算します。</p>
     <button type="button" onclick="openSettings()">初期設定を始める</button>
   </div>
+  <div id="simpleHome" class="simple-home">
+    <div class="card hero-coach"><div class="card-title">AIコーチと今日の記録</div><div class="anime-coach"><div class="coach-sprite waiting" role="img" aria-label="AIコーチ"></div><div class="coach-dialogue"><div class="coach-speech" id="simpleCoachSpeech">写真か相談から、今日できることを一緒に決めましょう。</div></div></div></div>
+    <div class="card"><h3>今日、何をしますか？</h3><div class="simple-actions"><button type="button" class="simple-action" onclick="openSimpleMeal()"><span>🍽</span>食事を撮る・選ぶ</button><button type="button" class="simple-action" onclick="openSimpleBody()"><span>⚖️</span>体重計を撮る・選ぶ</button><button type="button" class="simple-action" onclick="openSimpleCoach()"><span>💬</span>コーチに相談</button><button type="button" class="simple-action" onclick="openTodayRecord()"><span>✓</span>今日の記録を見る</button></div></div>
+    <div class="card"><h3>すぐ相談する</h3><div id="simpleAdviceButtons" class="simple-coach-actions"></div></div>
+  </div>
+  <div id="detailedHome">
   <div class="card hero-coach" id="coachCard">
     <div class="card-title">AI ダイエットコーチ</div>
     <div class="anime-coach">
@@ -377,6 +385,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div class="card-title">AIダイエット日記</div>
     <div id="diary" class="diary">今日の記録を保存すると自動生成します。</div>
   </div>
+  </div>
 </section>
 
 <section id="record" class="page">
@@ -410,9 +419,11 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
       <div><div class="label">疲労感 1〜5</div><input id="fatigue" type="number" min="1" max="5" inputmode="numeric" placeholder="3"></div>
     </div>
     <div class="label">体調・痛み・便通など</div><textarea id="condition" placeholder="体調、睡眠の様子、痛み、便通など"></textarea>
-    <div class="label">体組成写真（プレビューのみ・保存しません）</div>
+    <div class="label">体重計・体組成計の写真（撮影・保存済み写真から選択）</div>
     <input id="bodyPhoto" type="file" accept="image/*">
     <img id="bodyPreview" class="photo" alt="体組成プレビュー">
+    <button id="bodyAnalyze" type="button" class="analyzeBtn" onclick="analyzeBodyComposition()">AIで数値を読み取る</button>
+    <div id="bodyAnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div>
     <button id="bodyClear" type="button" class="sub photoClear" onclick="clearPhoto('bodyPhoto','bodyPreview','bodyClear')">体組成写真を消す</button>
   </div>
 
@@ -537,6 +548,14 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
     <div id="shareAppStatus" class="small" role="status" aria-live="polite"></div>
   </div>
   <div class="card"><h3>個人設定</h3>
+    <div class="label">使い方</div>
+    <select id="usageMode" onchange="applyUsageMode(this.value)"><option value="simple">かんたんモード（写真・AIコーチ中心）</option><option value="pro">しっかり記録モード（すべての項目）</option></select>
+    <p class="small">後からいつでも切り替えられます。保存済み記録は共通で、消えません。</p>
+    <div class="label">AIコーチから欲しいアドバイス</div>
+    <label class="check"><input id="adviceFood" type="checkbox" checked>食事の選び方</label>
+    <label class="check"><input id="adviceSleep" type="checkbox" checked>睡眠・休養</label>
+    <label class="check"><input id="adviceSupplement" type="checkbox">プロテイン・サプリ</label>
+    <label class="check"><input id="adviceExercise" type="checkbox">運動・筋トレ</label>
     <div class="label">栄養表示</div>
     <select id="displayMode" onchange="applyDisplayMode(this.value)">
       <option value="beginner">初心者表示（日本語中心）</option>
@@ -626,7 +645,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 <nav class="tabs">
   <div class="tab on" onclick="show('home',this)"><span class="tab-icon">🏠</span>ホーム</div>
   <div class="tab" onclick="show('record',this)"><span class="tab-icon">✏️</span>記録</div>
-  <div class="tab" onclick="show('graph',this)"><span class="tab-icon">📈</span>グラフ</div>
+  <div class="tab pro-tab" onclick="show('graph',this)"><span class="tab-icon">📈</span>グラフ</div>
   <div class="tab" onclick="show('chat',this)"><span class="tab-icon">💬</span>相談</div>
   <div class="tab" onclick="show('settings',this)"><span class="tab-icon">⚙️</span>設定</div>
 </nav>
@@ -645,7 +664,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='19.20';
+const APP_VERSION='20.0';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
@@ -654,8 +673,8 @@ $('date').value=today();
 function renderConnectivity(){const notice=$('offlineNotice');if(notice)notice.style.display=navigator.onLine===false?'block':'none';renderSyncQueueState()}
 window.addEventListener('offline',renderConnectivity);window.addEventListener('online',()=>{clearTimeout(cloudRetryTimer);cloudRetryAttempt=0;renderConnectivity();if(cloudUser)syncNow(true)});
 
-const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35,displayMode:'detailed',coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
-const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35,displayMode:'beginner',coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
+const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35,displayMode:'detailed',usageMode:'pro',adviceFood:true,adviceSleep:true,adviceSupplement:true,adviceExercise:true,coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
+const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35,displayMode:'beginner',usageMode:'simple',adviceFood:true,adviceSleep:true,adviceSupplement:false,adviceExercise:false,coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
 let activeStorageId='legacy';
 let bootStorageReady=false;
 let serverClockOffsetMs=Number(localStorage.getItem('shinDietServerClockOffsetMs')||0);
@@ -676,8 +695,8 @@ function mergeSyncStates(...groups){
 }
 function sets(){
  try{
-  const raw=localStorage.getItem(storageKey('Settings')),legacy=activeStorageId==='legacy'&&(!!raw||recs().length>0),parsed=raw?JSON.parse(raw):{};
-  return {...(legacy?LEGACY_DEFAULTS:NEW_USER_DEFAULTS),...(parsed&&typeof parsed==='object'?parsed:{})};
+  const raw=localStorage.getItem(storageKey('Settings')),existing=!!raw||recs().length>0,parsed=raw?JSON.parse(raw):{};
+  return {...(existing?LEGACY_DEFAULTS:NEW_USER_DEFAULTS),...(parsed&&typeof parsed==='object'?parsed:{})};
  }catch(e){return activeStorageId==='legacy'&&recs().length?{...LEGACY_DEFAULTS}:{...NEW_USER_DEFAULTS}}
 }
 function writeSettings(s){localStorage.setItem(storageKey('Settings'),JSON.stringify(s));renderSyncQueueState();scheduleCloudSync()}
@@ -847,6 +866,22 @@ const COACH_STYLES={
 function coachStyleKey(s=sets()){return COACH_STYLES[s&&s.coachStyle]?s.coachStyle:'partner'}
 function coachStyleInfo(s=sets()){return COACH_STYLES[coachStyleKey(s)]}
 function displayModeKey(value){return value==='beginner'?'beginner':'detailed'}
+function usageModeKey(value){return value==='simple'?'simple':'pro'}
+function adviceTopics(s=sets()){return [['adviceFood','食事'],['adviceSupplement','プロテイン・サプリ'],['adviceExercise','運動・筋トレ'],['adviceSleep','睡眠・休養']].filter(([key])=>!!s[key]).map(([,label])=>label)}
+function applyUsageMode(value=sets().usageMode){const mode=usageModeKey(value);document.body.dataset.usageMode=mode;if($('usageMode'))$('usageMode').value=mode;renderSimpleAdviceButtons()}
+function openPage(id,label){const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes(label));if(tab)show(id,tab)}
+function openSimpleMeal(){openPage('record','記録');$('breakfastPhoto')?.click()}
+function openSimpleBody(){openPage('record','記録');$('bodyPhoto')?.click()}
+function openSimpleCoach(){openPage('chat','相談');$('coachQuestion')?.focus()}
+function renderSimpleAdviceButtons(s=sets()){
+ const box=$('simpleAdviceButtons');if(!box)return;const choices=[];
+ if(s.adviceFood)choices.push(['今日、何を食べればいい？','今日の保存記録から、次の食事で何を選べばよいか1つ提案して。']);
+ if(s.adviceSupplement)choices.push(['プロテイン・サプリを相談','今の食事記録と運動量から、プロテインやサプリが必要か、まず食品で補えるかを含めて答えて。']);
+ if(s.adviceExercise)choices.push(['今日の運動を相談','直近の運動、睡眠、疲労、体調から、今日は運動か休養かを提案して。']);
+ if(s.adviceSleep)choices.push(['睡眠・休養を相談','直近の睡眠と疲労の記録から、今日優先する改善を1つ提案して。']);
+ box.replaceChildren(...choices.map(([label,q])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>{openSimpleCoach();askQuickCoach(q)};return b}));
+ if(!choices.length){const p=document.createElement('p');p.className='muted';p.textContent='設定で欲しいアドバイスを選べます。';box.append(p)}
+}
 function nutritionLabel(name,code,mode=displayModeKey(sets().displayMode)){return mode==='beginner'?name:`${name}（${code}）`}
 function applyDisplayMode(value=sets().displayMode){
  const mode=displayModeKey(value),labels=[['proteinTotalLabel','たんぱく質','P'],['fatTotalLabel','脂質','F'],['carbsTotalLabel','炭水化物','C']];
@@ -857,7 +892,7 @@ function applyDisplayMode(value=sets().displayMode){
  document.querySelectorAll('[data-nutrition-name]').forEach(el=>{el.textContent=nutritionLabel(el.dataset.nutritionName,el.dataset.nutritionCode,mode)+'g'});
  if($('displayMode'))$('displayMode').value=mode;
 }
-function coachStyledQuestion(question,s=sets()){const info=coachStyleInfo(s),prefix=`【希望する話し方】${info.instruction}\n【相談】`;return prefix+String(question||'').slice(0,Math.max(0,500-prefix.length))}
+function coachStyledQuestion(question,s=sets()){const info=coachStyleInfo(s),topics=adviceTopics(s),scope=topics.length?`【希望する助言分野】${topics.join('・')}。質問に関係する分野だけ答えてください。\n`:'' ,prefix=`【希望する話し方】${info.instruction}\n${scope}【相談】`;return prefix+String(question||'').slice(0,Math.max(0,500-prefix.length))}
 function coachSummaryLine(r,s,mode){const style=coachStyleKey(s),action=todayActionText(r,s);if(style==='gentle')return `AIコーチ（やさしい応援）：ここまで記録できたことが前進です。${action}`;if(style==='strict')return `AIコーチ（厳しいトレーナー）：記録を基準に率直に判断します。${action}`;return `AIコーチ（相棒）：今日も一緒に整理します。${action}`}
 function renderCoachStyleDescription(){const s=sets(),key=$('coachStyle')&&COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:coachStyleKey(s),info=COACH_STYLES[key];if($('coachStyleDescription'))$('coachStyleDescription').textContent=info.description;if($('chatCoachStyle'))$('chatCoachStyle').textContent=info.label+'で回答します';if($('homeCoachStyle'))$('homeCoachStyle').textContent=info.label}
 function coachStatus(message,ok=true){const el=$('coachConsultStatus');if(!el)return;el.textContent=message;el.className='status '+(ok?'ok':'ng')}
@@ -1094,6 +1129,25 @@ async function analyzeMeal(id,label){
     status.style.color='var(--bad)'
   }
   finally{btn.disabled=false;btn.textContent='AIで写真を解析して追加'}
+}
+function applyBodyCompositionAnalysis(result){
+ const values=result&&result.values||{},set=(id,value)=>{if(value!==null&&value!==undefined&&Number.isFinite(+value))$(id).value=+value};
+ set('weight',values.weight_kg);set('fat',values.body_fat_percent);set('muscle',values.muscle_mass_kg??values.skeletal_muscle_mass_kg);set('visceralFat',values.visceral_fat_level);set('bmi',values.bmi);set('basalMetabolism',values.basal_metabolism_kcal);set('totalEnergy',values.total_energy_kcal);
+ if(values.body_fat_percent!==null&&values.body_fat_percent!==undefined)$('fatType').value='fatPercent';
+ if(values.skeletal_muscle_mass_kg!==null&&values.skeletal_muscle_mass_kg!==undefined)$('muscleType').value='skeletalMuscleMass';else if(values.muscle_mass_kg!==null&&values.muscle_mass_kg!==undefined)$('muscleType').value='muscleMass';
+ scheduleDraftSave();renderExerciseEstimate()
+}
+async function analyzeBodyComposition(){
+ const file=$('bodyPhoto').files&&$('bodyPhoto').files[0],btn=$('bodyAnalyze'),status=$('bodyAnalysisStatus');
+ if(!file){status.textContent='先に体重計・体組成計の写真を選んでください。';status.style.color='var(--bad)';return}
+ btn.disabled=true;btn.textContent='読み取り中…';status.textContent='写真に表示された数値を確認しています。';status.style.color='var(--muted)';
+ try{
+  if(!cloudClient||!cloudUser)throw new Error('写真の読み取りにはログインが必要です。設定からログインしてください。');
+  const {data,error}=await cloudClient.auth.getSession();if(error||!data.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
+  const image=await imageForAnalysis(file),response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${data.session.access_token}`},body:JSON.stringify({kind:'body_composition',image})});
+  const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'数値を読み取れませんでした。');applyBodyCompositionAnalysis(body);
+  const count=Object.values(body.values||{}).filter(v=>v!==null&&v!==undefined).length;status.textContent=`AIが${count}項目を読み取りました（確信度 ${body.confidence}）。写真の数値と合っているか確認して保存してください。`;status.style.color='var(--good)';
+ }catch(error){status.textContent=error.message||'数値を読み取れませんでした。';status.style.color='var(--bad)'}finally{btn.disabled=false;btn.textContent='AIで数値を読み取る'}
 }
 renderMealEntries();
 pv($('bodyPhoto'),$('bodyPreview'),$('bodyClear'));
@@ -1402,7 +1456,7 @@ function calculateRecommendations(){
  out.textContent=`${latest?'最新体重 '+weight.toFixed(1)+'kg':'開始体重 '+weight.toFixed(1)+'kg'}を使用｜推定基礎代謝 ${Math.round(bmr)}kcal｜推定1日消費 ${tdee}kcal｜目標摂取 ${calorie}kcal｜目標P ${protein}g`;out.style.color='var(--good)'
 }
 function saveSettings(){
- const existing=sets(),s={...existing,displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,displayMode:displayModeKey($('displayMode').value),coachStyle:COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:'partner',reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
+ const existing=sets(),s={...existing,displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,displayMode:displayModeKey($('displayMode').value),usageMode:usageModeKey($('usageMode').value),adviceFood:$('adviceFood').checked,adviceSleep:$('adviceSleep').checked,adviceSupplement:$('adviceSupplement').checked,adviceExercise:$('adviceExercise').checked,coachStyle:COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:'partner',reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
  const legacyAllowed=recs().length>0&&!existing.age;
  if(!s.displayName||!s.startDate||!s.startWeight||!s.baseBurn||!s.goalWeight)return alert('名前・開始日・開始体重・消費kcal・目標体重を入力してください。');
  if(!legacyAllowed&&(!s.age||!s.sex||!s.heightCm||!s.activityLevel))return alert('年齢・性別・身長・活動量を入力し、自動計算してください。');
@@ -1412,7 +1466,7 @@ function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=
 function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings')renderAppDiagnostics()}
 
 function update(){
- const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('displayMode').value=displayModeKey(s.displayMode);$('coachStyle').value=coachStyleKey(s);$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';renderCoachStyleDescription();applyDisplayMode(s.displayMode);
+ const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('displayMode').value=displayModeKey(s.displayMode);$('usageMode').value=usageModeKey(s.usageMode);$('adviceFood').checked=!!s.adviceFood;$('adviceSleep').checked=!!s.adviceSleep;$('adviceSupplement').checked=!!s.adviceSupplement;$('adviceExercise').checked=!!s.adviceExercise;$('coachStyle').value=coachStyleKey(s);$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';renderCoachStyleDescription();applyDisplayMode(s.displayMode);applyUsageMode(s.usageMode);
  renderConnectivity();
  renderFirstUseProgress(s);
   $('onboardingNotice').style.display=bootStorageReady&&!profileComplete(s)&&!recs().length?'block':'none';
@@ -1422,6 +1476,7 @@ function update(){
  const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];
  if(last){const fm=fatMeta(last),mm=muscleMeta(last);$('cw').textContent=(+last.weight).toFixed(1);$('cf').textContent=last.fat??'--';$('cfLabel').textContent=fm.label;$('cfUnit').textContent=' '+fm.unit;$('cm').textContent=last.muscle??'--';$('cmLabel').textContent=mm.label;$('cmUnit').textContent=' '+mm.unit;$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+' kg';$('loss').className=(last.weight-s.startWeight)<0?'good':'warn'}
  const t=a.find(r=>r.date===today())||a.slice(-1)[0];const prev=t?prevRecord(a,t,'weight'):null;
+ if($('simpleCoachSpeech'))$('simpleCoachSpeech').textContent=t?todayActionText(t,s):'写真か相談から、今日できることを一緒に決めましょう。';
  if(t){let rest=isRestDay(t),b=estimatedBalance(t,s),burn=estimatedDailyBurn(t,s);$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('balanceBasis').textContent=`摂取 − 推定1日消費 ${burn}kcal（${s.autoBurn!==false&&+t.weight?'記録体重から自動計算':'固定設定'}）`;$('tw').textContent=rest?'休養日 · 運動0分':exerciseItems(t).join(' · ')||'まだ記録なし';$('coach').innerHTML=coachText(t,s,last,prev);$('diary').innerHTML=diaryText(t,s,last,prev)}
  updateStatTiles(a,s,t,prev);
  renderAnimeCoach(t,s);
