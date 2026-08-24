@@ -23,6 +23,18 @@ const schema = {
   }
 };
 
+const bodyCompositionSchema = {
+  type: 'object', additionalProperties: false, required: ['values', 'confidence', 'uncertainties'],
+  properties: {
+    values: { type: 'object', additionalProperties: false,
+      required: ['weight_kg', 'body_fat_percent', 'muscle_mass_kg', 'skeletal_muscle_mass_kg', 'visceral_fat_level', 'bmi', 'basal_metabolism_kcal', 'total_energy_kcal'],
+      properties: Object.fromEntries(['weight_kg', 'body_fat_percent', 'muscle_mass_kg', 'skeletal_muscle_mass_kg', 'visceral_fat_level', 'bmi', 'basal_metabolism_kcal', 'total_energy_kcal'].map(key => [key, { type: ['number', 'null'] }]))
+    },
+    confidence: { type: 'string', enum: ['高', '中', '低'] },
+    uncertainties: { type: 'array', items: { type: 'string' } }
+  }
+};
+
 function cors(origin) {
   return { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Vary': 'Origin', 'Content-Type': 'application/json; charset=utf-8' };
@@ -121,6 +133,19 @@ export default {
         return json(result.status === 200 ? { answer: result.answer } : { error: result.error, reason: result.reason }, result.status, origin);
       }
       if (!body.image || !/^data:image\/(jpeg|png|webp);base64,/.test(body.image)) return json({ error: '対応する写真データがありません。' }, 400, origin);
+      if (body.kind === 'body_composition') {
+        stage = 'body_composition_fetch';
+        const { response, data } = await openAIResponse(env, {
+          model: 'gpt-5-mini', store: false, reasoning: { effort: 'low' },
+          instructions: 'あなたは体重計・体組成計の表示数値を転記する日本語OCRです。写真に明確に表示されている数値だけを読み取り、推測・計算・補完をしないでください。項目名と単位を照合し、表示がない、判別できない、単位が不明な項目はnullにしてください。筋肉量と骨格筋量を混同しないでください。写真が体重計・体組成計でない場合は全項目をnullにしてください。',
+          input: [{ role: 'user', content: [{ type: 'input_text', text: 'この体重計・体組成計の写真から、表示されている項目だけを読み取ってください。' }, { type: 'input_image', image_url: body.image, detail: 'high' }] }],
+          text: { format: { type: 'json_schema', name: 'body_composition', strict: true, schema: bodyCompositionSchema } }, max_output_tokens: 1200
+        });
+        if (!data || !response.ok) return json({ error: '体重計写真を読み取れませんでした。時間を置いて再度お試しください。', reason: 'body_composition_error' }, 502, origin);
+        if (data.status === 'incomplete') return json({ error: '体重計写真の読み取りが完了しませんでした。もう一度お試しください。', reason: data.incomplete_details?.reason || 'incomplete' }, 502, origin);
+        const output = outputText(data);if (!output) return json({ error: '写真から数値を確認できませんでした。', reason: 'no_output' }, 422, origin);
+        try { return json(JSON.parse(output), 200, origin); } catch { return json({ error: '読み取り結果を処理できませんでした。もう一度お試しください。', reason: 'invalid_json' }, 502, origin); }
+      }
       stage = 'openai_fetch';
       const { response, data } = await openAIResponse(env, {
           model: 'gpt-5-mini', store: false,
