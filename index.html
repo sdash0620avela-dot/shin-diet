@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v20.0 かんたん・しっかり記録版</title>
+<title>AI Diet v20.1 現実的な平均推定版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -271,7 +271,7 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v20.0 かんたん・しっかり記録版</div>
+  <div class="version-pill">v20.1 現実的な平均推定版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -400,11 +400,11 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
     <div class="grid">
       <div><div class="label">体重 kg</div><input id="weight" type="number" step="0.1" inputmode="decimal" placeholder="127.0"></div>
       <div><div class="label">体脂肪データ</div><select id="fatType"><option value="fatPercent">体脂肪率（%）</option><option value="fatMass">体脂肪量（kg）</option></select><input id="fat" type="number" step="0.1" inputmode="decimal" placeholder="30.0" style="margin-top:8px"></div>
-      <div><div class="label">筋肉データ</div><select id="muscleType"><option value="muscleMass">筋肉量（kg）</option><option value="skeletalMuscleMass">骨格筋量（kg）</option></select><input id="muscle" type="number" step="0.1" inputmode="decimal" placeholder="47.1" style="margin-top:8px"></div>
+      <div><div class="label">筋肉データ</div><select id="muscleType"><option value="muscleMass">筋肉量（kg）</option><option value="skeletalMuscleMass">骨格筋量（kg）</option></select><input id="muscle" type="number" step="0.1" inputmode="decimal" placeholder="47.1" style="margin-top:8px"><div id="muscleTypeGuide" class="small" style="margin-top:6px">写真に項目名が写っていれば自動で選択します。</div></div>
       <div><div class="label">内臓脂肪レベル</div><input id="visceralFat" type="number" step="1" inputmode="numeric" placeholder="14"></div>
       <div><div class="label">BMI</div><input id="bmi" type="number" step="0.1" inputmode="decimal" placeholder="34.7"></div>
-      <div><div class="label">基礎代謝 kcal</div><input id="basalMetabolism" type="number" step="1" inputmode="numeric" placeholder="2179"></div>
-      <div><div class="label">総エネルギー kcal</div><input id="totalEnergy" type="number" step="1" inputmode="numeric" placeholder="3486"></div>
+      <div><div class="label">基礎代謝 kcal</div><input id="basalMetabolism" type="number" step="1" inputmode="numeric" placeholder="2179"><div class="small" style="margin-top:6px">安静にしていても使うエネルギー</div></div>
+      <div><div class="label">1日の総消費エネルギー kcal</div><input id="totalEnergy" type="number" step="1" inputmode="numeric" placeholder="3486"><div class="small" style="margin-top:6px">生活や運動を含めて1日に使う目安</div></div>
       <div><div class="label">睡眠</div><select id="sleep"><option value="">未入力</option><option>★★★★★</option><option>★★★★☆</option><option>★★★☆☆</option><option>★★☆☆☆</option><option>★☆☆☆☆</option></select></div>
     </div>
     <div class="label">身体サイズ（任意・cm）</div>
@@ -664,7 +664,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='20.0';
+const APP_VERSION='20.1';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
@@ -1134,7 +1134,10 @@ function applyBodyCompositionAnalysis(result){
  const values=result&&result.values||{},set=(id,value)=>{if(value!==null&&value!==undefined&&Number.isFinite(+value))$(id).value=+value};
  set('weight',values.weight_kg);set('fat',values.body_fat_percent);set('muscle',values.muscle_mass_kg??values.skeletal_muscle_mass_kg);set('visceralFat',values.visceral_fat_level);set('bmi',values.bmi);set('basalMetabolism',values.basal_metabolism_kcal);set('totalEnergy',values.total_energy_kcal);
  if(values.body_fat_percent!==null&&values.body_fat_percent!==undefined)$('fatType').value='fatPercent';
- if(values.skeletal_muscle_mass_kg!==null&&values.skeletal_muscle_mass_kg!==undefined)$('muscleType').value='skeletalMuscleMass';else if(values.muscle_mass_kg!==null&&values.muscle_mass_kg!==undefined)$('muscleType').value='muscleMass';
+ const muscleGuide=$('muscleTypeGuide');
+ if(values.skeletal_muscle_mass_kg!==null&&values.skeletal_muscle_mass_kg!==undefined){$('muscleType').value='skeletalMuscleMass';muscleGuide.textContent='写真から「骨格筋量」と確認して自動選択しました。';muscleGuide.style.color='var(--good)'}
+ else if(values.muscle_mass_kg!==null&&values.muscle_mass_kg!==undefined){$('muscleType').value='muscleMass';muscleGuide.textContent='写真から「筋肉量」と確認して自動選択しました。';muscleGuide.style.color='var(--good)'}
+ else{muscleGuide.textContent='写真で項目名を確認できませんでした。数値を入れる場合は「筋肉量／骨格筋量」を選んでください。';muscleGuide.style.color='var(--warn)'}
  scheduleDraftSave();renderExerciseEstimate()
 }
 async function analyzeBodyComposition(){

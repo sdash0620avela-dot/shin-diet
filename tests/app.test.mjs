@@ -520,7 +520,6 @@ test('v19.4 reminder appears only after its time when today is incomplete', () =
 
 test('v19.5 diagnostics reports actual app and storage state without changing data', () => {
   assert.match(html,/id="appDiagnostics"/);
-  assert.match(html,/const APP_VERSION='20\.0'/);
   assert.match(html,/function appDiagnosticState\(\)/);
   assert.match(html,/navigator\.storage\?\.persisted/);
   assert.match(html,/navigator\.storage\?\.estimate/);
@@ -673,7 +672,6 @@ test('v19.18 hides onboarding until storage is resolved and adds clear nutrition
 });
 
 test('v19.19 lets one coach use three consistent personalities in a warmer companion UI', () => {
-  assert.match(html,/const APP_VERSION='20\.0'/);
   assert.match(html,/id="coachStyle"/);
   assert.match(html,/相棒タイプ（標準）/);
   assert.match(html,/やさしい応援タイプ/);
@@ -716,9 +714,6 @@ test('v20.0 provides simple and pro modes with selectable advice and shared reco
   assert.match(html,/function adviceTopics\(s=sets\(\)\)/);
   assert.match(html,/希望する助言分野/);
   assert.match(html,/adviceSupplement:\$\('adviceSupplement'\)\.checked/);
-  assert.match(serviceWorker,/shin-diet-v20-simple-pro-advice/);
-  assert.match(serviceWorker,/version:'20\.0'/);
-  assert.match(manifest,/v20\.0 かんたん・しっかり記録版/);
 });
 
 test('v20.0 reads only visible body-composition values and requires confirmation before save', () => {
@@ -732,6 +727,27 @@ test('v20.0 reads only visible body-composition values and requires confirmation
   assert.match(worker,/推測・計算・補完をしないでください/);
   assert.match(worker,/筋肉量と骨格筋量を混同しないでください/);
   assert.match(worker,/detail: 'high'/);
+});
+
+test('v20.1 distinguishes muscle type and energy fields after photo reading', () => {
+  assert.match(html,/id="muscleTypeGuide"/);
+  assert.match(html,/写真から「骨格筋量」と確認して自動選択しました/);
+  assert.match(html,/写真から「筋肉量」と確認して自動選択しました/);
+  assert.match(html,/写真で項目名を確認できませんでした/);
+  assert.match(html,/安静にしていても使うエネルギー/);
+  assert.match(html,/1日の総消費エネルギー kcal/);
+  assert.match(html,/生活や運動を含めて1日に使う目安/);
+});
+
+test('v20.1 meal analysis uses a realistic average without low or high bias', () => {
+  assert.match(worker,/低めにも高めにも寄せない最も現実的な平均値/);
+  assert.match(worker,/通常含まれる平均的な油・調味料分を計上/);
+  assert.match(worker,/不明だからゼロにしたり安全側として過剰に加算したりしない/);
+  assert.doesNotMatch(worker,/過大評価を避け/);
+  assert.match(html,/const APP_VERSION='20\.1'/);
+  assert.match(serviceWorker,/shin-diet-v20-1-realistic-average/);
+  assert.match(serviceWorker,/version:'20\.1'/);
+  assert.match(manifest,/v20\.1 現実的な平均推定版/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {

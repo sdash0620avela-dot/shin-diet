@@ -150,7 +150,7 @@ export default {
       const { response, data } = await openAIResponse(env, {
           model: 'gpt-5-mini', store: false,
           reasoning: { effort: 'low' },
-          instructions: 'あなたは日本の食事記録用栄養推定器です。写真に見える食品を一品ずつ分け、各品の一般的な中央値の量と栄養値を推定してください。過大評価を避け、推定範囲の最大値ではなく最も妥当な中央寄りの値を使います。ユーザーの補足に個数・g数・食べた割合・食べていない品が書かれている場合は、写真より補足を優先してください。base_amountは補正計算の基準となる数値、unitは個・g・杯・切れ等の短い単位にします。totalはitemsの合計と一致させてください。見えない油・調味料・重量を断定せずuncertaintiesに日本語で記載してください。食事でない画像ならitemsを空、全数値を0、confidenceを低にしてください。',
+          instructions: 'あなたは日本の食事記録用栄養推定器です。写真に見える食品を一品ずつ分け、写真から判断できる量と日本で一般的な調理法を基に、低めにも高めにも寄せない最も現実的な平均値を推定してください。揚げ物・炒め物・ドレッシング等は、その料理に通常含まれる平均的な油・調味料分を計上し、不明だからゼロにしたり安全側として過剰に加算したりしないでください。量を判別できない場合は一般的な1人前の中央値を使います。ユーザーの補足に個数・g数・食べた割合・食べていない品が書かれている場合は、写真より補足を優先してください。base_amountは補正計算の基準となる数値、unitは個・g・杯・切れ等の短い単位にします。totalはitemsの合計と一致させてください。写真だけでは確定できない量・油・調味料はuncertaintiesに日本語で記載してください。食事でない画像ならitemsを空、全数値を0、confidenceを低にしてください。',
           input: [{ role: 'user', content: [
             { type: 'input_text', text: `${String(body.meal_type || '食事')}の写真です。料理名、推定量、各料理のkcal・P・F・Cと合計を推定してください。実際に食べた量の補足：${String(body.portion_note || '補足なし').slice(0,500)}` },
             { type: 'input_image', image_url: body.image, detail: 'low' }
