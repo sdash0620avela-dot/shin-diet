@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v20.1 現実的な平均推定版</title>
+<title>AI Diet v20.2 かんたんモード完成版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -252,6 +252,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 .nutrition-guide{margin:10px 0 14px}.nutrition-guide summary{cursor:pointer;color:var(--accent);font-weight:750}.nutrition-guide-grid{display:grid;gap:8px;margin-top:10px}.nutrition-guide-grid div{padding:10px 12px;border-radius:12px;background:#F8FAFF;border:1px solid rgba(0,122,255,.13);font-size:13px;line-height:1.55}
 .record-reminder{display:none;border-color:rgba(255,149,0,.38);background:#FFF9E6}.record-reminder.show{display:block}.record-reminder-actions{display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:12px}.record-reminder-actions button{margin:0}.record-reminder-actions .dismiss{background:#fff;color:var(--ink2);border:1px solid var(--line);box-shadow:none}
 .simple-home{display:none}.simple-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.simple-action{min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}.simple-action span{font-size:30px}.simple-coach-actions{display:grid;gap:8px;margin-top:12px}.simple-coach-actions button{margin:0;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line)}
+.analysis-advice{display:none;margin-top:12px;padding:13px 14px;border-radius:14px;background:#F8FAFF;border:1px solid rgba(0,122,255,.18);line-height:1.65;color:var(--ink2)}.analysis-advice.show{display:block}.analysis-advice b{display:block;color:var(--ink);margin-bottom:4px}.analysis-advice button{margin-top:10px;background:#fff;color:var(--accent);border:1px solid rgba(0,122,255,.24);box-shadow:none}
 body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="simple"] #detailedHome{display:none}body[data-usage-mode="simple"] .pro-tab{display:none}body[data-usage-mode="simple"] .tabs{grid-template-columns:repeat(4,1fr)}
 @keyframes coachCelebrate{0%{transform:scale(.88) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
 
@@ -271,7 +272,7 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v20.1 現実的な平均推定版</div>
+  <div class="version-pill">v20.2 かんたんモード完成版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -424,6 +425,7 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
     <img id="bodyPreview" class="photo" alt="体組成プレビュー">
     <button id="bodyAnalyze" type="button" class="analyzeBtn" onclick="analyzeBodyComposition()">AIで数値を読み取る</button>
     <div id="bodyAnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div>
+    <div id="bodyAnalysisAdvice" class="analysis-advice" role="status" aria-live="polite"></div>
     <button id="bodyClear" type="button" class="sub photoClear" onclick="clearPhoto('bodyPhoto','bodyPreview','bodyClear')">体組成写真を消す</button>
   </div>
 
@@ -510,13 +512,7 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
     <div class="card-title">AIコーチに相談</div>
     <div class="coach-chat-intro"><div class="coach-avatar-mini" role="img" aria-label="AIコーチ"></div><div><b id="chatCoachStyle">相棒タイプで回答します</b><span class="small">選んだ話し方で、記録を根拠に一緒に考えます。</span></div></div>
     <p class="muted">本人の保存記録（直近最大14日）を踏まえて、今日の最優先を一緒に考えます。</p>
-    <div class="quick-coach">
-      <button type="button" onclick="askQuickCoach('今日の食事で最優先して気をつけることは？')">今日の食事</button>
-      <button type="button" onclick="askQuickCoach('直近の筋トレ記録、ローテーション、睡眠、疲労、体調と痛みを確認し、今日の筋トレ候補を具体的に提案して。未確認の店舗や別マシンの重量は流用しないでください。')">今日の筋トレ</button>
-      <button type="button" onclick="askQuickCoach('今の記録は停滞と考えるべき？')">停滞してる？</button>
-      <button type="button" onclick="askQuickCoach('今日は運動を増やすべき？それとも休養を優先すべき？')">運動か休養か</button>
-      <button type="button" onclick="askQuickCoach('今週の記録から改善点を1つ教えて')">今週の改善点</button>
-    </div>
+    <div id="coachQuickButtons" class="quick-coach"></div>
     <div class="label">相談内容（450文字以内）</div>
     <textarea id="coachQuestion" class="coach-question" maxlength="450" placeholder="例：体重が3日動かないけど、食事をさらに減らすべき？"></textarea>
     <button id="askCoachBtn" type="button" onclick="askCoach()">記録を踏まえて相談する</button>
@@ -543,6 +539,14 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
         <li>右上の「追加」を押す</li>
       </ol>
       <p style="margin-bottom:0">追加はこのiPhoneで最初の1回だけです。ログインや更新のたびに、古いアイコンを消したり追加し直したりする必要はありません。</p>
+    </div></details>
+    <details class="coach-detail"><summary>Androidで開く・ホーム画面へ追加する手順</summary><div class="coach-detail-body small">
+      <ol style="line-height:1.9;padding-left:22px;margin:0">
+        <li>LINEなどの中ではなく、Google ChromeでこのURLを開く</li>
+        <li>Chrome右上の「︙」を押す</li>
+        <li>「アプリをインストール」または「ホーム画面に追加」を選ぶ</li>
+      </ol>
+      <p style="margin-bottom:0">開けない場合は、Chrome更新 → Wi-Fiとモバイル通信の切替 → シークレットタブの順で確認してください。VPN・広告ブロック・プライベートDNSがある場合は一時停止も確認します。</p>
     </div></details>
     <button type="button" class="sub" style="margin-top:14px" onclick="shareApp()">このアプリを友達に送る</button>
     <div id="shareAppStatus" class="small" role="status" aria-live="polite"></div>
@@ -664,7 +668,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='20.1';
+const APP_VERSION='20.2';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
@@ -779,7 +783,7 @@ function authErrorMessage(error){
  if(code==='bad_jwt')return 'ログイン情報を確認できません。アプリを開き直してください。';
  if(code==='signup_disabled')return '新しい利用者の登録が停止されています。管理者へお問い合わせください。';
  if(code==='otp_disabled')return 'メールコードログインが停止されています。管理者へお問い合わせください。';
- if(/failed to fetch|network|load failed/i.test(msg))return '通信できませんでした。電波やWi-Fiを確認して再度お試しください。';
+ if(/failed to fetch|network|load failed/i.test(msg))return '通信できませんでした。AndroidはLINE内ではなくChromeで開き、Wi-Fiとモバイル通信を切り替えて再度お試しください。VPN・広告ブロック・プライベートDNSも確認してください。';
  return '処理を完了できませんでした。時間を置いて再度お試しください。';
 }
 function startLoginCooldown(seconds=60){
@@ -868,7 +872,7 @@ function coachStyleInfo(s=sets()){return COACH_STYLES[coachStyleKey(s)]}
 function displayModeKey(value){return value==='beginner'?'beginner':'detailed'}
 function usageModeKey(value){return value==='simple'?'simple':'pro'}
 function adviceTopics(s=sets()){return [['adviceFood','食事'],['adviceSupplement','プロテイン・サプリ'],['adviceExercise','運動・筋トレ'],['adviceSleep','睡眠・休養']].filter(([key])=>!!s[key]).map(([,label])=>label)}
-function applyUsageMode(value=sets().usageMode){const mode=usageModeKey(value);document.body.dataset.usageMode=mode;if($('usageMode'))$('usageMode').value=mode;renderSimpleAdviceButtons()}
+function applyUsageMode(value=sets().usageMode){const mode=usageModeKey(value);document.body.dataset.usageMode=mode;if($('usageMode'))$('usageMode').value=mode;renderSimpleAdviceButtons();renderCoachQuickButtons()}
 function openPage(id,label){const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes(label));if(tab)show(id,tab)}
 function openSimpleMeal(){openPage('record','記録');$('breakfastPhoto')?.click()}
 function openSimpleBody(){openPage('record','記録');$('bodyPhoto')?.click()}
@@ -881,6 +885,16 @@ function renderSimpleAdviceButtons(s=sets()){
  if(s.adviceSleep)choices.push(['睡眠・休養を相談','直近の睡眠と疲労の記録から、今日優先する改善を1つ提案して。']);
  box.replaceChildren(...choices.map(([label,q])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>{openSimpleCoach();askQuickCoach(q)};return b}));
  if(!choices.length){const p=document.createElement('p');p.className='muted';p.textContent='設定で欲しいアドバイスを選べます。';box.append(p)}
+}
+function renderCoachQuickButtons(s=sets()){
+ const box=$('coachQuickButtons');if(!box)return;const choices=[];
+ if(s.adviceFood)choices.push(['今日の食事','今日の保存記録から、次の食事で何を選べばよいか1つ提案して。']);
+ if(s.adviceSupplement)choices.push(['プロテインは必要？','今の食事記録と運動量から、プロテインやサプリが必要か、食品で補えるかを先に確認して答えて。']);
+ if(s.adviceExercise)choices.push(['今日の筋トレ','直近の筋トレ、睡眠、疲労、体調と痛みから、今日の運動候補を具体的に提案して。']);
+ if(s.adviceSleep)choices.push(['運動か休養か','直近の睡眠と疲労、運動記録から、今日は運動か休養かを提案して。']);
+ if(s.adviceFood)choices.push(['外食では何を選ぶ？','今日の保存記録と残りの目標から、外食で選ぶ料理を1つ提案して。']);
+ box.replaceChildren(...choices.map(([label,q])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>askQuickCoach(q);return b}));
+ if(!choices.length){const p=document.createElement('p');p.className='muted';p.textContent='設定で欲しいアドバイスを選ぶと、質問例が表示されます。';box.append(p)}
 }
 function nutritionLabel(name,code,mode=displayModeKey(sets().displayMode)){return mode==='beginner'?name:`${name}（${code}）`}
 function applyDisplayMode(value=sets().displayMode){
@@ -969,7 +983,7 @@ $('strength').addEventListener('input',()=>{if(isRestDay({strength:$('strength')
 function fillMeal(id,text){const el=$(id);if(el)el.value=text}
 function renderMealEntries(){
   const mode=displayModeKey(sets().displayMode);
-  $('mealEntries').innerHTML=mealTypes.map(([id,label],index)=>`<details id="${id}Block" class="mealBlock" ${index===0?'open':''}><summary><span>${label}</span><span id="${id}Summary" class="mealDone">未入力</span></summary><div class="mealBody"><button type="button" class="sub" onclick="copyPreviousMeal('${id}','${label}')">前回の${label}を追加</button><div id="${id}Favorites" class="meal-favorites"></div><div id="${id}AddGuide" class="analysisStatus">保存履歴と写真解析は、この食事へ順番に追加されます。</div><div class="label">${label}写真（撮影・保存済み写真・フォルダーから選択できます）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><textarea id="${id}PortionNote" class="portionNote" placeholder="任意：ご飯は半分、唐揚げ3個、味噌汁は飲まない など"></textarea><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析して追加</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div id="${id}PortionEditor" class="portionEditor"></div><div class="label">内容（確認・修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option><option value="mixed">本人入力＋AI推定</option></select></div><div><div class="label">カロリー kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label" data-nutrition-name="たんぱく質" data-nutrition-code="P">${nutritionLabel('たんぱく質','P',mode)}g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label" data-nutrition-name="脂質" data-nutrition-code="F">${nutritionLabel('脂質','F',mode)}g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label" data-nutrition-name="炭水化物" data-nutrition-code="C">${nutritionLabel('炭水化物','C',mode)}g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div></details>`).join('');
+  $('mealEntries').innerHTML=mealTypes.map(([id,label],index)=>`<details id="${id}Block" class="mealBlock" ${index===0?'open':''}><summary><span>${label}</span><span id="${id}Summary" class="mealDone">未入力</span></summary><div class="mealBody"><button type="button" class="sub" onclick="copyPreviousMeal('${id}','${label}')">前回の${label}を追加</button><div id="${id}Favorites" class="meal-favorites"></div><div id="${id}AddGuide" class="analysisStatus">保存履歴と写真解析は、この食事へ順番に追加されます。</div><div class="label">${label}写真（撮影・保存済み写真・フォルダーから選択できます）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><textarea id="${id}PortionNote" class="portionNote" placeholder="任意：ご飯は半分、唐揚げ3個、味噌汁は飲まない など"></textarea><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析して追加</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><div id="${id}AnalysisAdvice" class="analysis-advice" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div id="${id}PortionEditor" class="portionEditor"></div><div class="label">内容（確認・修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option><option value="mixed">本人入力＋AI推定</option></select></div><div><div class="label">カロリー kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label" data-nutrition-name="たんぱく質" data-nutrition-code="P">${nutritionLabel('たんぱく質','P',mode)}g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label" data-nutrition-name="脂質" data-nutrition-code="F">${nutritionLabel('脂質','F',mode)}g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label" data-nutrition-name="炭水化物" data-nutrition-code="C">${nutritionLabel('炭水化物','C',mode)}g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div></details>`).join('');
   mealTypes.forEach(([id,label])=>{
    pv($(id+'Photo'),$(id+'Preview'),$(id+'Clear'));[id,...mealSuffixes.slice(1).map(s=>id+s)].forEach(fid=>$(fid).addEventListener('input',()=>{calculateMealTotals();updateMealSummary(id)}));
    const saveFavorite=document.createElement('button');saveFavorite.type='button';saveFavorite.className='sub';saveFavorite.textContent='現在の内容を「いつもの食事」に登録・更新';saveFavorite.addEventListener('click',()=>saveCurrentMealFavorite(id,label));$(id+'Block').querySelector('.mealBody').append(saveFavorite)
@@ -1110,6 +1124,15 @@ function recalculatePortions(id){
 }
 function renderPortionEditor(id,items){mealAnalysisItems[id]=(items||[]).map(x=>({...x,multiplier:1}));$(id+'PortionEditor').innerHTML=mealAnalysisItems[id].map((x,i)=>`<div class="portionItem"><div class="portionItemHead"><b>${esc(x.name)}</b><span>AI推定 ${esc(x.estimated_amount)}</span></div><div class="portionControls"><button type="button" onclick="setPortion('${id}',${i},0)">食べてない</button><button type="button" onclick="setPortion('${id}',${i},0.5)">半分</button><button type="button" onclick="setPortion('${id}',${i},1)">全部</button><input id="${id}PortionAmount${i}" type="number" min="0" step="0.1" value="${esc(x.base_amount)}" oninput="setPortionAmount('${id}',${i},this.value)"><span>${esc(x.unit)}</span></div></div>`).join('')}
 function applyMealAnalysis(id,result){if(!mealAnalysisItems[id])mealAnalysisBase[id]=mealFormEntry(id);renderPortionEditor(id,result.items);recalculatePortions(id)}
+function renderMealAnalysisAdvice(id,result,s=sets()){
+ const el=$(id+'AnalysisAdvice');if(!el)return;el.replaceChildren();el.classList.remove('show');if(!s.adviceFood)return;
+ const kcal=Math.round(+result?.total?.kcal||0),protein=+(result?.total?.protein_g||0).toFixed(1),goal=+s.proteinGoal||120,remaining=Math.max(0,goal-(+$('protein').value||0));
+ const title=document.createElement('b');title.textContent=`確認できた結果：${kcal}kcal・たんぱく質${protein}g`;
+ const message=document.createElement('span');message.textContent=remaining>0?`次は、たんぱく質を補える主菜を1つ選ぶのがおすすめです。今日の目標まで残り約${remaining.toFixed(0)}gです。`:'今日のたんぱく質目標には届いています。次は量を増やすより、記録を保存して1日合計を確認しましょう。';
+ el.append(title,message);
+ if(s.adviceSupplement&&remaining>=25){const b=document.createElement('button');b.type='button';b.textContent='プロテイン・サプリを相談する';b.onclick=()=>{openSimpleCoach();askQuickCoach(`今日の食事記録では、たんぱく質目標まで約${remaining.toFixed(0)}gです。食品で補う方法と、プロテインが必要かを答えて。`)};el.append(b)}
+ el.classList.add('show')
+}
 async function analyzeMeal(id,label){
   const file=$(id+'Photo').files&&$(id+'Photo').files[0],btn=$(id+'Analyze'),status=$(id+'AnalysisStatus');
   if(!file){status.textContent='先に写真を選んでください。';status.style.color='var(--bad)';return}
@@ -1119,7 +1142,7 @@ async function analyzeMeal(id,label){
     if(!cloudClient||!cloudUser)throw new Error('写真解析にはログインが必要です。設定からログインしてください。');
     const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();if(sessionError||!sessionData.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
     const image=await imageForAnalysis(file),res=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({image,meal_type:label,portion_note:$(id+'PortionNote').value.trim()})});
-    const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'解析に失敗しました。');applyMealAnalysis(id,body);
+    const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'解析に失敗しました。');applyMealAnalysis(id,body);renderMealAnalysisAdvice(id,body);
     status.textContent=`AI推定を追加しました（確信度 ${body.confidence}）。保存履歴などの既存内容と栄養値も合計されています。`;status.style.color='var(--good)';
   }catch(e){
     const raw=String(e&&e.message||'');
@@ -1140,6 +1163,15 @@ function applyBodyCompositionAnalysis(result){
  else{muscleGuide.textContent='写真で項目名を確認できませんでした。数値を入れる場合は「筋肉量／骨格筋量」を選んでください。';muscleGuide.style.color='var(--warn)'}
  scheduleDraftSave();renderExerciseEstimate()
 }
+function renderBodyAnalysisAdvice(result){
+ const el=$('bodyAnalysisAdvice');if(!el)return;el.replaceChildren();el.classList.remove('show');
+ const values=result&&result.values||{},weight=+values.weight_kg,prior=recs().filter(r=>r.date<($('date').value||today())&&+r.weight>0).slice(-1)[0],title=document.createElement('b'),message=document.createElement('span');
+ title.textContent='読み取り結果を確認してください';
+ if(Number.isFinite(weight)&&weight>0&&prior){const diff=weight-(+prior.weight);message.textContent=`前回記録より${Math.abs(diff).toFixed(1)}kg${diff<0?'減':'増'}です。ただし1回の変化だけでは脂肪の増減とは判断しません。写真と数値を確認して保存してください。`}
+ else if(Number.isFinite(weight)&&weight>0)message.textContent=`体重${weight.toFixed(1)}kgを読み取りました。写真と数値を確認して保存すると、次回から比較できます。`;
+ else message.textContent='読み取れた項目だけ入力しました。空欄は推測で埋めていません。写真と数値を確認して保存してください。';
+ el.append(title,message);el.classList.add('show')
+}
 async function analyzeBodyComposition(){
  const file=$('bodyPhoto').files&&$('bodyPhoto').files[0],btn=$('bodyAnalyze'),status=$('bodyAnalysisStatus');
  if(!file){status.textContent='先に体重計・体組成計の写真を選んでください。';status.style.color='var(--bad)';return}
@@ -1148,7 +1180,7 @@ async function analyzeBodyComposition(){
   if(!cloudClient||!cloudUser)throw new Error('写真の読み取りにはログインが必要です。設定からログインしてください。');
   const {data,error}=await cloudClient.auth.getSession();if(error||!data.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
   const image=await imageForAnalysis(file),response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${data.session.access_token}`},body:JSON.stringify({kind:'body_composition',image})});
-  const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'数値を読み取れませんでした。');applyBodyCompositionAnalysis(body);
+  const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'数値を読み取れませんでした。');applyBodyCompositionAnalysis(body);renderBodyAnalysisAdvice(body);
   const count=Object.values(body.values||{}).filter(v=>v!==null&&v!==undefined).length;status.textContent=`AIが${count}項目を読み取りました（確信度 ${body.confidence}）。写真の数値と合っているか確認して保存してください。`;status.style.color='var(--good)';
  }catch(error){status.textContent=error.message||'数値を読み取れませんでした。';status.style.color='var(--bad)'}finally{btn.disabled=false;btn.textContent='AIで数値を読み取る'}
 }
