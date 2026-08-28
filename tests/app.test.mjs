@@ -744,10 +744,31 @@ test('v20.1 meal analysis uses a realistic average without low or high bias', ()
   assert.match(worker,/通常含まれる平均的な油・調味料分を計上/);
   assert.match(worker,/不明だからゼロにしたり安全側として過剰に加算したりしない/);
   assert.doesNotMatch(worker,/過大評価を避け/);
-  assert.match(html,/const APP_VERSION='20\.1'/);
-  assert.match(serviceWorker,/shin-diet-v20-1-realistic-average/);
-  assert.match(serviceWorker,/version:'20\.1'/);
-  assert.match(manifest,/v20\.1 現実的な平均推定版/);
+});
+
+test('v20.2 gives immediate photo guidance and respects selected advice topics', () => {
+  assert.match(html,/v20\.2 かんたんモード完成版/);
+  assert.match(html,/id="bodyAnalysisAdvice"/);
+  assert.match(html,/function renderBodyAnalysisAdvice\(result\)/);
+  assert.match(html,/1回の変化だけでは脂肪の増減とは判断しません/);
+  assert.match(html,/AnalysisAdvice" class="analysis-advice"/);
+  assert.match(html,/function renderMealAnalysisAdvice\(id,result,s=sets\(\)\)/);
+  assert.match(html,/if\(!s\.adviceFood\)return/);
+  assert.match(html,/s\.adviceSupplement&&remaining>=25/);
+  assert.match(html,/次は、たんぱく質を補える主菜を1つ/);
+});
+
+test('v20.2 filters quick questions and explains Android recovery', () => {
+  assert.match(html,/id="coachQuickButtons"/);
+  assert.match(html,/function renderCoachQuickButtons\(s=sets\(\)\)/);
+  assert.match(html,/if\(s\.adviceExercise\)choices\.push/);
+  assert.match(html,/Androidで開く・ホーム画面へ追加する手順/);
+  assert.match(html,/LINE内ではなくChromeで開き/);
+  assert.match(html,/プライベートDNS/);
+  assert.match(html,/const APP_VERSION='20\.2'/);
+  assert.match(serviceWorker,/shin-diet-v20-2-simple-complete/);
+  assert.match(serviceWorker,/version:'20\.2'/);
+  assert.match(manifest,/v20\.2 かんたんモード完成版/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
