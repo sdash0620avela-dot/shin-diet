@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v20.2 かんたんモード完成版</title>
+<title>AI Diet v20.3 初心者導線・安定版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -254,6 +254,7 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 .simple-home{display:none}.simple-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.simple-action{min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}.simple-action span{font-size:30px}.simple-coach-actions{display:grid;gap:8px;margin-top:12px}.simple-coach-actions button{margin:0;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line)}
 .analysis-advice{display:none;margin-top:12px;padding:13px 14px;border-radius:14px;background:#F8FAFF;border:1px solid rgba(0,122,255,.18);line-height:1.65;color:var(--ink2)}.analysis-advice.show{display:block}.analysis-advice b{display:block;color:var(--ink);margin-bottom:4px}.analysis-advice button{margin-top:10px;background:#fff;color:var(--accent);border:1px solid rgba(0,122,255,.24);box-shadow:none}
 body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="simple"] #detailedHome{display:none}body[data-usage-mode="simple"] .pro-tab{display:none}body[data-usage-mode="simple"] .tabs{grid-template-columns:repeat(4,1fr)}
+body[data-usage-mode="simple"][data-record-focus="meal"] #bodyCompositionCard,body[data-usage-mode="simple"][data-record-focus="meal"] #exerciseCard{display:none}body[data-usage-mode="simple"][data-record-focus="body"] #mealCard,body[data-usage-mode="simple"][data-record-focus="body"] #exerciseCard{display:none}
 @keyframes coachCelebrate{0%{transform:scale(.88) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
 
 @media(max-width:380px){
@@ -272,7 +273,7 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v20.2 かんたんモード完成版</div>
+  <div class="version-pill">v20.3 初心者導線・安定版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -396,7 +397,7 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
     <p class="small" style="margin-top:10px">日付を変えると、その日の保存済みデータを自動表示。未記入の日は空欄。</p>
   </div>
 
-  <div class="card">
+  <div id="bodyCompositionCard" class="card">
     <div class="section-head"><div class="section-icon">⚖️</div><h3>朝の体組成</h3></div>
     <div class="grid">
       <div><div class="label">体重 kg</div><input id="weight" type="number" step="0.1" inputmode="decimal" placeholder="127.0"></div>
@@ -429,7 +430,7 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
     <button id="bodyClear" type="button" class="sub photoClear" onclick="clearPhoto('bodyPhoto','bodyPreview','bodyClear')">体組成写真を消す</button>
   </div>
 
-  <div class="card">
+  <div id="mealCard" class="card">
     <div class="section-head"><div class="section-icon">🍽</div><h3>食事</h3></div>
     <div class="quick-chips">
       <span id="calorieGoalChip" class="chip" onclick="applyCalorieGoal()">目標kcal</span>
@@ -450,7 +451,7 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
 
   <div class="saveJump"><button type="button" onclick="goToRecordSave()">入力を確認して保存へ進む</button></div>
 
-  <div class="card">
+  <div id="exerciseCard" class="card">
     <div class="section-head"><div class="section-icon">💪</div><h3>運動</h3></div>
     <div class="hint" style="margin-bottom:14px"><b>今日の筋トレをAIに提案してもらう</b><br><span class="small">直近最大14日の記録・ローテーション・睡眠・疲労・痛みを確認して提案します。</span><div class="grid" style="margin-top:10px"><div><div class="label">利用店舗・場所</div><input id="workoutPlace" placeholder="例：本店、塩田店"></div><div><div class="label">使える時間 分</div><input id="workoutPlanMinutes" type="number" inputmode="numeric" placeholder="60"></div></div><div class="label">今日の痛み・希望（任意）</div><textarea id="workoutRequest" placeholder="例：右二頭が痛む。胸をやりたい。混雑を避けたい"></textarea><button type="button" style="margin-top:10px" onclick="openWorkoutConsult()">今日の筋トレを提案</button></div>
     <div class="quick-chips">
@@ -648,7 +649,7 @@ body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="
 
 <nav class="tabs">
   <div class="tab on" onclick="show('home',this)"><span class="tab-icon">🏠</span>ホーム</div>
-  <div class="tab" onclick="show('record',this)"><span class="tab-icon">✏️</span>記録</div>
+  <div class="tab" onclick="setSimpleRecordFocus('all');show('record',this)"><span class="tab-icon">✏️</span>記録</div>
   <div class="tab pro-tab" onclick="show('graph',this)"><span class="tab-icon">📈</span>グラフ</div>
   <div class="tab" onclick="show('chat',this)"><span class="tab-icon">💬</span>相談</div>
   <div class="tab" onclick="show('settings',this)"><span class="tab-icon">⚙️</span>設定</div>
@@ -668,7 +669,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='20.2';
+const APP_VERSION='20.3';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
@@ -874,8 +875,10 @@ function usageModeKey(value){return value==='simple'?'simple':'pro'}
 function adviceTopics(s=sets()){return [['adviceFood','食事'],['adviceSupplement','プロテイン・サプリ'],['adviceExercise','運動・筋トレ'],['adviceSleep','睡眠・休養']].filter(([key])=>!!s[key]).map(([,label])=>label)}
 function applyUsageMode(value=sets().usageMode){const mode=usageModeKey(value);document.body.dataset.usageMode=mode;if($('usageMode'))$('usageMode').value=mode;renderSimpleAdviceButtons();renderCoachQuickButtons()}
 function openPage(id,label){const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes(label));if(tab)show(id,tab)}
-function openSimpleMeal(){openPage('record','記録');$('breakfastPhoto')?.click()}
-function openSimpleBody(){openPage('record','記録');$('bodyPhoto')?.click()}
+function simpleMealSlot(now=new Date()){const hour=now.getHours();return hour<10?'breakfast':hour<15?'lunch':hour<21?'dinner':'snack'}
+function setSimpleRecordFocus(focus='all'){document.body.dataset.recordFocus=['meal','body'].includes(focus)?focus:'all'}
+function openSimpleMeal(){setSimpleRecordFocus('meal');openPage('record','記録');$(simpleMealSlot()+'Photo')?.click()}
+function openSimpleBody(){setSimpleRecordFocus('body');openPage('record','記録');$('bodyPhoto')?.click()}
 function openSimpleCoach(){openPage('chat','相談');$('coachQuestion')?.focus()}
 function renderSimpleAdviceButtons(s=sets()){
  const box=$('simpleAdviceButtons');if(!box)return;const choices=[];
@@ -1131,6 +1134,7 @@ function renderMealAnalysisAdvice(id,result,s=sets()){
  const message=document.createElement('span');message.textContent=remaining>0?`次は、たんぱく質を補える主菜を1つ選ぶのがおすすめです。今日の目標まで残り約${remaining.toFixed(0)}gです。`:'今日のたんぱく質目標には届いています。次は量を増やすより、記録を保存して1日合計を確認しましょう。';
  el.append(title,message);
  if(s.adviceSupplement&&remaining>=25){const b=document.createElement('button');b.type='button';b.textContent='プロテイン・サプリを相談する';b.onclick=()=>{openSimpleCoach();askQuickCoach(`今日の食事記録では、たんぱく質目標まで約${remaining.toFixed(0)}gです。食品で補う方法と、プロテインが必要かを答えて。`)};el.append(b)}
+ const save=document.createElement('button');save.type='button';save.textContent='内容を確認してこの食事を保存';save.onclick=()=>saveSimpleResult(save);el.append(save);
  el.classList.add('show')
 }
 async function analyzeMeal(id,label){
@@ -1170,7 +1174,7 @@ function renderBodyAnalysisAdvice(result){
  if(Number.isFinite(weight)&&weight>0&&prior){const diff=weight-(+prior.weight);message.textContent=`前回記録より${Math.abs(diff).toFixed(1)}kg${diff<0?'減':'増'}です。ただし1回の変化だけでは脂肪の増減とは判断しません。写真と数値を確認して保存してください。`}
  else if(Number.isFinite(weight)&&weight>0)message.textContent=`体重${weight.toFixed(1)}kgを読み取りました。写真と数値を確認して保存すると、次回から比較できます。`;
  else message.textContent='読み取れた項目だけ入力しました。空欄は推測で埋めていません。写真と数値を確認して保存してください。';
- el.append(title,message);el.classList.add('show')
+ const save=document.createElement('button');save.type='button';save.textContent='数値を確認して保存';save.onclick=()=>saveSimpleResult(save);el.append(title,message,save);el.classList.add('show')
 }
 async function analyzeBodyComposition(){
  const file=$('bodyPhoto').files&&$('bodyPhoto').files[0],btn=$('bodyAnalyze'),status=$('bodyAnalysisStatus');
@@ -1466,18 +1470,19 @@ function confirmRecordSave(r,existing){
  messages.push(existing?'この内容で上書きしますか？':'このまま保存しますか？');
  return confirm(messages.join('\n\n'));
 }
-function saveRecord(){
+function saveSimpleResult(button){if(saveRecord(true)){button.textContent='保存しました ✓';button.disabled=true}}
+function saveRecord(skipConfirm=false){
  try{
   clearTimeout(draftTimer);
   if(!$('date').value)throw new Error('日付を入力してください。');
-  const exerciseErrors=exerciseInputErrors();if(exerciseErrors.length){setStatus(exerciseErrors.join(' '),false);return}
+  const exerciseErrors=exerciseInputErrors();if(exerciseErrors.length){setStatus(exerciseErrors.join(' '),false);return false}
   const r=collectRecord(),all=recs(),existing=all.find(x=>x.date===r.date);
-  if(!confirmRecordSave(r,existing))return;
+  if(!skipConfirm&&!confirmRecordSave(r,existing))return false;
   const a=all.filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));removeDeletedRecord(r.date);setRecs(a);removeDraft(r.date);update();
   $('editState').textContent=`${r.date}の記録を保存済みです。再び保存すると上書きします。`;$('editState').className='edit-state on';
   setStatus(existing?'この日の記録を上書きしました ✓':'この日の記録を保存しました ✓',true);
-  $('recordSaveBtn').textContent='保存済み ✓';setTimeout(()=>{$('recordSaveBtn').textContent='この日の記録を上書き'},1800)
- }catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false)}
+  $('recordSaveBtn').textContent='保存済み ✓';setTimeout(()=>{$('recordSaveBtn').textContent='この日の記録を上書き'},1800);return true
+ }catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false);return false}
 }
 function clearForm(){clearTimeout(draftTimer);removeDraft($('date').value);fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';$('cardioType').value='bike';$('cardioIntensity').value='moderate';$('cardio2Type').value='walk';$('cardio2Intensity').value='moderate';$('strengthIntensity').value='moderate';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';renderExerciseEstimate();setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
 function profileComplete(s){return !!(s.displayName&&s.startDate&&s.startWeight&&s.goalWeight&&s.baseBurn&&s.age&&s.sex&&s.heightCm&&s.activityLevel)}
@@ -1911,7 +1916,7 @@ function renderRecordReminder(){
  if(state.show)$('recordReminderText').textContent=`未入力：${state.missing.join('・')}。入力済みの内容は残したまま続きから記録できます。`
 }
 function openTodayRecord(){
- $('date').value=today();const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('記録'));if(tab)show('record',tab);else loadRecordForDate()
+ setSimpleRecordFocus('all');$('date').value=today();const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('記録'));if(tab)show('record',tab);else loadRecordForDate()
 }
 function dismissReminderToday(){localStorage.setItem(storageKey('ReminderDismissed'),today());renderRecordReminder()}
 
