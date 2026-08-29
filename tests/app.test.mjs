@@ -539,7 +539,7 @@ test('v19.6 rest day overrides stale exercise fields and save errors do not jump
   assert.match(html,/if\(rest\)return \[\]/);
   assert.match(html,/\$\('restDay'\)\.addEventListener\('change'/);
   assert.match(html,/\$\('strength'\)\.addEventListener\('input'/);
-  assert.match(html,/const exerciseErrors=exerciseInputErrors\(\);if\(exerciseErrors\.length\)\{setStatus\(exerciseErrors\.join\(' '\),false\);return\}/);
+  assert.match(html,/const exerciseErrors=exerciseInputErrors\(\);if\(exerciseErrors\.length\)\{setStatus\(exerciseErrors\.join\(' '\),false\);return false\}/);
   assert.doesNotMatch(html,/exerciseErrors\.length[^\n]*scrollIntoView/);
 });
 
@@ -747,7 +747,6 @@ test('v20.1 meal analysis uses a realistic average without low or high bias', ()
 });
 
 test('v20.2 gives immediate photo guidance and respects selected advice topics', () => {
-  assert.match(html,/v20\.2 かんたんモード完成版/);
   assert.match(html,/id="bodyAnalysisAdvice"/);
   assert.match(html,/function renderBodyAnalysisAdvice\(result\)/);
   assert.match(html,/1回の変化だけでは脂肪の増減とは判断しません/);
@@ -765,10 +764,26 @@ test('v20.2 filters quick questions and explains Android recovery', () => {
   assert.match(html,/Androidで開く・ホーム画面へ追加する手順/);
   assert.match(html,/LINE内ではなくChromeで開き/);
   assert.match(html,/プライベートDNS/);
-  assert.match(html,/const APP_VERSION='20\.2'/);
-  assert.match(serviceWorker,/shin-diet-v20-2-simple-complete/);
-  assert.match(serviceWorker,/version:'20\.2'/);
-  assert.match(manifest,/v20\.2 かんたんモード完成版/);
+});
+
+test('v20.3 reduces simple photo recording to one confirmed save', () => {
+  assert.match(html,/v20\.3 初心者導線・安定版/);
+  assert.match(html,/function simpleMealSlot\(now=new Date\(\)\)/);
+  assert.match(html,/hour<10\?'breakfast':hour<15\?'lunch':hour<21\?'dinner':'snack'/);
+  assert.match(html,/function setSimpleRecordFocus\(focus='all'\)/);
+  assert.match(html,/data-record-focus="meal"/);
+  assert.match(html,/id="bodyCompositionCard"/);
+  assert.match(html,/id="mealCard"/);
+  assert.match(html,/id="exerciseCard"/);
+  assert.match(html,/内容を確認してこの食事を保存/);
+  assert.match(html,/数値を確認して保存/);
+  assert.match(html,/function saveSimpleResult\(button\)/);
+  assert.match(html,/function saveRecord\(skipConfirm=false\)/);
+  assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
+  assert.match(html,/const APP_VERSION='20\.3'/);
+  assert.match(serviceWorker,/shin-diet-v20-3-beginner-stable/);
+  assert.match(serviceWorker,/version:'20\.3'/);
+  assert.match(manifest,/v20\.3 初心者導線・安定版/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
