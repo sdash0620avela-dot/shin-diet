@@ -1,7 +1,7 @@
-const CACHE='shin-diet-v20-3-beginner-stable';
-const APP_SHELL=['./index.html','./manifest.json','./icon.svg','./supabase-config.js','./assets/ai-coach-sprite.png'];
+const CACHE='shin-diet-v20-4-niece-coach';
+const APP_SHELL=['./index.html','./manifest.json','./icon.svg','./supabase-config.js','./assets/ai-coach-niece-v1.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()).then(()=>self.clients.matchAll({type:'window'})).then(clients=>clients.forEach(client=>client.postMessage({type:'APP_UPDATED',version:'20.3'})))));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()).then(()=>self.clients.matchAll({type:'window'})).then(clients=>clients.forEach(client=>client.postMessage({type:'APP_UPDATED',version:'20.4'})))));
 self.addEventListener('fetch',e=>{
   const url=new URL(e.request.url);
   if(e.request.method!=='GET'||url.origin!==self.location.origin)return;

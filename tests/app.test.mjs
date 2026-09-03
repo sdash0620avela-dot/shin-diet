@@ -435,7 +435,7 @@ test('v16.1 provides morning and daily summaries with verified and inferred sect
 });
 
 test('v16.2 anime coach has four deterministic states', () => {
-  assert.match(html, /assets\/ai-coach-sprite\.png/);
+  assert.match(html, /assets\/ai-coach-niece-v1\.png/);
   assert.equal(coachApi.animeCoachState(null, settings), 'waiting');
   assert.equal(coachApi.animeCoachState({...ideal, sleep:'★★☆☆☆'}, settings), 'warning');
   assert.equal(coachApi.animeCoachState(ideal, settings), 'achievement');
@@ -767,7 +767,6 @@ test('v20.2 filters quick questions and explains Android recovery', () => {
 });
 
 test('v20.3 reduces simple photo recording to one confirmed save', () => {
-  assert.match(html,/v20\.3 初心者導線・安定版/);
   assert.match(html,/function simpleMealSlot\(now=new Date\(\)\)/);
   assert.match(html,/hour<10\?'breakfast':hour<15\?'lunch':hour<21\?'dinner':'snack'/);
   assert.match(html,/function setSimpleRecordFocus\(focus='all'\)/);
@@ -780,10 +779,17 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/function saveSimpleResult\(button\)/);
   assert.match(html,/function saveRecord\(skipConfirm=false\)/);
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
-  assert.match(html,/const APP_VERSION='20\.3'/);
-  assert.match(serviceWorker,/shin-diet-v20-3-beginner-stable/);
-  assert.match(serviceWorker,/version:'20\.3'/);
-  assert.match(manifest,/v20\.3 初心者導線・安定版/);
+});
+
+test('v20.4 uses the submitted niece illustration without inventing extra expressions', () => {
+  assert.match(html,/v20\.4 姪っ子イラスト版/);
+  assert.match(html,/assets\/ai-coach-niece-v1\.png/);
+  assert.doesNotMatch(html,/background-size:200% 200%/);
+  assert.match(html,/const APP_VERSION='20\.4'/);
+  assert.match(serviceWorker,/shin-diet-v20-4-niece-coach/);
+  assert.match(serviceWorker,/assets\/ai-coach-niece-v1\.png/);
+  assert.match(serviceWorker,/version:'20\.4'/);
+  assert.match(manifest,/v20\.4 姪っ子イラスト版/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
