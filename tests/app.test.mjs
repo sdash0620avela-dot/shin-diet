@@ -435,7 +435,7 @@ test('v16.1 provides morning and daily summaries with verified and inferred sect
 });
 
 test('v16.2 anime coach has four deterministic states', () => {
-  assert.match(html, /assets\/ai-coach-niece-v1\.png/);
+  assert.match(html, /assets\/ai-coach-niece-anime-v2\.png/);
   assert.equal(coachApi.animeCoachState(null, settings), 'waiting');
   assert.equal(coachApi.animeCoachState({...ideal, sleep:'★★☆☆☆'}, settings), 'warning');
   assert.equal(coachApi.animeCoachState(ideal, settings), 'achievement');
@@ -781,15 +781,18 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
 });
 
-test('v20.4 uses the submitted niece illustration without inventing extra expressions', () => {
-  assert.match(html,/v20\.4 姪っ子イラスト版/);
-  assert.match(html,/assets\/ai-coach-niece-v1\.png/);
+test('v20.5 uses a larger anime-style version of the submitted niece illustration', () => {
+  assert.match(html,/v20\.5 アニメコーチ版/);
+  assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
+  assert.match(html,/grid-template-columns:170px 1fr/);
+  assert.match(html,/\.coach-sprite\{width:170px/);
+  assert.match(html,/background-size:cover/);
   assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='20\.4'/);
-  assert.match(serviceWorker,/shin-diet-v20-4-niece-coach/);
-  assert.match(serviceWorker,/assets\/ai-coach-niece-v1\.png/);
-  assert.match(serviceWorker,/version:'20\.4'/);
-  assert.match(manifest,/v20\.4 姪っ子イラスト版/);
+  assert.match(html,/const APP_VERSION='20\.5'/);
+  assert.match(serviceWorker,/shin-diet-v20-5-anime-coach/);
+  assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
+  assert.match(serviceWorker,/version:'20\.5'/);
+  assert.match(manifest,/v20\.5 アニメコーチ版/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
