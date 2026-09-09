@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v20.5 アニメコーチ版</title>
+<title>AI Diet v21.0 食事・筋トレ強化版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -242,20 +242,27 @@ canvas.chart-canvas{width:100%;height:220px;display:block;border-radius:var(--ra
 .forecast-chart-wrap{margin-top:12px;background:#FAFAFA;border-radius:var(--radius-sm);padding:8px;border:1px solid var(--line)}
 .summary-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.summary-switch button{margin:0;box-shadow:none}.summary-switch button.off{background:#F2F2F7;color:var(--ink2);border:1px solid var(--line)}.reportText{white-space:pre-wrap;margin:0;font:inherit;line-height:1.75;color:var(--ink2)}.copyReport{margin-top:12px}
 .anime-coach{display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:end}
-.coach-sprite{width:170px;aspect-ratio:1/1;background-image:url('./assets/ai-coach-niece-anime-v2.png');background-repeat:no-repeat;background-size:cover;background-position:center top;filter:drop-shadow(0 8px 12px rgba(28,28,30,.12));transition:filter .2s ease,transform .25s ease}
-.coach-sprite.good{filter:drop-shadow(0 8px 12px rgba(28,28,30,.12)) saturate(1.06);transform:translateY(-2px)}.coach-sprite.warning{filter:drop-shadow(0 8px 12px rgba(28,28,30,.12)) saturate(.84);transform:scale(.97)}.coach-sprite.achievement{filter:drop-shadow(0 8px 12px rgba(255,149,0,.25)) saturate(1.12);animation:coachCelebrate .55s cubic-bezier(.34,1.56,.64,1)}
+.coach-sprite{width:170px;aspect-ratio:1/1;background-image:url('./assets/ai-coach-niece-anime-v2.png');background-repeat:no-repeat;background-size:cover;background-position:center top;filter:drop-shadow(0 8px 12px rgba(28,28,30,.12));transition:filter .2s ease,transform .25s ease;transform-origin:50% 90%;will-change:transform}
+.coach-sprite.waiting{animation:coachBreathe 3.2s ease-in-out infinite}.coach-sprite.good{filter:drop-shadow(0 10px 14px rgba(52,199,89,.2)) saturate(1.06);animation:coachReady 1.8s ease-in-out infinite}.coach-sprite.warning{filter:drop-shadow(0 8px 12px rgba(255,149,0,.18)) saturate(.84);animation:coachCaution 2.6s ease-in-out infinite}.coach-sprite.achievement{filter:drop-shadow(0 11px 15px rgba(255,149,0,.3)) saturate(1.12);animation:coachCelebrate 1.05s cubic-bezier(.34,1.56,.64,1) infinite alternate}
 .coach-dialogue{min-width:0}.coach-mood{display:inline-flex;border-radius:999px;padding:5px 10px;background:#F2F2F7;color:var(--ink2);font-size:12px;font-weight:800;margin-bottom:8px}.coach-mood.good{background:#EAF8EE;color:#248A3D}.coach-mood.warning{background:#FFF4E5;color:#A35D00}.coach-mood.achievement{background:#FFF6D9;color:#8B6914}
 .coach-speech{position:relative;background:rgba(255,255,255,.92);border:1px solid rgba(60,60,67,.14);border-radius:18px;padding:14px;font-size:15px;font-weight:750;line-height:1.55;box-shadow:0 5px 18px rgba(0,0,0,.06)}.coach-speech:before{content:'';position:absolute;left:-8px;bottom:22px;width:14px;height:14px;background:#fff;border-left:1px solid rgba(60,60,67,.14);border-bottom:1px solid rgba(60,60,67,.14);transform:rotate(45deg)}.coach-style-name{display:block;margin-top:7px;color:var(--muted);font-size:11px;font-weight:700}.coach-detail{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.coach-detail summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px}.coach-detail-body{margin-top:12px}
 .coach-chat-intro{display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:center;margin:0 0 14px;padding:10px;border-radius:16px;background:rgba(255,255,255,.7);border:1px solid var(--line)}.coach-avatar-mini{width:84px;aspect-ratio:1/1;background:url('./assets/ai-coach-niece-anime-v2.png') center top/cover no-repeat;filter:drop-shadow(0 5px 8px rgba(28,28,30,.1))}.coach-chat-intro b{display:block;margin-bottom:4px}.coach-personality-note{margin-top:8px;padding:10px 12px;border-radius:12px;background:#F8FAFF;border:1px solid rgba(0,122,255,.13);font-size:13px;line-height:1.55;color:var(--ink2)}
 .coach-question{min-height:112px}.coach-answer{display:none;white-space:pre-wrap;margin-top:14px}.coach-answer.show{display:block}.coach-privacy{margin-top:10px}.quick-coach{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.quick-coach button{margin:0;padding:11px 8px;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line);font-size:13px}.quick-coach button:disabled{opacity:.55}
 .meal-favorites{margin:10px 0 14px}.meal-favorites-title{font-size:13px;color:var(--muted);font-weight:750;margin-bottom:7px}.meal-favorites-list{display:flex;gap:7px;overflow-x:auto;padding:1px 1px 5px;scrollbar-width:thin}.meal-favorite{flex:0 0 auto;width:auto;max-width:220px;margin:0;padding:9px 12px;background:#F2F2F7;color:var(--ink2);border:1px solid var(--line);box-shadow:none;font-size:13px;text-align:left}.meal-favorite-name{display:block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.meal-favorite-count{display:block;margin-top:2px;color:var(--muted);font-size:11px;font-weight:650}
 .nutrition-guide{margin:10px 0 14px}.nutrition-guide summary{cursor:pointer;color:var(--accent);font-weight:750}.nutrition-guide-grid{display:grid;gap:8px;margin-top:10px}.nutrition-guide-grid div{padding:10px 12px;border-radius:12px;background:#F8FAFF;border:1px solid rgba(0,122,255,.13);font-size:13px;line-height:1.55}
+.nutrition-progress{display:grid;gap:11px;margin-top:14px}.nutrition-progress-row{display:grid;gap:5px}.nutrition-progress-head{display:flex;justify-content:space-between;gap:12px;font-size:13px}.nutrition-progress-head b{color:var(--ink)}.nutrition-progress-head span{color:var(--muted);text-align:right}.nutrition-progress-track{height:9px;border-radius:999px;background:#E5E5EA;overflow:hidden}.nutrition-progress-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#34C759,#007AFF);transform-origin:left;animation:nutritionGrow .65s cubic-bezier(.22,1,.36,1);transition:width .25s ease}.nutrition-progress-fill.warn{background:#FF9500}.nutrition-progress-fill.over{background:#FF3B30}.nutrition-progress-note{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.5}
+.workout-builder{margin-bottom:14px}.workout-plan-result{display:none;margin-top:12px;padding:12px;border-radius:14px;background:#fff;border:1px solid rgba(0,122,255,.18)}.workout-plan-result.show{display:block}.workout-plan-text{min-height:220px;white-space:pre-wrap;font-size:14px;line-height:1.65}.workout-result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .record-reminder{display:none;border-color:rgba(255,149,0,.38);background:#FFF9E6}.record-reminder.show{display:block}.record-reminder-actions{display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:12px}.record-reminder-actions button{margin:0}.record-reminder-actions .dismiss{background:#fff;color:var(--ink2);border:1px solid var(--line);box-shadow:none}
 .simple-home{display:none}.simple-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.simple-action{min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}.simple-action span{font-size:30px}.simple-coach-actions{display:grid;gap:8px;margin-top:12px}.simple-coach-actions button{margin:0;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line)}
 .analysis-advice{display:none;margin-top:12px;padding:13px 14px;border-radius:14px;background:#F8FAFF;border:1px solid rgba(0,122,255,.18);line-height:1.65;color:var(--ink2)}.analysis-advice.show{display:block}.analysis-advice b{display:block;color:var(--ink);margin-bottom:4px}.analysis-advice button{margin-top:10px;background:#fff;color:var(--accent);border:1px solid rgba(0,122,255,.24);box-shadow:none}
 body[data-usage-mode="simple"] .simple-home{display:block}body[data-usage-mode="simple"] #detailedHome{display:none}body[data-usage-mode="simple"] .pro-tab{display:none}body[data-usage-mode="simple"] .tabs{grid-template-columns:repeat(4,1fr)}
 body[data-usage-mode="simple"][data-record-focus="meal"] #bodyCompositionCard,body[data-usage-mode="simple"][data-record-focus="meal"] #exerciseCard{display:none}body[data-usage-mode="simple"][data-record-focus="body"] #mealCard,body[data-usage-mode="simple"][data-record-focus="body"] #exerciseCard{display:none}
-@keyframes coachCelebrate{0%{transform:scale(.88) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes coachBreathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-4px) scale(1.015)}}
+@keyframes coachReady{0%,100%{transform:translateY(-1px) rotate(-.7deg)}50%{transform:translateY(-8px) rotate(.7deg)}}
+@keyframes coachCaution{0%,100%{transform:translateX(0) scale(.98)}50%{transform:translateX(-3px) scale(.98)}}
+@keyframes coachCelebrate{0%{transform:translateY(0) scale(.96) rotate(-2deg)}100%{transform:translateY(-11px) scale(1.035) rotate(1.5deg)}}
+@keyframes nutritionGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){.coach-sprite.waiting,.coach-sprite.good,.coach-sprite.warning,.coach-sprite.achievement,.nutrition-progress-fill{animation:none!important}.coach-sprite{transform:none!important}}
 
 @media(max-width:380px){
   .anime-coach{grid-template-columns:156px 1fr;gap:10px}.coach-sprite{width:156px}
@@ -273,7 +280,7 @@ body[data-usage-mode="simple"][data-record-focus="meal"] #bodyCompositionCard,bo
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v20.5 アニメコーチ版</div>
+  <div class="version-pill">v21.0 食事・筋トレ強化版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -311,6 +318,11 @@ body[data-usage-mode="simple"][data-record-focus="meal"] #bodyCompositionCard,bo
     <div class="stat-tile"><div class="label">1日実行評価</div><div class="val" id="todayScore">--<small>点</small></div><div class="delta neutral" id="scoreDelta">記録待ち</div></div>
     <div class="stat-tile"><div class="label">昨日比</div><div class="val" id="yesterdayCompare">--</div><div class="delta neutral" id="weightDelta">体重 --</div></div>
     <div class="stat-tile"><div class="label">7日平均</div><div class="val" id="avg7">--<small>kg</small></div><div class="delta neutral" id="avg7Score">評価 --</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">今日の栄養進捗</div>
+    <div id="homeNutritionProgress" class="nutrition-progress"><p class="muted">食事を記録すると表示します。</p></div>
   </div>
 
   <div class="card">
@@ -447,13 +459,31 @@ body[data-usage-mode="simple"][data-record-focus="meal"] #bodyCompositionCard,bo
       <div><div id="carbsTotalLabel" class="label">炭水化物（C）合計 g</div><input id="carbsG" type="number" step="0.1" inputmode="decimal" placeholder="220"></div>
       <div><div class="label">水分 L</div><input id="waterL" type="number" step="0.1" inputmode="decimal" placeholder="2.0"></div>
     </div>
+    <div class="label">1日の栄養進捗</div>
+    <div id="nutritionProgress" class="nutrition-progress"><p class="muted">食事を入力すると、目標までの進み具合を表示します。</p></div>
   </div>
 
   <div class="saveJump"><button type="button" onclick="goToRecordSave()">入力を確認して保存へ進む</button></div>
 
   <div id="exerciseCard" class="card">
     <div class="section-head"><div class="section-icon">💪</div><h3>運動</h3></div>
-    <div class="hint" style="margin-bottom:14px"><b>今日の筋トレをAIに提案してもらう</b><br><span class="small">直近最大14日の記録・ローテーション・睡眠・疲労・痛みを確認して提案します。</span><div class="grid" style="margin-top:10px"><div><div class="label">利用店舗・場所</div><input id="workoutPlace" placeholder="例：本店、塩田店"></div><div><div class="label">使える時間 分</div><input id="workoutPlanMinutes" type="number" inputmode="numeric" placeholder="60"></div></div><div class="label">今日の痛み・希望（任意）</div><textarea id="workoutRequest" placeholder="例：右二頭が痛む。胸をやりたい。混雑を避けたい"></textarea><button type="button" style="margin-top:10px" onclick="openWorkoutConsult()">今日の筋トレを提案</button></div>
+    <div class="hint workout-builder"><b>部位と強度から、今日の筋トレを作成</b><br><span class="small">標準メニューをすぐ表示し、ログイン中は同じ店舗・同じ部位の過去記録、痛み、完遂状況からAIが調整します。</span>
+      <div class="grid" style="margin-top:10px">
+        <div><div class="label">利用店舗・場所</div><input id="workoutPlace" placeholder="例：本店、塩田店"></div>
+        <div><div class="label">使用予定の器具</div><input id="workoutEquipment" placeholder="例：Life Fitness、ケーブル台"></div>
+        <div><div class="label">部位</div><select id="workoutPart"><option value="">選択</option><option value="chest">胸</option><option value="back">背中</option><option value="shoulders">肩</option><option value="arms">腕</option><option value="legs">脚</option><option value="fullbody">全身</option></select></div>
+        <div><div class="label">レベル</div><select id="workoutLevel"><option value="beginner">初歩</option><option value="intermediate" selected>中級</option><option value="high">高強度</option></select></div>
+        <div><div class="label">使える時間 分</div><input id="workoutPlanMinutes" type="number" inputmode="numeric" placeholder="60"></div>
+      </div>
+      <div class="label">今日の痛み・希望</div><textarea id="workoutRequest" placeholder="例：右二頭3/10、左肩1/10、腰5/10。ケーブルから始めたい"></textarea>
+      <button id="createWorkoutPlanBtn" type="button" style="margin-top:10px" onclick="createWorkoutPlan()">今日の筋トレメニューを作る</button>
+      <div id="workoutPlanStatus" class="analysisStatus" role="status" aria-live="polite"></div>
+      <div id="workoutPlanResult" class="workout-plan-result">
+        <div class="label">今日の計画（修正できます）</div>
+        <textarea id="workoutPlan" class="workout-plan-text" placeholder="作成したメニューが入ります"></textarea>
+      </div>
+      <p class="small" style="margin-bottom:0">作成した計画と実施結果は、この日の記録として保存した場合だけ次回提案に使用します。別店舗・別マシンの重量は流用しません。</p>
+    </div>
     <div class="quick-chips">
       <span id="cardioGoalChip" class="chip" onclick="quickCardio()">有酸素</span>
       <span class="chip" onclick="quickCardioOnly()">有酸素のみの日</span>
@@ -488,7 +518,11 @@ body[data-usage-mode="simple"][data-record-focus="meal"] #bodyCompositionCard,bo
     <label class="check"><input id="plank" type="checkbox">プランク3分</label>
     <label class="check"><input id="powerplate" type="checkbox">Power Plate 4セット</label>
     <label class="check"><input id="drawin" type="checkbox">ドローイン5セット</label>
-    <div class="label">筋トレ内容（しなかった日は空欄でOK）</div><textarea id="strength" placeholder="胸25セット　1時間"></textarea>
+    <div class="label">筋トレ内容（しなかった日は空欄でOK）・実施結果</div><textarea id="strength" placeholder="例：チェストプレス80kg×10回×4セット。計画との差も記入"></textarea>
+    <div class="workout-result-grid">
+      <div><div class="label">完遂状況</div><select id="workoutCompletion"><option value="">未入力</option><option value="completed">完遂</option><option value="partial">一部実施</option><option value="stopped">痛み・体調で中止</option></select></div>
+      <div><div class="label">実施後の痛み・余裕</div><textarea id="workoutFeedback" placeholder="例：45kgは余裕、50kgは上がらず。右二頭3/10"></textarea></div>
+    </div>
     <button type="button" class="sub" onclick="copyPreviousStrength()">前回の筋トレ・強度をそのまま使う</button>
   </div>
 
@@ -597,6 +631,11 @@ body[data-usage-mode="simple"][data-record-focus="meal"] #bodyCompositionCard,bo
     <p class="small">オン：最新体重・年齢・性別・身長・活動量から各日の収支を再計算。オフ：上の手入力値を固定使用。</p>
     <div class="label">1日の目標たんぱく質 g（編集可）</div><input id="proteinGoal" type="number" step="1" inputmode="numeric" value="120">
     <div class="label">1日の目標摂取 kcal（編集可）</div><input id="calorieGoal" type="number" step="10" inputmode="numeric" value="2000">
+    <div class="grid">
+      <div><div class="label">脂質目標 g（任意）</div><input id="fatGoal" type="number" step="1" inputmode="numeric" placeholder="未設定なら判定しない"></div>
+      <div><div class="label">炭水化物目標 g（任意）</div><input id="carbsGoal" type="number" step="1" inputmode="numeric" placeholder="未設定なら判定しない"></div>
+    </div>
+    <p class="small">脂質・炭水化物は目標を設定した場合だけ、進捗と過不足を判定します。</p>
     <div class="label">有酸素の基準時間 分</div><input id="cardioGoal" type="number" step="1" inputmode="numeric" value="35">
     <label class="check"><input id="reminderEnabled" type="checkbox">毎日の記録忘れをアプリ内で知らせる</label>
     <div class="label">確認する時刻</div><input id="reminderTime" type="time" value="21:00">
@@ -669,7 +708,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='20.5';
+const APP_VERSION='21.0';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
@@ -678,8 +717,8 @@ $('date').value=today();
 function renderConnectivity(){const notice=$('offlineNotice');if(notice)notice.style.display=navigator.onLine===false?'block':'none';renderSyncQueueState()}
 window.addEventListener('offline',renderConnectivity);window.addEventListener('online',()=>{clearTimeout(cloudRetryTimer);cloudRetryAttempt=0;renderConnectivity();if(cloudUser)syncNow(true)});
 
-const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,cardioGoal:35,displayMode:'detailed',usageMode:'pro',adviceFood:true,adviceSleep:true,adviceSupplement:true,adviceExercise:true,coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
-const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,cardioGoal:35,displayMode:'beginner',usageMode:'simple',adviceFood:true,adviceSleep:true,adviceSupplement:false,adviceExercise:false,coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
+const LEGACY_DEFAULTS={displayName:'慎',startDate:'2026-06-17',startWeight:127.4,baseBurn:2800,autoBurn:true,goalWeight:95,proteinGoal:120,calorieGoal:2000,fatGoal:0,carbsGoal:0,cardioGoal:35,displayMode:'detailed',usageMode:'pro',adviceFood:true,adviceSleep:true,adviceSupplement:true,adviceExercise:true,coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
+const NEW_USER_DEFAULTS={displayName:'',startDate:today(),startWeight:0,baseBurn:2200,autoBurn:true,goalWeight:0,proteinGoal:120,calorieGoal:2000,fatGoal:0,carbsGoal:0,cardioGoal:35,displayMode:'beginner',usageMode:'simple',adviceFood:true,adviceSleep:true,adviceSupplement:false,adviceExercise:false,coachStyle:'partner',reminderEnabled:false,reminderTime:'21:00'};
 let activeStorageId='legacy';
 let bootStorageReady=false;
 let serverClockOffsetMs=Number(localStorage.getItem('shinDietServerClockOffsetMs')||0);
@@ -858,10 +897,10 @@ async function refreshServerClock(){
  }catch(e){}
 }
 function coachContext(records,settings){
- const allowed=['date','weight','fat','fatType','muscle','muscleType','visceralFat','sleep','hunger','fatigue','condition','breakfast','breakfastSource','lunch','lunchSource','dinner','dinnerSource','snack','snackSource','intake','protein','fatG','carbsG','waterL','restDay','cardio','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioManualCalories','cardioCalories','cardioCalorieSource','cardio1Calories','cardio1CalorieSource','cardio2','cardio2Type','cardio2Intensity','cardio2Details','cardio2Min','cardio2ManualCalories','cardio2Calories','cardio2CalorieSource','strengthIntensity','strengthCalories','strengthCalorieSource','accessoryCalories','exerciseTotal','workoutMinutes','strength','legRaise','plank','powerplate','drawin'];
+ const allowed=['date','weight','fat','fatType','muscle','muscleType','visceralFat','sleep','hunger','fatigue','condition','breakfast','breakfastSource','lunch','lunchSource','dinner','dinnerSource','snack','snackSource','intake','protein','fatG','carbsG','waterL','restDay','cardio','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioManualCalories','cardioCalories','cardioCalorieSource','cardio1Calories','cardio1CalorieSource','cardio2','cardio2Type','cardio2Intensity','cardio2Details','cardio2Min','cardio2ManualCalories','cardio2Calories','cardio2CalorieSource','strengthIntensity','strengthCalories','strengthCalorieSource','accessoryCalories','exerciseTotal','workoutMinutes','strength','workoutPlace','workoutEquipment','workoutPart','workoutLevel','workoutPlanMinutes','workoutRequest','workoutPlan','workoutCompletion','workoutFeedback','legRaise','plank','powerplate','drawin'];
  const list=(Array.isArray(records)?records:[]).filter(r=>r&&r.date).slice().sort((a,b)=>a.date.localeCompare(b.date)).slice(-14).map(r=>Object.fromEntries(allowed.filter(key=>r[key]!==undefined&&r[key]!=='').map(key=>[key,typeof r[key]==='string'?r[key].slice(0,200):r[key]])));
  const settingKeys=['displayName','startWeight','goalWeight','proteinGoal','calorieGoal','cardioGoal'];
- return {settings:Object.fromEntries(settingKeys.filter(key=>settings&&settings[key]!==undefined).map(key=>[key,settings[key]])),records:list};
+ return {settings:Object.fromEntries(settingKeys.filter(key=>settings&&settings[key]!==undefined).map(key=>[key,settings[key]])),records:list,workoutHistory:workoutHistoryForContext(records)};
 }
 const COACH_STYLES={
  partner:{label:'相棒タイプ',description:'率直だけど責めず、良い点と最優先の改善を1つ伝えます。',instruction:'相棒のように率直で親しみやすく、良い点と最優先の改善を1つ伝えてください。'},
@@ -909,29 +948,52 @@ function applyDisplayMode(value=sets().displayMode){
  document.querySelectorAll('[data-nutrition-name]').forEach(el=>{el.textContent=nutritionLabel(el.dataset.nutritionName,el.dataset.nutritionCode,mode)+'g'});
  if($('displayMode'))$('displayMode').value=mode;
 }
-function coachStyledQuestion(question,s=sets()){const info=coachStyleInfo(s),topics=adviceTopics(s),scope=topics.length?`【希望する助言分野】${topics.join('・')}。質問に関係する分野だけ答えてください。\n`:'' ,prefix=`【希望する話し方】${info.instruction}\n${scope}【相談】`;return prefix+String(question||'').slice(0,Math.max(0,500-prefix.length))}
+function coachStyledQuestion(question,s=sets()){const info=coachStyleInfo(s),topics=adviceTopics(s),scope=topics.length?`【希望する助言分野】${topics.join('・')}。質問に関係する分野だけ答えてください。\n`:'' ,prefix=`【希望する話し方】${info.instruction}\n${scope}【相談】`;return prefix+String(question||'').slice(0,Math.max(0,1200-prefix.length))}
 function coachSummaryLine(r,s,mode){const style=coachStyleKey(s),action=todayActionText(r,s);if(style==='gentle')return `AIコーチ（やさしい応援）：ここまで記録できたことが前進です。${action}`;if(style==='strict')return `AIコーチ（厳しいトレーナー）：記録を基準に率直に判断します。${action}`;return `AIコーチ（相棒）：今日も一緒に整理します。${action}`}
 function renderCoachStyleDescription(){const s=sets(),key=$('coachStyle')&&COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:coachStyleKey(s),info=COACH_STYLES[key];if($('coachStyleDescription'))$('coachStyleDescription').textContent=info.description;if($('chatCoachStyle'))$('chatCoachStyle').textContent=info.label+'で回答します';if($('homeCoachStyle'))$('homeCoachStyle').textContent=info.label}
 function coachStatus(message,ok=true){const el=$('coachConsultStatus');if(!el)return;el.textContent=message;el.className='status '+(ok?'ok':'ng')}
 async function askQuickCoach(question){$('coachQuestion').value=question;await askCoach()}
-async function openWorkoutConsult(){
- const place=$('workoutPlace').value.trim(),minutes=+$('workoutPlanMinutes').value||+$('workoutMinutes').value||60,request=$('workoutRequest').value.trim();
- if(place)localStorage.setItem(storageKey('WorkoutPlace'),place);
- const details=[place&&`利用場所：${place}`,`使える時間：${minutes}分`,request&&`今日の痛み・希望：${request}`].filter(Boolean).join('。');
- $('coachQuestion').value=`今日の筋トレメニューを提案して。${details}。直近最大14日の筋トレ順、睡眠、疲労、体調、痛みと過去実績を確認し、部位、種目、重量、回数、セット数、実施順、筋トレのみの推定消費カロリーを出してください。別店舗・別マシンの重量は流用せず、確認できない重量は確認日として提案してください。`;
- const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('相談'));if(tab)show('chat',tab);await askCoach()
+function inferWorkoutPart(text=''){
+ const value=String(text||'');if(/胸|チェスト|ベンチ|ペック/.test(value))return 'chest';if(/背中|ラット|ローイング|ロウ/.test(value))return 'back';if(/肩|ショルダー|レイズ/.test(value))return 'shoulders';if(/腕|二頭|三頭|カール|プレスダウン/.test(value))return 'arms';if(/脚|下半身|レッグ|スクワット/.test(value))return 'legs';return ''
 }
+function workoutHistoryForContext(records,limit=20){
+ const fields=['date','workoutPlace','workoutEquipment','workoutPart','workoutLevel','workoutPlanMinutes','workoutPlan','workoutMinutes','strength','workoutCompletion','workoutFeedback','workoutRequest','strengthIntensity','condition'];
+ return (Array.isArray(records)?records:[]).filter(r=>r&&r.date&&(r.workoutPlan||r.strength||r.workoutPart)).slice().sort((a,b)=>a.date.localeCompare(b.date)).slice(-limit).map(r=>{const safe={};fields.forEach(key=>{if(r[key]!==undefined&&r[key]!=='')safe[key]=typeof r[key]==='string'?r[key].slice(0,key==='workoutPlan'?1400:key==='strength'?1000:500):r[key]});safe.workoutPart=safe.workoutPart||inferWorkoutPart(`${safe.workoutPlan||''} ${safe.strength||''}`);return safe})
+}
+function buildBaseWorkoutPlan(part='fullbody',level='intermediate',minutes=60){
+ const parts={chest:['チェストプレス','インクラインプレス','ペックフライ','ケーブルフライ'],back:['ラットプルダウン','シーテッドロー','ワンハンドロー','ストレートアームプルダウン'],shoulders:['ショルダープレス','サイドレイズ','リアデルトフライ','ケーブルレイズ'],arms:['ケーブルカール','プレスダウン','ハンマーカール','オーバーヘッドエクステンション'],legs:['レッグプレス','レッグカール','レッグエクステンション','カーフレイズ'],fullbody:['レッグプレス','チェストプレス','ラットプルダウン','ショルダープレス']};
+ const names={chest:'胸',back:'背中',shoulders:'肩',arms:'腕',legs:'脚',fullbody:'全身'},levels={beginner:{label:'初歩',sets:2,reps:'10〜15回',rest:'90秒',effort:'3回ほど余裕を残す'},intermediate:{label:'中級',sets:3,reps:'8〜15回',rest:'90〜120秒',effort:'2回ほど余裕を残す'},high:{label:'高強度',sets:4,reps:'6〜15回',rest:'90〜150秒',effort:'0〜2回の余裕'}};
+ const spec=levels[level]||levels.intermediate,time=Math.max(20,Math.min(120,+minutes||60)),count=time<40?3:4,exercises=(parts[part]||parts.fullbody).slice(0,count);
+ return `【${names[part]||'全身'}・${spec.label}｜${time}分】\n準備：痛みと可動域を確認し、最初の種目は軽い確認重量で1〜2セット。\n${exercises.map((name,i)=>`${i+1}. ${name}：確認重量／${spec.reps}×${spec.sets}セット／休憩${spec.rest}／${spec.effort}`).join('\n')}\n合計：${exercises.length*spec.sets}セット。重量は同じ店舗・同じ器具の保存実績がある場合だけ引き継ぎ、痛みが増えたら中止または種目変更。`
+}
+async function coachRequest(question){
+ if(!cloudClient||!cloudUser)throw new Error('履歴でのAI調整にはログインが必要です。');
+ const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();if(sessionError||!sessionData.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
+ const response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({kind:'coach_chat',message:coachStyledQuestion(question),context:coachContext(recs(),sets())})});
+ const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'相談に回答できませんでした。');return body.answer||'回答がありませんでした。'
+}
+async function createWorkoutPlan(){
+ const part=$('workoutPart').value,level=$('workoutLevel').value||'intermediate',place=$('workoutPlace').value.trim(),equipment=$('workoutEquipment').value.trim(),minutes=Math.max(20,Math.min(120,+$('workoutPlanMinutes').value||60)),request=$('workoutRequest').value.trim(),status=$('workoutPlanStatus'),button=$('createWorkoutPlanBtn');
+ if(!part){status.textContent='部位を選んでください。';status.style.color='var(--bad)';return}
+ if(place)localStorage.setItem(storageKey('WorkoutPlace'),place);localStorage.setItem(storageKey('WorkoutPart'),part);localStorage.setItem(storageKey('WorkoutLevel'),level);
+ $('workoutPlanMinutes').value=minutes;if(!$('workoutMinutes').value)$('workoutMinutes').value=minutes;$('strengthIntensity').value=level==='beginner'?'light':level==='high'?'hard':'moderate';
+ $('workoutPlan').value=buildBaseWorkoutPlan(part,level,minutes);$('workoutPlanResult').classList.add('show');status.textContent=cloudUser?'標準メニューを作成しました。保存履歴からAIが調整中…':'標準メニューを作成しました。ログインすると保存履歴から調整できます。';status.style.color='var(--good)';scheduleDraftSave();
+ if(!cloudUser)return;
+ button.disabled=true;
+ try{
+  const labels={chest:'胸',back:'背中',shoulders:'肩',arms:'腕',legs:'脚',fullbody:'全身'},levels={beginner:'初歩',intermediate:'中級',high:'高強度'},health=String(sets().healthNotes||'').slice(0,250);
+  const prompt=`今日の筋トレ計画を作成してください。利用場所：${place||'未指定'}。使用予定の器具：${equipment||'未指定'}。部位：${labels[part]}。レベル：${levels[level]}。時間：${minutes}分。今日の痛み・希望：${request||'記載なし'}。既往・注意：${health||'設定なし'}。workoutHistoryのうち同じ利用場所・同じ部位・同じ器具と確認できる実績だけを重量の根拠にしてください。別店舗・別器具の重量は流用禁止です。根拠がなければ数値重量を作らず「確認重量」と余力目安を示してください。前回の完遂状況、実施結果、痛み、余裕を次の重量・セットへ反映してください。計画と実績を混同しないでください。器具間の移動を減らす順に並べ、各種目の重量または確認方法、回数、セット、休憩、合計セット、予定時間、筋トレのみの推定消費kcalを出してください。`;
+  $('workoutPlan').value=await coachRequest(prompt);status.textContent='保存履歴・痛み・完遂状況を反映したメニューです。記録を保存すると次回に生かします。';scheduleDraftSave()
+ }catch(error){status.textContent=`標準メニューは作成済みです。AI調整はできませんでした：${error.message}`;status.style.color='var(--bad)'}finally{button.disabled=false}
+}
+async function openWorkoutConsult(){return createWorkoutPlan()}
 async function askCoach(){
  const question=$('coachQuestion').value.trim(),btn=$('askCoachBtn'),answer=$('coachAnswer');
  if(!question){coachStatus('相談内容を入力してください。',false);return}
  if(!cloudClient||!cloudUser){coachStatus('相談にはログインが必要です。「設定」からログインしてください。',false);return}
  btn.disabled=true;document.querySelectorAll('.quick-coach button').forEach(x=>x.disabled=true);btn.textContent='AIコーチが確認中…';answer.classList.remove('show');coachStatus('直近の保存記録を確認しています。',true);
  try{
-  const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();
-  if(sessionError||!sessionData.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
-  const response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({kind:'coach_chat',message:coachStyledQuestion(question),context:coachContext(recs(),sets())})});
-  const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'相談に回答できませんでした。');
-  answer.textContent=body.answer||'回答がありませんでした。';answer.classList.add('show');coachStatus('回答しました。相談内容と回答は保存していません。',true);
+  answer.textContent=await coachRequest(question);answer.classList.add('show');coachStatus('回答しました。通常の相談内容と回答は保存していません。筋トレ欄で保存した計画・実績だけ次回に使います。',true);
  }catch(error){coachStatus(error.message||'相談中にエラーが発生しました。時間を置いて再度お試しください。',false)}
  finally{btn.disabled=false;document.querySelectorAll('.quick-coach button').forEach(x=>x.disabled=false);btn.textContent='記録を踏まえて相談する'}
 }
@@ -941,7 +1003,7 @@ function saveErrorReason(e){if(e&&(['QuotaExceededError','NS_ERROR_DOM_QUOTA_REA
 const mealTypes=[['breakfast','朝食'],['lunch','昼食'],['dinner','夕食'],['snack','間食']];
 const mealSuffixes=['Source','Kcal','Protein','Fat','Carbs'];
 function mealFieldIds(){return mealTypes.flatMap(([id])=>[id,...mealSuffixes.map(s=>id+s)])}
-function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','visceralFat','bmi','basalMetabolism','totalEnergy','waistCm','chestCm','hipCm','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioManualCalories','cardio2Type','cardio2Intensity','cardio2Details','cardio2Min','cardio2ManualCalories','strengthIntensity','exerciseCal','workoutMinutes','strength']}
+function fieldIds(){return ['weight','fatType','fat','muscleType','muscle','visceralFat','bmi','basalMetabolism','totalEnergy','waistCm','chestCm','hipCm','sleep','hunger','fatigue','condition',...mealFieldIds(),'intake','protein','fatG','carbsG','waterL','cardioType','cardioIntensity','cardioDetails','cardioMin','cardioManualCalories','cardio2Type','cardio2Intensity','cardio2Details','cardio2Min','cardio2ManualCalories','workoutPlace','workoutEquipment','workoutPart','workoutLevel','workoutPlanMinutes','workoutRequest','workoutPlan','strengthIntensity','exerciseCal','workoutMinutes','strength','workoutCompletion','workoutFeedback']}
 function checkIds(){return ['cardio','cardio2','legRaise','plank','powerplate','drawin']}
 function fatTypeOf(r){return r&&r.fatType==='fatMass'?'fatMass':'fatPercent'}
 function muscleTypeOf(r){return r&&r.muscleType==='skeletalMuscleMass'?'skeletalMuscleMass':'muscleMass'}
@@ -959,6 +1021,8 @@ function loadRecordForDate(){
   if(!r.cardio2Type)$('cardio2Type').value='walk';
   if(!r.cardio2Intensity)$('cardio2Intensity').value='moderate';
   if(!r.strengthIntensity)$('strengthIntensity').value='moderate';
+  if(!r.workoutPart)$('workoutPart').value=localStorage.getItem(storageKey('WorkoutPart'))||'';
+  if(!r.workoutLevel)$('workoutLevel').value=localStorage.getItem(storageKey('WorkoutLevel'))||'intermediate';
   mealTypes.forEach(([id])=>{if(!r[id+'Source'])$(id+'Source').value='manual';updateMealSummary(id)});
   checkIds().forEach(id=>$(id).checked=!!r[id]);
   $('restDay').checked=!!r.restDay||isRestDay(r);
@@ -973,6 +1037,8 @@ function loadRecordForDate(){
   recordLoading=false;
   if(!$('workoutPlace').value)$('workoutPlace').value=localStorage.getItem(storageKey('WorkoutPlace'))||'';
   if(!$('workoutPlanMinutes').value)$('workoutPlanMinutes').value=r.workoutMinutes||60;
+  $('workoutPlanResult').classList.toggle('show',!!$('workoutPlan').value);
+  $('workoutPlanStatus').textContent=$('workoutPlan').value?'保存済みまたは下書きの計画を読み込みました。':'';
   renderMealFavorites();
   setStatus(draft?'前回の入力途中データを復元しました':editing?'保存済みの記録を読み込みました':'新しい日の記録です',true);
 }
@@ -980,6 +1046,7 @@ $('date').addEventListener('change',loadRecordForDate);
 const exerciseEstimateIds=new Set(['weight','cardio','cardioType','cardioIntensity','cardioMin','cardioManualCalories','cardio2','cardio2Type','cardio2Intensity','cardio2Min','cardio2ManualCalories','strengthIntensity','exerciseCal','workoutMinutes','strength','legRaise','plank','powerplate','drawin','restDay']);
 $('record').addEventListener('input',e=>{if(e.target.id!=='date'&&e.target.type!=='file')scheduleDraftSave();if(exerciseEstimateIds.has(e.target.id))renderExerciseEstimate()});
 $('record').addEventListener('change',e=>{if(e.target.id!=='date'&&e.target.type!=='file')scheduleDraftSave();if(exerciseEstimateIds.has(e.target.id))renderExerciseEstimate()});
+['intake','protein','fatG','carbsG'].forEach(id=>$(id).addEventListener('input',()=>renderNutritionProgress()));
 $('restDay').addEventListener('change',()=>{if($('restDay').checked)clearExerciseForRest(true)});
 $('strength').addEventListener('input',()=>{if(isRestDay({strength:$('strength').value})){$('restDay').checked=true;clearExerciseForRest(true)}});
 
@@ -993,17 +1060,29 @@ function renderMealEntries(){
   });
 }
 function mealNumbersEntered(){return mealTypes.some(([id])=>mealSuffixes.slice(1).some(s=>hasValue($(id+s).value)))}
+function nutritionProgressRows(values,settings){
+ values=values||{};settings=settings||{};
+ const definitions=[['calories','摂取カロリー','kcal',+values.intake||0,+settings.calorieGoal||0],['protein','たんぱく質','g',+values.protein||0,+settings.proteinGoal||0],['fat','脂質','g',+values.fatG||0,+settings.fatGoal||0],['carbs','炭水化物','g',+values.carbsG||0,+settings.carbsGoal||0]];
+ return definitions.map(([key,label,unit,value,goal])=>{const ratio=goal>0?value/goal:null;let status='目標未設定',tone='';if(ratio!==null){if(key==='protein')status=ratio>=1?'達成':ratio>=.8?'もう少し':'不足';else status=ratio>1.1?'多め':ratio>=.8?'目安内':'不足';tone=ratio>1.2&&key!=='protein'?'over':ratio<.8?'warn':''}return {key,label,unit,value,goal,ratio,status,tone}})
+}
+function renderNutritionProgress(values=null,settings=sets(),targetId='nutritionProgress'){
+ const root=$(targetId);if(!root)return;const data=values||{intake:+$('intake')?.value||0,protein:+$('protein')?.value||0,fatG:+$('fatG')?.value||0,carbsG:+$('carbsG')?.value||0};
+ const entered=['intake','protein','fatG','carbsG'].some(key=>Number(data[key])>0);root.replaceChildren();if(!entered){const p=document.createElement('p');p.className='muted';p.textContent='食事を記録すると表示します。';root.append(p);return}
+ nutritionProgressRows(data,settings).forEach(row=>{const wrap=document.createElement('div');wrap.className='nutrition-progress-row';const head=document.createElement('div');head.className='nutrition-progress-head';const label=document.createElement('b');label.textContent=row.label;const value=document.createElement('span');value.textContent=row.goal>0?`${row.value}${row.unit} / ${row.goal}${row.unit}・${row.status}`:`${row.value}${row.unit}・目標未設定`;head.append(label,value);const track=document.createElement('div');track.className='nutrition-progress-track';const fill=document.createElement('div');fill.className='nutrition-progress-fill '+row.tone;fill.style.width=`${row.ratio===null?0:Math.min(100,Math.max(0,row.ratio*100))}%`;track.append(fill);wrap.append(head,track);root.append(wrap)});
+ const note=document.createElement('div');note.className='nutrition-progress-note';note.textContent='写真解析は推定値です。料理や量が違う場合は修正すると、次の助言も正確になります。';root.append(note)
+}
 function calculateMealTotals(){
-  if(!mealNumbersEntered())return;
+  if(!mealNumbersEntered()){renderNutritionProgress();return}
   const sum=s=>mealTypes.reduce((n,[id])=>n+(+$(id+s).value||0),0);
   $('intake').value=Math.round(sum('Kcal'));
   $('protein').value=+sum('Protein').toFixed(1);
   $('fatG').value=+sum('Fat').toFixed(1);
   $('carbsG').value=+sum('Carbs').toFixed(1);
+  renderNutritionProgress();
 }
 function quickCardio(){const min=sets().cardioGoal||35;$('restDay').checked=false;$('cardio').checked=true;if(!$('cardioMin').value)$('cardioMin').value=min;if(!$('cardioType').value)$('cardioType').value='bike';if(!$('cardioIntensity').value)$('cardioIntensity').value='moderate';renderExerciseEstimate()}
 function quickCardioOnly(){
- quickCardio();['legRaise','plank','powerplate','drawin'].forEach(id=>$(id).checked=false);['exerciseCal','workoutMinutes','strength'].forEach(id=>$(id).value='');$('strengthIntensity').value='moderate';renderExerciseEstimate();scheduleDraftSave();setStatus('有酸素のみの日にしました。種類・強度・時間を確認して保存してください',true)
+ quickCardio();['legRaise','plank','powerplate','drawin'].forEach(id=>$(id).checked=false);['exerciseCal','workoutMinutes','strength'].forEach(id=>$(id).value='');['workoutPart','workoutRequest','workoutPlan','workoutCompletion','workoutFeedback'].forEach(id=>$(id).value='');$('strengthIntensity').value='moderate';$('workoutPlanResult').classList.remove('show');$('workoutPlanStatus').textContent='';renderExerciseEstimate();scheduleDraftSave();setStatus('有酸素のみの日にしました。種類・強度・時間を確認して保存してください',true)
 }
 function applyProteinGoal(){$('protein').value=sets().proteinGoal||120}
 function applyCalorieGoal(){$('intake').value=sets().calorieGoal||2000}
@@ -1072,10 +1151,10 @@ function copyPreviousCardio(){
  $('restDay').checked=false;$('cardio').checked=true;$('cardioType').value=previous.cardioType||'other';$('cardioIntensity').value=previous.cardioIntensity||'moderate';$('cardioMin').value=previous.cardioMin||'';$('cardioDetails').value=previous.cardioDetails||'';$('cardioManualCalories').value='';$('cardio2').checked=!!previous.cardio2;$('cardio2Type').value=previous.cardio2Type||'walk';$('cardio2Intensity').value=previous.cardio2Intensity||'moderate';$('cardio2Min').value=previous.cardio2Min||'';$('cardio2Details').value=previous.cardio2Details||'';$('cardio2ManualCalories').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'旧記録から時間をコピーしました。種類は「その他」、強度は「普通」に仮設定したので今回の内容に合わせて確認してください':'前回の有酸素・強度・時間をコピーしました。機器表示kcalは今回の値を入れてください',true)
 }
 function copyPreviousStrength(){
- const current=$('date').value,previous=recs().filter(r=>r.date<current&&(String(r.strength||'').trim()||+r.workoutMinutes>0)).slice(-1)[0];
+ const current=$('date').value,place=$('workoutPlace').value.trim();if(!place){setStatus('先に利用店舗・場所を入力してください。別店舗の重量はコピーしません',false);return}const previous=recs().filter(r=>r.date<current&&r.workoutPlace===place&&(String(r.strength||'').trim()||+r.workoutMinutes>0)).slice(-1)[0];
  if(!previous){setStatus('過去の筋トレ記録がありません',false);return}
  const legacy=!previous.strengthIntensity;
- $('restDay').checked=false;$('strengthIntensity').value=previous.strengthIntensity||'moderate';$('workoutMinutes').value=previous.workoutMinutes||'';$('strength').value=previous.strength||'';$('exerciseCal').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'旧記録から筋トレ内容・時間をコピーしました。強度は「普通」に仮設定したので今回の強度に合わせて確認してください':'前回の筋トレ内容・強度・時間をコピーしました。消費kcalは今回の条件で再計算します',true)
+ $('restDay').checked=false;$('workoutEquipment').value=previous.workoutEquipment||'';$('workoutPart').value=previous.workoutPart||inferWorkoutPart(previous.strength);$('workoutLevel').value=previous.workoutLevel||'intermediate';$('strengthIntensity').value=previous.strengthIntensity||'moderate';$('workoutMinutes').value=previous.workoutMinutes||'';$('strength').value=previous.strength||'';$('exerciseCal').value='';renderExerciseEstimate();scheduleDraftSave();setStatus(legacy?'同じ場所の旧記録から筋トレ内容・時間をコピーしました。強度と器具を確認してください':'同じ場所の前回実績をコピーしました。器具が同じか確認し、違う場合は重量を流用しないでください',true)
 }
 function copyPreviousWorkout(){
  const current=$('date').value,previous=recs().filter(r=>r.date<current&&!isRestDay(r)&&hasExerciseInput(r)).slice(-1)[0];
@@ -1220,8 +1299,8 @@ function exerciseBreakdownFromForm(){
 function formIsRestDay(){return $('restDay').checked||isRestDay({strength:$('strength').value})}
 function clearExerciseForRest(showMsg=true){
  const hadExercise=checkIds().some(id=>$(id).checked)||['cardioMin','cardioManualCalories','cardioDetails','cardio2Min','cardio2ManualCalories','cardio2Details','exerciseCal','workoutMinutes'].some(id=>hasValue($(id).value))||String($('strength').value||'').trim();
- checkIds().forEach(id=>$(id).checked=false);['cardioMin','cardioManualCalories','cardioDetails','cardio2Min','cardio2ManualCalories','cardio2Details','exerciseCal','workoutMinutes','strength'].forEach(id=>$(id).value='');
- $('cardio2Fields').style.display='none';renderExerciseEstimate();scheduleDraftSave();if(showMsg&&hadExercise)setStatus('休養日を優先し、残っていた運動入力を外しました',true)
+ checkIds().forEach(id=>$(id).checked=false);['cardioMin','cardioManualCalories','cardioDetails','cardio2Min','cardio2ManualCalories','cardio2Details','exerciseCal','workoutMinutes','strength','workoutPart','workoutRequest','workoutPlan','workoutCompletion','workoutFeedback'].forEach(id=>$(id).value='');
+ $('cardio2Fields').style.display='none';$('workoutPlanResult').classList.remove('show');$('workoutPlanStatus').textContent='';renderExerciseEstimate();scheduleDraftSave();if(showMsg&&hadExercise)setStatus('休養日を優先し、残っていた運動入力を外しました',true)
 }
 function renderExerciseEstimate(){
  const el=$('exerciseEstimate');if(!el)return;if(formIsRestDay()){el.innerHTML='<b>休養日：運動消費 0kcal</b><br><span class="small">休養日は、有酸素・筋トレ・補助運動を加算しません。</span>';return}$('cardio2Fields').style.display=$('cardio2').checked?'block':'none';const x=exerciseBreakdownFromForm(),weight=cardioWeight(),entryText=(prefix,calories,source)=>!$(prefix).checked?'':source==='machine'?`${cardioLabels[$(prefix+'Type').value]}：${calories}kcal（機器表示を優先）`:!weight?`${cardioLabels[$(prefix+'Type').value]}：体重を入力すると推定できます`:`${cardioLabels[$(prefix+'Type').value]}：${calories}kcal（${cardioIntensityLabels[$(prefix+'Intensity').value]}・${+$(prefix+'Min').value||0}分・${weight.toFixed(1)}kgで推定）`,cardioLines=[entryText('cardio',x.cardio1,x.cardio1Source),entryText('cardio2',x.cardio2,x.cardio2Source)].filter(Boolean);
@@ -1445,7 +1524,7 @@ function collectRecord(normalizeRest=true){
  fieldIds().forEach(id=>{const el=$(id);r[id]=el.type==='number'?(el.value===''?null:+el.value):el.value});
  checkIds().forEach(id=>r[id]=$(id).checked);
  const breakdown=exerciseBreakdownFromForm();r.cardio1Calories=breakdown.cardio1;r.cardio1CalorieSource=breakdown.cardio1Source;r.cardio2Calories=breakdown.cardio2;r.cardio2CalorieSource=breakdown.cardio2Source;r.cardioCalories=breakdown.cardio;r.cardioCalorieSource=breakdown.source;r.strengthCalories=breakdown.strength;r.strengthCalorieSource=breakdown.strengthSource;r.accessoryCalories=breakdown.accessory;
- if(normalizeRest&&isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.cardioManualCalories=null;r.cardio1Calories=0;r.cardio1CalorieSource='none';r.cardio2Min=0;r.cardio2ManualCalories=null;r.cardio2Calories=0;r.cardio2CalorieSource='none';r.cardioCalories=0;r.cardioCalorieSource='none';r.exerciseCal=null;r.strengthCalories=0;r.strengthCalorieSource='none';r.accessoryCalories=0;r.workoutMinutes=0;r.exerciseTotal=0}else r.exerciseTotal=breakdown.total;
+ if(normalizeRest&&isRestDay(r)){r.restDay=true;checkIds().forEach(id=>r[id]=false);r.cardioMin=0;r.cardioManualCalories=null;r.cardio1Calories=0;r.cardio1CalorieSource='none';r.cardio2Min=0;r.cardio2ManualCalories=null;r.cardio2Calories=0;r.cardio2CalorieSource='none';r.cardioCalories=0;r.cardioCalorieSource='none';r.exerciseCal=null;r.strengthCalories=0;r.strengthCalorieSource='none';r.accessoryCalories=0;r.workoutMinutes=0;r.strength='';r.workoutPart='';r.workoutPlan='';r.workoutCompletion='';r.workoutFeedback='';r.exerciseTotal=0}else r.exerciseTotal=breakdown.total;
  return r;
 }
 function recordMissingFields(r){
@@ -1484,7 +1563,7 @@ function saveRecord(skipConfirm=false){
   $('recordSaveBtn').textContent='保存済み ✓';setTimeout(()=>{$('recordSaveBtn').textContent='この日の記録を上書き'},1800);return true
  }catch(e){setStatus('保存できませんでした：'+saveErrorReason(e),false);return false}
 }
-function clearForm(){clearTimeout(draftTimer);removeDraft($('date').value);fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';$('cardioType').value='bike';$('cardioIntensity').value='moderate';$('cardio2Type').value='walk';$('cardio2Intensity').value='moderate';$('strengthIntensity').value='moderate';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';renderExerciseEstimate();setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
+function clearForm(){clearTimeout(draftTimer);removeDraft($('date').value);fieldIds().forEach(id=>$(id).value='');$('fatType').value='fatPercent';$('muscleType').value='muscleMass';$('cardioType').value='bike';$('cardioIntensity').value='moderate';$('cardio2Type').value='walk';$('cardio2Intensity').value='moderate';$('strengthIntensity').value='moderate';$('workoutLevel').value='intermediate';$('workoutCompletion').value='';$('workoutPlanResult').classList.remove('show');$('workoutPlanStatus').textContent='';mealTypes.forEach(([id])=>{$(id+'Source').value='manual';clearPhoto(id+'Photo',id+'Preview',id+'Clear',false);updateMealSummary(id)});$('restDay').checked=false;checkIds().forEach(id=>$(id).checked=false);clearPhoto('bodyPhoto','bodyPreview','bodyClear',false);$('editState').textContent='';$('editState').className='edit-state';$('recordSaveBtn').textContent='この日の記録を保存';renderExerciseEstimate();renderNutritionProgress();setStatus('入力欄をクリアしました。保存済み記録は削除されていません',true)}
 function profileComplete(s){return !!(s.displayName&&s.startDate&&s.startWeight&&s.goalWeight&&s.baseBurn&&s.age&&s.sex&&s.heightCm&&s.activityLevel)}
 function calculateRecommendations(){
  const age=+$('age').value,height=+$('heightCm').value,latest=recs().filter(r=>+r.weight>0).slice(-1)[0],weight=latest?+latest.weight:+$('startWeight').value,goal=+$('goalWeight').value,sex=$('sex').value,activity=+$('activityLevel').value,deficit=+$('weightLossPace').value||500;
@@ -1496,7 +1575,7 @@ function calculateRecommendations(){
  out.textContent=`${latest?'最新体重 '+weight.toFixed(1)+'kg':'開始体重 '+weight.toFixed(1)+'kg'}を使用｜推定基礎代謝 ${Math.round(bmr)}kcal｜推定1日消費 ${tdee}kcal｜目標摂取 ${calorie}kcal｜目標P ${protein}g`;out.style.color='var(--good)'
 }
 function saveSettings(){
- const existing=sets(),s={...existing,displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,cardioGoal:+$('cardioGoal').value||35,displayMode:displayModeKey($('displayMode').value),usageMode:usageModeKey($('usageMode').value),adviceFood:$('adviceFood').checked,adviceSleep:$('adviceSleep').checked,adviceSupplement:$('adviceSupplement').checked,adviceExercise:$('adviceExercise').checked,coachStyle:COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:'partner',reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
+ const existing=sets(),s={...existing,displayName:$('displayName').value.trim(),startDate:$('startDate').value,age:+$('age').value||0,sex:$('sex').value,heightCm:+$('heightCm').value||0,startWeight:+$('startWeight').value||0,activityLevel:+$('activityLevel').value||0,weightLossPace:+$('weightLossPace').value||500,healthNotes:$('healthNotes').value.trim(),baseBurn:+$('baseBurn').value||0,autoBurn:$('autoBurn').checked,goalWeight:+$('goalWeight').value||0,proteinGoal:+$('proteinGoal').value||120,calorieGoal:+$('calorieGoal').value||2000,fatGoal:+$('fatGoal').value||0,carbsGoal:+$('carbsGoal').value||0,cardioGoal:+$('cardioGoal').value||35,displayMode:displayModeKey($('displayMode').value),usageMode:usageModeKey($('usageMode').value),adviceFood:$('adviceFood').checked,adviceSleep:$('adviceSleep').checked,adviceSupplement:$('adviceSupplement').checked,adviceExercise:$('adviceExercise').checked,coachStyle:COACH_STYLES[$('coachStyle').value]?$('coachStyle').value:'partner',reminderEnabled:$('reminderEnabled').checked,reminderTime:$('reminderTime').value||'21:00',updatedAt:appNowIso()};
  const legacyAllowed=recs().length>0&&!existing.age;
  if(!s.displayName||!s.startDate||!s.startWeight||!s.baseBurn||!s.goalWeight)return alert('名前・開始日・開始体重・消費kcal・目標体重を入力してください。');
  if(!legacyAllowed&&(!s.age||!s.sex||!s.heightCm||!s.activityLevel))return alert('年齢・性別・身長・活動量を入力し、自動計算してください。');
@@ -1506,7 +1585,7 @@ function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=
 function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings')renderAppDiagnostics()}
 
 function update(){
- const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('cardioGoal').value=s.cardioGoal||35;$('displayMode').value=displayModeKey(s.displayMode);$('usageMode').value=usageModeKey(s.usageMode);$('adviceFood').checked=!!s.adviceFood;$('adviceSleep').checked=!!s.adviceSleep;$('adviceSupplement').checked=!!s.adviceSupplement;$('adviceExercise').checked=!!s.adviceExercise;$('coachStyle').value=coachStyleKey(s);$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';renderCoachStyleDescription();applyDisplayMode(s.displayMode);applyUsageMode(s.usageMode);
+ const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('fatGoal').value=s.fatGoal||'';$('carbsGoal').value=s.carbsGoal||'';$('cardioGoal').value=s.cardioGoal||35;$('displayMode').value=displayModeKey(s.displayMode);$('usageMode').value=usageModeKey(s.usageMode);$('adviceFood').checked=!!s.adviceFood;$('adviceSleep').checked=!!s.adviceSleep;$('adviceSupplement').checked=!!s.adviceSupplement;$('adviceExercise').checked=!!s.adviceExercise;$('coachStyle').value=coachStyleKey(s);$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';renderCoachStyleDescription();applyDisplayMode(s.displayMode);applyUsageMode(s.usageMode);
  renderConnectivity();
  renderFirstUseProgress(s);
   $('onboardingNotice').style.display=bootStorageReady&&!profileComplete(s)&&!recs().length?'block':'none';
@@ -1516,6 +1595,8 @@ function update(){
  const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];
  if(last){const fm=fatMeta(last),mm=muscleMeta(last);$('cw').textContent=(+last.weight).toFixed(1);$('cf').textContent=last.fat??'--';$('cfLabel').textContent=fm.label;$('cfUnit').textContent=' '+fm.unit;$('cm').textContent=last.muscle??'--';$('cmLabel').textContent=mm.label;$('cmUnit').textContent=' '+mm.unit;$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+' kg';$('loss').className=(last.weight-s.startWeight)<0?'good':'warn'}
  const t=a.find(r=>r.date===today())||a.slice(-1)[0];const prev=t?prevRecord(a,t,'weight'):null;
+ renderNutritionProgress(null,s,'nutritionProgress');
+ renderNutritionProgress(t?{intake:t.intake,protein:t.protein,fatG:t.fatG,carbsG:t.carbsG}:{intake:null,protein:null,fatG:null,carbsG:null},s,'homeNutritionProgress');
  if($('simpleCoachSpeech'))$('simpleCoachSpeech').textContent=t?todayActionText(t,s):'写真か相談から、今日できることを一緒に決めましょう。';
  if(t){let rest=isRestDay(t),b=estimatedBalance(t,s),burn=estimatedDailyBurn(t,s);$('bal').textContent=b===null?'--':b;$('bal').className='big '+(b<0?'good':'bad');$('balanceBasis').textContent=`摂取 − 推定1日消費 ${burn}kcal（${s.autoBurn!==false&&+t.weight?'記録体重から自動計算':'固定設定'}）`;$('tw').textContent=rest?'休養日 · 運動0分':exerciseItems(t).join(' · ')||'まだ記録なし';$('coach').innerHTML=coachText(t,s,last,prev);$('diary').innerHTML=diaryText(t,s,last,prev)}
  updateStatTiles(a,s,t,prev);

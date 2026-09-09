@@ -84,7 +84,16 @@ const bodyProgressApi = new Function(
 )();
 
 const consultApi = new Function(
-  extractFunction(html, 'coachContext') + '\nreturn { coachContext };'
+  ['inferWorkoutPart','workoutHistoryForContext','coachContext'].map(name => extractFunction(html, name)).join('\n') + '\nreturn { coachContext };'
+)();
+
+const nutritionProgressApi = new Function(
+  extractFunction(html, 'nutritionProgressRows') + '\nreturn { nutritionProgressRows };'
+)();
+
+const workoutPlanApi = new Function(
+  ['inferWorkoutPart','workoutHistoryForContext','buildBaseWorkoutPlan'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { inferWorkoutPart, workoutHistoryForContext, buildBaseWorkoutPlan };'
 )();
 
 const mealAdditionApi = new Function(
@@ -667,7 +676,7 @@ test('v19.18 hides onboarding until storage is resolved and adds clear nutrition
   assert.match(html,/脂質（F）/);
   assert.match(html,/炭水化物（C）/);
   assert.match(html,/function openWorkoutConsult\(\)/);
-  assert.match(html,/別店舗・別マシンの重量は流用せず/);
+  assert.match(html,/別店舗・別マシンの重量は流用しません/);
   assert.match(html,/質問、減量目標と直近最大14日の記録/);
 });
 
@@ -781,18 +790,60 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
 });
 
-test('v20.5 uses a larger anime-style version of the submitted niece illustration', () => {
-  assert.match(html,/v20\.5 アニメコーチ版/);
+test('v21.0 keeps the larger anime-style submitted illustration', () => {
+  assert.match(html,/v21\.0 食事・筋トレ強化版/);
   assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
   assert.match(html,/grid-template-columns:170px 1fr/);
   assert.match(html,/\.coach-sprite\{width:170px/);
   assert.match(html,/background-size:cover/);
   assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='20\.5'/);
-  assert.match(serviceWorker,/shin-diet-v20-5-anime-coach/);
+  assert.match(html,/const APP_VERSION='21\.0'/);
+  assert.match(serviceWorker,/shin-diet-v21-0-food-workout/);
   assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(serviceWorker,/version:'20\.5'/);
-  assert.match(manifest,/v20\.5 アニメコーチ版/);
+  assert.match(serviceWorker,/version:'21\.0'/);
+  assert.match(manifest,/v21\.0 食事・筋トレ強化版/);
+});
+
+test('v21.0 shows daily nutrition progress without inventing optional macro goals', () => {
+  const rows=nutritionProgressApi.nutritionProgressRows({intake:1600,protein:96,fatG:55,carbsG:180},{calorieGoal:2000,proteinGoal:120,fatGoal:0,carbsGoal:0});
+  assert.equal(rows.find(x=>x.key==='calories').status,'目安内');
+  assert.equal(rows.find(x=>x.key==='protein').status,'もう少し');
+  assert.equal(rows.find(x=>x.key==='fat').status,'目標未設定');
+  assert.equal(rows.find(x=>x.key==='carbs').status,'目標未設定');
+  assert.match(html,/id="homeNutritionProgress"/);
+  assert.match(html,/id="nutritionProgress"/);
+});
+
+test('v21.0 builds beginner, intermediate and high workout plans by body part', () => {
+  const beginner=workoutPlanApi.buildBaseWorkoutPlan('chest','beginner',45);
+  const high=workoutPlanApi.buildBaseWorkoutPlan('chest','high',60);
+  assert.match(beginner,/胸・初歩/);
+  assert.match(high,/胸・高強度/);
+  assert.match(high,/×4セット/);
+  assert.match(beginner,/×2セット/);
+  assert.equal(workoutPlanApi.inferWorkoutPart('ラットプルダウン 50kg'),'back');
+  assert.match(html,/id="workoutPart"/);
+  assert.match(html,/id="workoutLevel"/);
+});
+
+test('v21.0 retains bounded structured workout results for the next plan', () => {
+  const records=Array.from({length:25},(_,i)=>({date:`2026-09-${String(i+1).padStart(2,'0')}`,workoutPlace:'本店',strength:'チェストプレス',workoutCompletion:'completed',workoutFeedback:'余裕2回'}));
+  const history=workoutPlanApi.workoutHistoryForContext(records);
+  assert.equal(history.length,20);
+  assert.equal(history[0].date,'2026-09-06');
+  assert.equal(history[0].workoutPart,'chest');
+  assert.equal(history[0].workoutCompletion,'completed');
+  assert.match(worker,/別店舗・別器具の重量は流用せず/);
+  assert.match(worker,/workoutHistory/);
+});
+
+test('v21.0 animates every coach state and respects reduced-motion settings', () => {
+  assert.match(html,/\.coach-sprite\.waiting\{animation:coachBreathe/);
+  assert.match(html,/\.coach-sprite\.good[\s\S]*animation:coachReady/);
+  assert.match(html,/\.coach-sprite\.warning[\s\S]*animation:coachCaution/);
+  assert.match(html,/\.coach-sprite\.achievement[\s\S]*animation:coachCelebrate/);
+  assert.match(html,/@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(html,/@keyframes nutritionGrow/);
 });
 
 test('v16.6 stores and compares optional body measurements', () => {
@@ -842,7 +893,7 @@ test('v17.0 AI consultation sends only a bounded record context for a signed-in 
 
 test('v17.0 coach worker authenticates, rate limits and separates facts from inference', () => {
   assert.match(worker,/body\.kind === 'coach_chat'/);
-  assert.match(worker,/message\.length > 500/);
+  assert.match(worker,/message\.length > 1200/);
   assert.match(worker,/cleanCoachContext/);
   assert.match(worker,/slice\(-14\)/);
   assert.match(worker,/store: false/);
