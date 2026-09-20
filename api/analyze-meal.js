@@ -48,10 +48,11 @@ function outputText(data) {
 const workoutLoadTypes = new Set(['total', 'per_side', 'bodyweight', 'assistance', 'other']);
 function cleanWorkoutExercises(items) {
   const numberOrNull = value => value !== null && value !== '' && Number.isFinite(+value) && +value >= 0 ? +value : null;
+  const countOrText = value => { if (value === null || value === undefined || value === '') return null; if (Number.isFinite(+value) && +value >= 0) return +value; const text = String(value).trim().slice(0, 40); return /^[0-9０-９.,、〜~～\-－回秒\s]+$/.test(text) ? text : null; };
   return (Array.isArray(items) ? items : []).slice(0, 20).map(item => ({
     name: String(item?.name || '').slice(0, 80), equipment: String(item?.equipment || '').slice(0, 80),
     loadType: workoutLoadTypes.has(item?.loadType) ? item.loadType : 'total',
-    weight: numberOrNull(item?.weight), reps: numberOrNull(item?.reps), sets: numberOrNull(item?.sets), restSeconds: numberOrNull(item?.restSeconds),
+    weight: numberOrNull(item?.weight), reps: countOrText(item?.reps), sets: numberOrNull(item?.sets), restSeconds: countOrText(item?.restSeconds),
     note: String(item?.note || '').slice(0, 240)
   })).filter(item => item.name || item.equipment || item.weight !== null || item.reps !== null || item.sets !== null || item.note);
 }

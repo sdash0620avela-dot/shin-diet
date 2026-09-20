@@ -92,8 +92,8 @@ const nutritionProgressApi = new Function(
 )();
 
 const workoutPlanApi = new Function(
-  (html.match(/const workoutLoadTypeLabels=\{.*?\};/s)?.[0]||'')+'\n'+['sanitizeWorkoutExercises','workoutExerciseSummary','inferWorkoutPart','workoutHistoryForContext','buildBaseWorkoutPlan'].map(name => extractFunction(html, name)).join('\n') +
-  '\nreturn { sanitizeWorkoutExercises, workoutExerciseSummary, inferWorkoutPart, workoutHistoryForContext, buildBaseWorkoutPlan };'
+  (html.match(/const workoutLoadTypeLabels=\{.*?\};/s)?.[0]||'')+'\n'+['sanitizeWorkoutExercises','workoutExerciseSummary','normalizeWorkoutExerciseName','savedExerciseForPlan','workoutExercisesFromPlan','inferWorkoutPart','workoutHistoryForContext','buildBaseWorkoutPlan'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { sanitizeWorkoutExercises, workoutExerciseSummary, workoutExercisesFromPlan, inferWorkoutPart, workoutHistoryForContext, buildBaseWorkoutPlan };'
 )();
 
 const mealAdditionApi = new Function(
@@ -791,18 +791,18 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
 });
 
-test('v21.1 keeps the larger anime-style submitted illustration', () => {
-  assert.match(html,/v21\.1 記録完結版/);
+test('v21.2 keeps the larger anime-style submitted illustration', () => {
+  assert.match(html,/v21\.2 メニュー自動入力版/);
   assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
   assert.match(html,/grid-template-columns:170px 1fr/);
   assert.match(html,/\.coach-sprite\{width:170px/);
   assert.match(html,/background-size:cover/);
   assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='21\.1'/);
-  assert.match(serviceWorker,/shin-diet-v21-1-record-complete/);
+  assert.match(html,/const APP_VERSION='21\.2'/);
+  assert.match(serviceWorker,/shin-diet-v21-2-workout-autofill/);
   assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(serviceWorker,/version:'21\.1'/);
-  assert.match(manifest,/v21\.1 記録完結版/);
+  assert.match(serviceWorker,/version:'21\.2'/);
+  assert.match(manifest,/v21\.2 メニュー自動入力版/);
 });
 
 test('v21.0 shows daily nutrition progress without inventing optional macro goals', () => {
@@ -865,6 +865,26 @@ test('v21.1 stores structured workout sets for later coaching', () => {
   assert.equal(history[0].workoutExercises[0].reps,10);
   assert.match(html,/id="workoutExerciseRows"/);
   assert.match(worker,/cleanWorkoutExercises/);
+});
+
+test('v21.2 fills workout result rows from the generated plan without inventing weights', () => {
+  const plan=workoutPlanApi.buildBaseWorkoutPlan('shoulders','high',70);
+  const empty=workoutPlanApi.workoutExercisesFromPlan(plan,'塩田店','Life Fitness',[]);
+  assert.equal(empty.length,4);
+  assert.equal(empty[0].name,'ショルダープレス');
+  assert.equal(empty[0].reps,'6〜15');
+  assert.equal(empty[0].sets,4);
+  assert.equal(empty[0].restSeconds,'90〜150');
+  assert.equal(empty[0].weight,null);
+  const weighted='1. ショルダープレス：15kg／10回×4セット／休憩120秒／余裕2回';
+  const history=[{date:'2026-09-19',workoutPlace:'塩田店',workoutEquipment:'Life Fitness',workoutExercises:[{name:'ショルダープレス',equipment:'Life Fitness',loadType:'per_side',weight:14,reps:10,sets:4,restSeconds:120}]}];
+  const same=workoutPlanApi.workoutExercisesFromPlan(weighted,'塩田店','Life Fitness',history);
+  const otherStore=workoutPlanApi.workoutExercisesFromPlan(weighted,'本店','Life Fitness',history);
+  assert.equal(same[0].weight,15);
+  assert.equal(same[0].loadType,'per_side');
+  assert.equal(otherStore[0].weight,null);
+  assert.match(html,/fillWorkoutExercisesFromPlan/);
+  assert.match(html,/下の実施欄へ\$\{adjustedCount\}種目を自動入力/);
 });
 
 test('v21.0 animates every coach state and respects reduced-motion settings', () => {
