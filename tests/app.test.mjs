@@ -84,7 +84,7 @@ const bodyProgressApi = new Function(
 )();
 
 const consultApi = new Function(
-  ['inferWorkoutPart','workoutHistoryForContext','coachContext'].map(name => extractFunction(html, name)).join('\n') + '\nreturn { coachContext };'
+  (html.match(/const workoutLoadTypeLabels=\{.*?\};/s)?.[0]||'')+'\n'+['sanitizeWorkoutExercises','inferWorkoutPart','workoutHistoryForContext','coachContext'].map(name => extractFunction(html, name)).join('\n') + '\nreturn { coachContext };'
 )();
 
 const nutritionProgressApi = new Function(
@@ -92,8 +92,8 @@ const nutritionProgressApi = new Function(
 )();
 
 const workoutPlanApi = new Function(
-  ['inferWorkoutPart','workoutHistoryForContext','buildBaseWorkoutPlan'].map(name => extractFunction(html, name)).join('\n') +
-  '\nreturn { inferWorkoutPart, workoutHistoryForContext, buildBaseWorkoutPlan };'
+  (html.match(/const workoutLoadTypeLabels=\{.*?\};/s)?.[0]||'')+'\n'+['sanitizeWorkoutExercises','workoutExerciseSummary','inferWorkoutPart','workoutHistoryForContext','buildBaseWorkoutPlan'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { sanitizeWorkoutExercises, workoutExerciseSummary, inferWorkoutPart, workoutHistoryForContext, buildBaseWorkoutPlan };'
 )();
 
 const mealAdditionApi = new Function(
@@ -213,7 +213,7 @@ test('v18.1 estimates strength training from intensity, duration and current wei
   assert.equal(api.strengthEstimatedCalories('moderate',60,113.8),597);
   assert.equal(api.strengthEstimatedCalories('hard',60,113.8),717);
   assert.match(html,/id="strengthIntensity"/);
-  assert.match(html,/前回の筋トレ・強度をそのまま使う/);
+  assert.match(html,/同じ場所の前回筋トレをコピー/);
   assert.match(html,/strengthCalorieSource=breakdown\.strengthSource/);
   assert.match(html,/\$\('exerciseCal'\)\.value=''/);
 });
@@ -559,7 +559,7 @@ test('v19.7 distinguishes complete rest from cardio-only days', () => {
   assert.match(html,/\['legRaise','plank','powerplate','drawin'\]\.forEach/);
   assert.match(html,/\['exerciseCal','workoutMinutes','strength'\]\.forEach/);
   assert.match(html,/有酸素のみの日にしました。種類・強度・時間を確認して保存してください/);
-  assert.match(html,/筋トレ内容（しなかった日は空欄でOK）/);
+  assert.match(html,/筋トレ提案・記録/);
 });
 
 test('v19.8 gives first-time users one guide and accepts the full emailed code length', () => {
@@ -778,11 +778,12 @@ test('v20.2 filters quick questions and explains Android recovery', () => {
 test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/function simpleMealSlot\(now=new Date\(\)\)/);
   assert.match(html,/hour<10\?'breakfast':hour<15\?'lunch':hour<21\?'dinner':'snack'/);
-  assert.match(html,/function setSimpleRecordFocus\(focus='all'\)/);
+  assert.match(html,/function setSimpleRecordFocus\(focus='daily'\)/);
   assert.match(html,/data-record-focus="meal"/);
   assert.match(html,/id="bodyCompositionCard"/);
   assert.match(html,/id="mealCard"/);
-  assert.match(html,/id="exerciseCard"/);
+  assert.match(html,/id="cardioCard"/);
+  assert.match(html,/id="workoutCard"/);
   assert.match(html,/内容を確認してこの食事を保存/);
   assert.match(html,/数値を確認して保存/);
   assert.match(html,/function saveSimpleResult\(button\)/);
@@ -790,18 +791,18 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
 });
 
-test('v21.0 keeps the larger anime-style submitted illustration', () => {
-  assert.match(html,/v21\.0 食事・筋トレ強化版/);
+test('v21.1 keeps the larger anime-style submitted illustration', () => {
+  assert.match(html,/v21\.1 記録完結版/);
   assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
   assert.match(html,/grid-template-columns:170px 1fr/);
   assert.match(html,/\.coach-sprite\{width:170px/);
   assert.match(html,/background-size:cover/);
   assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='21\.0'/);
-  assert.match(serviceWorker,/shin-diet-v21-0-food-workout/);
+  assert.match(html,/const APP_VERSION='21\.1'/);
+  assert.match(serviceWorker,/shin-diet-v21-1-record-complete/);
   assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(serviceWorker,/version:'21\.0'/);
-  assert.match(manifest,/v21\.0 食事・筋トレ強化版/);
+  assert.match(serviceWorker,/version:'21\.1'/);
+  assert.match(manifest,/v21\.1 記録完結版/);
 });
 
 test('v21.0 shows daily nutrition progress without inventing optional macro goals', () => {
@@ -835,6 +836,35 @@ test('v21.0 retains bounded structured workout results for the next plan', () =>
   assert.equal(history[0].workoutCompletion,'completed');
   assert.match(worker,/別店舗・別器具の重量は流用せず/);
   assert.match(worker,/workoutHistory/);
+});
+
+test('v21.1 recalculates nutrition from corrected meal text', () => {
+  assert.match(html,/修正した文章でカロリー・PFCを再計算/);
+  assert.match(html,/function analyzeMealText\(id,label\)/);
+  assert.match(html,/kind:'meal_text_analysis'/);
+  assert.match(worker,/body\.kind === 'meal_text_analysis'/);
+  assert.match(worker,/修正済みの食事内容/);
+  assert.match(worker,/低めにも高めにも寄せない現実的な平均/);
+});
+
+test('v21.1 separates daily and workout recording in the bottom navigation', () => {
+  assert.match(html,/openRecordMode\('daily',this\)/);
+  assert.match(html,/openRecordMode\('workout',this\)/);
+  assert.match(html,/>食事など</);
+  assert.match(html,/>筋トレ</);
+  assert.match(html,/data-record-focus="workout"/);
+});
+
+test('v21.1 stores structured workout sets for later coaching', () => {
+  assert.deepEqual(workoutPlanApi.sanitizeWorkoutExercises([{name:'',weight:null,reps:null,sets:null}]),[]);
+  const items=workoutPlanApi.sanitizeWorkoutExercises([{name:'チェストプレス',equipment:'Life Fitness',loadType:'total',weight:'80',reps:'10',sets:'4',restSeconds:'120',note:'余裕2回'}]);
+  assert.equal(items.length,1);
+  assert.equal(items[0].weight,80);
+  assert.match(workoutPlanApi.workoutExerciseSummary(items),/80kg（合計重量）×10回×4セット/);
+  const history=workoutPlanApi.workoutHistoryForContext([{date:'2026-09-20',workoutPlace:'本店',workoutPart:'chest',workoutExercises:items}]);
+  assert.equal(history[0].workoutExercises[0].reps,10);
+  assert.match(html,/id="workoutExerciseRows"/);
+  assert.match(worker,/cleanWorkoutExercises/);
 });
 
 test('v21.0 animates every coach state and respects reduced-motion settings', () => {
