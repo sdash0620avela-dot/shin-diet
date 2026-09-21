@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v21.2 メニュー自動入力版</title>
+<title>AI Diet v21.3 一般利用安定版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -281,7 +281,7 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v21.2 メニュー自動入力版</div>
+  <div class="version-pill">v21.3 一般利用安定版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -691,8 +691,18 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
   <div class="card"><h3>アプリ状態チェック</h3>
     <div id="appDiagnostics" class="diary">確認中…</div>
     <button type="button" class="sub" onclick="renderAppDiagnostics()">状態を再確認</button>
+    <button id="connectionCheckBtn" type="button" class="sub" onclick="runConnectionCheck()">接続をまとめて確認</button>
+    <div id="connectionCheckStatus" class="status" role="status" aria-live="polite"></div>
     <button type="button" class="sub" onclick="requestPersistentStorage()">端末保存の保護を依頼</button>
     <p class="small">端末・ブラウザが対応している範囲で確認します。「保護済み」でも、機種変更に備えてクラウド同期またはデータ書き出しを併用してください。</p>
+  </div>
+  <div class="card"><h3>データとAIの取り扱い</h3>
+    <details class="nutrition-guide"><summary>送信・保存される内容を確認</summary><div class="nutrition-guide-grid">
+      <div><b>写真解析</b><br>選んだ食事写真・体組成計写真は、解析時だけ専用WorkerとOpenAI APIへ送信します。写真自体はアプリの記録・クラウドへ保存しません。</div>
+      <div><b>AI相談・筋トレ調整</b><br>質問、設定した目標、直近最大14日の記録、筋トレ履歴最大20回を送信します。通常の相談文と回答は記録へ保存しません。</div>
+      <div><b>日々の記録</b><br>ログイン前はこの端末へ保存し、ログイン後は本人の端末と本人専用クラウドへ保存します。設定から書き出し・復元・全削除ができます。</div>
+      <div><b>推定値</b><br>食事・消費カロリー・体重予測・AI助言は推定です。写真の誤読や実量との差があるため、保存前に本人が確認・修正します。</div>
+    </div></details>
   </div>
 </section>
 </main>
@@ -720,8 +730,12 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='21.2';
+const APP_VERSION='21.3';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
+async function fetchWithTimeout(url,options={},timeoutMs=60000){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+ try{return await fetch(url,{...options,signal:controller.signal})}catch(error){if(error&&error.name==='AbortError')throw new Error(`通信が${Math.round(timeoutMs/1000)}秒以内に完了しませんでした。入力内容は残っています。通信を確認して、もう一度お試しください。`);throw error}finally{clearTimeout(timer)}
+}
 const dateKey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
 const today=()=>dateKey(new Date());
 const yesterdayStr=()=>{const d=new Date();d.setDate(d.getDate()-1);return dateKey(d)};
@@ -902,7 +916,7 @@ async function refreshServerClock(){
  if(!cloudClient||!cloudUser)return;
  try{
   const {data}=await cloudClient.auth.getSession(),token=data.session?.access_token;if(!token)return;
-  const started=Date.now(),response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify({kind:'server_time'})});
+  const started=Date.now(),response=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify({kind:'server_time'})},20000);
   const body=await response.json();if(!response.ok||!body.server_time)return;
   const midpoint=started+(Date.now()-started)/2,offset=Date.parse(body.server_time)-midpoint;
   if(Number.isFinite(offset)&&Math.abs(offset)<86400000){serverClockOffsetMs=offset;localStorage.setItem('shinDietServerClockOffsetMs',String(offset))}
@@ -1001,7 +1015,7 @@ function buildBaseWorkoutPlan(part='fullbody',level='intermediate',minutes=60){
 async function coachRequest(question){
  if(!cloudClient||!cloudUser)throw new Error('履歴でのAI調整にはログインが必要です。');
  const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();if(sessionError||!sessionData.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
- const response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({kind:'coach_chat',message:coachStyledQuestion(question),context:coachContext(recs(),sets())})});
+ const response=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({kind:'coach_chat',message:coachStyledQuestion(question),context:coachContext(recs(),sets())})},90000);
  const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'相談に回答できませんでした。');return body.answer||'回答がありませんでした。'
 }
 async function createWorkoutPlan(){
@@ -1258,7 +1272,7 @@ async function analyzeMeal(id,label){
   try{
     if(!cloudClient||!cloudUser)throw new Error('写真解析にはログインが必要です。設定からログインしてください。');
     const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();if(sessionError||!sessionData.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
-    const image=await imageForAnalysis(file),res=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({image,meal_type:label,portion_note:$(id+'PortionNote').value.trim()})});
+    const image=await imageForAnalysis(file),res=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({image,meal_type:label,portion_note:$(id+'PortionNote').value.trim()})},90000);
     const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'解析に失敗しました。');applyMealAnalysis(id,body);renderMealAnalysisAdvice(id,body);
     status.textContent=`AI推定を追加しました（確信度 ${body.confidence}）。保存履歴などの既存内容と栄養値も合計されています。`;status.style.color='var(--good)';
   }catch(e){
@@ -1273,7 +1287,7 @@ async function analyzeMeal(id,label){
 async function analyzeMealText(id,label){
  const text=$(id).value.trim(),btn=$(id+'TextAnalyze'),status=$(id+'AnalysisStatus');if(!text){status.textContent='先に料理名と量を文章で入力してください。';status.style.color='var(--bad)';return}
  btn.disabled=true;btn.textContent='再計算中…';status.textContent='修正した文章から栄養値を推定しています。';status.style.color='var(--muted)';
- try{if(!cloudClient||!cloudUser)throw new Error('文章からの再計算にはログインが必要です。設定からログインしてください。');const {data,error}=await cloudClient.auth.getSession();if(error||!data.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');const response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${data.session.access_token}`},body:JSON.stringify({kind:'meal_text_analysis',meal_type:label,meal_text:text})});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'再計算に失敗しました。');mealAnalysisBase[id]={};renderPortionEditor(id,body.items);recalculatePortions(id);$(id+'Source').value='mixed';renderMealAnalysisAdvice(id,body);status.textContent=`修正後の文章を基準に再計算しました（確信度 ${body.confidence}）。量と数値を確認して保存してください。`;status.style.color='var(--good)'}catch(error){status.textContent=error.message||'再計算に失敗しました。';status.style.color='var(--bad)'}finally{btn.disabled=false;btn.textContent='修正した文章でカロリー・PFCを再計算'}
+ try{if(!cloudClient||!cloudUser)throw new Error('文章からの再計算にはログインが必要です。設定からログインしてください。');const {data,error}=await cloudClient.auth.getSession();if(error||!data.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');const response=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${data.session.access_token}`},body:JSON.stringify({kind:'meal_text_analysis',meal_type:label,meal_text:text})},90000);const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'再計算に失敗しました。');mealAnalysisBase[id]={};renderPortionEditor(id,body.items);recalculatePortions(id);$(id+'Source').value='mixed';renderMealAnalysisAdvice(id,body);status.textContent=`修正後の文章を基準に再計算しました（確信度 ${body.confidence}）。量と数値を確認して保存してください。`;status.style.color='var(--good)'}catch(error){status.textContent=error.message||'再計算に失敗しました。';status.style.color='var(--bad)'}finally{btn.disabled=false;btn.textContent='修正した文章でカロリー・PFCを再計算'}
 }
 function applyBodyCompositionAnalysis(result){
  const values=result&&result.values||{},set=(id,value)=>{if(value!==null&&value!==undefined&&Number.isFinite(+value))$(id).value=+value};
@@ -1301,7 +1315,7 @@ async function analyzeBodyComposition(){
  try{
   if(!cloudClient||!cloudUser)throw new Error('写真の読み取りにはログインが必要です。設定からログインしてください。');
   const {data,error}=await cloudClient.auth.getSession();if(error||!data.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
-  const image=await imageForAnalysis(file),response=await fetch(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${data.session.access_token}`},body:JSON.stringify({kind:'body_composition',image})});
+  const image=await imageForAnalysis(file),response=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${data.session.access_token}`},body:JSON.stringify({kind:'body_composition',image})},90000);
   const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'数値を読み取れませんでした。');applyBodyCompositionAnalysis(body);renderBodyAnalysisAdvice(body);
   const count=Object.values(body.values||{}).filter(v=>v!==null&&v!==undefined).length;status.textContent=`AIが${count}項目を読み取りました（確信度 ${body.confidence}）。写真の数値と合っているか確認して保存してください。`;status.style.color='var(--good)';
  }catch(error){status.textContent=error.message||'数値を読み取れませんでした。';status.style.color='var(--bad)'}finally{btn.disabled=false;btn.textContent='AIで数値を読み取る'}
@@ -2053,6 +2067,20 @@ async function renderAppDiagnostics(){
  const sync=x.signedIn?(x.lastSync?`ログイン済み・最終同期 ${x.lastSync}`:'ログイン済み・同期確認中'):'未ログイン・この端末だけに保存';
  root.textContent=`版：v${x.version}\n起動：${x.installed?'ホーム画面アプリ':'ブラウザ表示'}\n通信：${x.online?'オンライン':'オフライン'}\n更新機能：${x.controlled?'動作中':'初回読込または確認不可'}\n保存記録：${x.records}日分\nクラウド：${sync}\n端末保存：${x.persistent===true?'保護済み':x.persistent===false?'通常保存':'確認不可'}\n使用容量：${storage}\n最終書き出し：${x.lastExport||'未実施'}`
 }
+async function runConnectionCheck(){
+ const status=$('connectionCheckStatus'),button=$('connectionCheckBtn');if(!status||!button)return;
+ button.disabled=true;status.className='status';status.textContent='公開ページ・ログイン・AIサーバーを確認中…';
+ try{
+  if(navigator.onLine===false)throw new Error('オフラインです。Wi-Fiまたはモバイル通信を確認してください。');
+  const manifestResponse=await fetchWithTimeout('./manifest.json',{cache:'no-store'},12000);if(!manifestResponse.ok)throw new Error('公開ファイルを取得できませんでした。少し待ってから再確認してください。');
+  if(!cloudClient||!cloudUser){status.className='status ok';status.textContent='公開ページ：正常｜この端末の保存：利用可能｜クラウド・AI：未ログインのため未確認';return}
+  const {data,error}=await cloudClient.auth.getSession();if(error||!data.session?.access_token)throw new Error('ログイン期限を確認できません。設定からもう一度ログインしてください。');
+  const response=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${data.session.access_token}`},body:JSON.stringify({kind:'server_time'})},20000),body=await response.json().catch(()=>({}));
+  if(!response.ok||!body.server_time)throw new Error(body.error||'AIサーバーから正常な応答を確認できませんでした。');
+  status.className='status ok';status.textContent=`公開ページ：正常｜ログイン：正常｜AIサーバー：正常｜クラウド同期待ち：${pendingCloudChanges()}件`;
+ }catch(error){status.className='status ng';status.textContent=`接続確認：${error.message||'確認できませんでした。'}`}
+ finally{button.disabled=false}
+}
 async function requestPersistentStorage(){
  if(!navigator.storage?.persist){alert('この端末・ブラウザでは保存保護の依頼機能を利用できません。クラウド同期またはデータ書き出しを使ってください。');return}
  try{const granted=await navigator.storage.persist();await renderAppDiagnostics();alert(granted?'端末から保存保護が許可されました。':'端末から保存保護は許可されませんでした。クラウド同期またはデータ書き出しを併用してください。')}catch(e){alert('保存保護を確認できませんでした。クラウド同期またはデータ書き出しを使ってください。')}
@@ -2144,20 +2172,26 @@ function drawChart(){
 }
 
 function exportData(){
- const payload={version:'15.3',storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),deletedRecords:deletedRecords(),settings:sets()};
+ const payload={version:APP_VERSION,storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),deletedRecords:deletedRecords(),settings:sets()};
  const b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href);localStorage.setItem(storageKey('LastExport'),new Date().toLocaleString('ja-JP'));renderAppDiagnostics()
+}
+function validBackupDate(value){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return false;const date=new Date(`${value}T00:00:00Z`);return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value
 }
 function backupStates(data){
  const records=Array.isArray(data)?data:data&&data.records,deleted=Array.isArray(data&&data.deletedRecords)?data.deletedRecords:[];
  if(!Array.isArray(records))throw new Error('記録データが見つかりません');
- return {records:records.filter(r=>r&&r.date&&!r._deleted),deleted:deleted.filter(r=>r&&r.date&&r._deleted)}
+ if(records.length+deleted.length>5000)throw new Error('記録件数が5000件を超えています');
+ if([...records,...deleted].some(r=>!r||typeof r!=='object'||Array.isArray(r)||!validBackupDate(r.date)))throw new Error('日付形式が正しくない記録があります');
+ return {records:records.filter(r=>!r._deleted),deleted:deleted.filter(r=>r._deleted)}
 }
 function importData(event){
- const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();
+ const file=event.target.files&&event.target.files[0];if(!file)return;if(file.size>5*1024*1024){alert('復元できませんでした：バックアップは5MB以下のJSONファイルを選んでください');event.target.value='';return}const reader=new FileReader();
  reader.onload=()=>{try{
   const data=JSON.parse(reader.result),backup=backupStates(data),before=recs(),states=mergeSyncStates(before,deletedRecords(),backup.records,backup.deleted);
+  if(data&&data.settings!==undefined&&(!data.settings||typeof data.settings!=='object'||Array.isArray(data.settings)))throw new Error('設定データの形式が正しくありません');
   const active=states.filter(r=>!r._deleted),deleted=states.filter(r=>r._deleted),added=active.filter(r=>!before.some(x=>x.date===r.date)).length,updated=active.filter(r=>before.some(x=>x.date===r.date&&stateTime(r)>stateTime(x))).length;
-  if(!confirm(`記録${backup.records.length}日分を現在のデータへ統合しますか？\n削除済み情報${backup.deleted.length}件も照合し、各日付の新しい状態だけを残します。`))return;
+  if(!confirm(`${file.name}\n記録${backup.records.length}日分と削除済み情報${backup.deleted.length}件の形式を検査しました。現在のデータへ統合しますか？\n各日付の新しい状態だけを残します。`))return;
   setDeletedRecords(deleted);setRecs(active);
   if(data.settings){const current=sets(),backupTime=Date.parse(data.settings.updatedAt||''),currentTime=Date.parse(current.updatedAt||'');if(!Number.isFinite(currentTime)||(Number.isFinite(backupTime)&&backupTime>currentTime))localStorage.setItem(storageKey('Settings'),JSON.stringify({...current,...data.settings}))}
   update();loadRecordForDate();alert(`復元しました（追加：${added}日／更新：${updated}日／合計：${active.length}日）`)

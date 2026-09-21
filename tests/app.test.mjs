@@ -28,8 +28,8 @@ const scoreApi = new Function(
 )();
 
 const syncApi = new Function(
-  ['stateTime', 'mergeSyncStates', 'backupStates'].map(name => extractFunction(html, name)).join('\n') +
-  '\nreturn { mergeSyncStates, backupStates };'
+  ['stateTime', 'mergeSyncStates', 'validBackupDate', 'backupStates'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { mergeSyncStates, validBackupDate, backupStates };'
 )();
 
 const analysisApi = new Function(
@@ -791,18 +791,18 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
 });
 
-test('v21.2 keeps the larger anime-style submitted illustration', () => {
-  assert.match(html,/v21\.2 メニュー自動入力版/);
+test('v21.3 keeps the larger anime-style submitted illustration', () => {
+  assert.match(html,/v21\.3 一般利用安定版/);
   assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
   assert.match(html,/grid-template-columns:170px 1fr/);
   assert.match(html,/\.coach-sprite\{width:170px/);
   assert.match(html,/background-size:cover/);
   assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='21\.2'/);
-  assert.match(serviceWorker,/shin-diet-v21-2-workout-autofill/);
+  assert.match(html,/const APP_VERSION='21\.3'/);
+  assert.match(serviceWorker,/shin-diet-v21-3-public-stability/);
   assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(serviceWorker,/version:'21\.2'/);
-  assert.match(manifest,/v21\.2 メニュー自動入力版/);
+  assert.match(serviceWorker,/version:'21\.3'/);
+  assert.match(manifest,/v21\.3 一般利用安定版/);
 });
 
 test('v21.0 shows daily nutrition progress without inventing optional macro goals', () => {
@@ -885,6 +885,33 @@ test('v21.2 fills workout result rows from the generated plan without inventing 
   assert.equal(otherStore[0].weight,null);
   assert.match(html,/fillWorkoutExercisesFromPlan/);
   assert.match(html,/下の実施欄へ\$\{adjustedCount\}種目を自動入力/);
+});
+
+test('v21.3 bounds AI network waits while preserving entered content', () => {
+  assert.match(html,/async function fetchWithTimeout\(url,options=\{\},timeoutMs=60000\)/);
+  assert.match(html,/new AbortController\(\)/);
+  assert.doesNotMatch(html,/fetch\(MEAL_ANALYSIS_API/);
+  assert.match(html,/入力内容は残っています/);
+  assert.match(html,/\},90000\)/);
+});
+
+test('v21.3 provides one-tap connection checks and explicit data handling', () => {
+  assert.match(html,/id="connectionCheckBtn"/);
+  assert.match(html,/async function runConnectionCheck\(\)/);
+  assert.match(html,/公開ページ：正常｜ログイン：正常｜AIサーバー：正常/);
+  assert.match(html,/データとAIの取り扱い/);
+  assert.match(html,/写真自体はアプリの記録・クラウドへ保存しません/);
+  assert.match(html,/筋トレ履歴最大20回/);
+});
+
+test('v21.3 validates backup shape, dates, size and record count before restore', () => {
+  assert.equal(syncApi.validBackupDate('2026-09-21'),true);
+  assert.equal(syncApi.validBackupDate('2026-02-30'),false);
+  assert.throws(()=>syncApi.backupStates({records:[{date:'not-a-date'}]}),/日付形式/);
+  assert.throws(()=>syncApi.backupStates({records:Array.from({length:5001},()=>({date:'2026-09-21'}))}),/5000件/);
+  assert.match(html,/file\.size>5\*1024\*1024/);
+  assert.match(html,/version:APP_VERSION/);
+  assert.match(html,/設定データの形式が正しくありません/);
 });
 
 test('v21.0 animates every coach state and respects reduced-motion settings', () => {
