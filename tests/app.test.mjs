@@ -32,6 +32,11 @@ const syncApi = new Function(
   '\nreturn { mergeSyncStates, validBackupDate, backupStates };'
 )();
 
+const releaseReadinessApi = new Function(
+  ['backupFreshness', 'diagnosticText'].map(name => extractFunction(html, name)).join('\n') +
+  '\nreturn { backupFreshness, diagnosticText };'
+)();
+
 const analysisApi = new Function(
   ['dayNumber', 'weightAnalysis'].map(name => extractFunction(html, name)).join('\n') +
   '\nreturn { weightAnalysis };'
@@ -791,18 +796,18 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
 });
 
-test('v21.3 keeps the larger anime-style submitted illustration', () => {
-  assert.match(html,/v21\.3 一般利用安定版/);
+test('v21.4 keeps the larger anime-style submitted illustration', () => {
+  assert.match(html,/v21\.4 公開準備版/);
   assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
   assert.match(html,/grid-template-columns:170px 1fr/);
   assert.match(html,/\.coach-sprite\{width:170px/);
   assert.match(html,/background-size:cover/);
   assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='21\.3'/);
-  assert.match(serviceWorker,/shin-diet-v21-3-public-stability/);
+  assert.match(html,/const APP_VERSION='21\.4'/);
+  assert.match(serviceWorker,/shin-diet-v21-4-release-readiness/);
   assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(serviceWorker,/version:'21\.3'/);
-  assert.match(manifest,/v21\.3 一般利用安定版/);
+  assert.match(serviceWorker,/version:'21\.4'/);
+  assert.match(manifest,/v21\.4 公開準備版/);
 });
 
 test('v21.0 shows daily nutrition progress without inventing optional macro goals', () => {
@@ -912,6 +917,32 @@ test('v21.3 validates backup shape, dates, size and record count before restore'
   assert.match(html,/file\.size>5\*1024\*1024/);
   assert.match(html,/version:APP_VERSION/);
   assert.match(html,/設定データの形式が正しくありません/);
+});
+
+test('v21.4 requires one-time disclosure before sending data to AI', () => {
+  assert.match(html,/const AI_CONSENT_VERSION='1'/);
+  assert.match(html,/function ensureAiConsent\(\)/);
+  assert.match(html,/写真解析：選んだ写真を専用WorkerとOpenAI APIへ送信します/);
+  assert.match(html,/直近最大14日の記録、筋トレ履歴最大20回/);
+  assert.equal((html.match(/if\(!ensureAiConsent\(\)\)/g)||[]).length,4);
+  assert.match(html,/AI送信の確認をリセット/);
+});
+
+test('v21.4 copies support diagnostics without health or account contents', () => {
+  const text=releaseReadinessApi.diagnosticText({version:'21.4',installed:true,online:true,controlled:true,signedIn:true,pending:2,records:12,persistent:true,lastExportIso:'2026-09-20T00:00:00.000Z'},'Test Browser');
+  assert.match(text,/版：v21\.4/);
+  assert.match(text,/同期待ち：2件/);
+  assert.match(text,/環境：Test Browser/);
+  assert.doesNotMatch(text,/メール|体重|食事|相談文/);
+  assert.match(html,/食事・体重・相談文・メールアドレスは含みません/);
+});
+
+test('v21.4 flags backups older than thirty days', () => {
+  const now=Date.parse('2026-09-22T00:00:00.000Z');
+  assert.equal(releaseReadinessApi.backupFreshness(null,now),'未実施');
+  assert.equal(releaseReadinessApi.backupFreshness('2026-09-21T00:00:00.000Z',now),'1日前');
+  assert.equal(releaseReadinessApi.backupFreshness('2026-08-20T00:00:00.000Z',now),'33日前・書き出し推奨');
+  assert.match(html,/storageKey\('LastExportIso'\)/);
 });
 
 test('v21.0 animates every coach state and respects reduced-motion settings', () => {

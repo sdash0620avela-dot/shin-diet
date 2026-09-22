@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v21.3 一般利用安定版</title>
+<title>AI Diet v21.4 公開準備版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -281,7 +281,7 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v21.3 一般利用安定版</div>
+  <div class="version-pill">v21.4 公開準備版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -693,8 +693,10 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
     <button type="button" class="sub" onclick="renderAppDiagnostics()">状態を再確認</button>
     <button id="connectionCheckBtn" type="button" class="sub" onclick="runConnectionCheck()">接続をまとめて確認</button>
     <div id="connectionCheckStatus" class="status" role="status" aria-live="polite"></div>
+    <button type="button" class="sub" onclick="copyAppDiagnostics()">サポート用の状態をコピー</button>
+    <div id="diagnosticsCopyStatus" class="status" role="status" aria-live="polite"></div>
     <button type="button" class="sub" onclick="requestPersistentStorage()">端末保存の保護を依頼</button>
-    <p class="small">端末・ブラウザが対応している範囲で確認します。「保護済み」でも、機種変更に備えてクラウド同期またはデータ書き出しを併用してください。</p>
+    <p class="small">コピー内容に食事・体重・相談文・メールアドレスは含みません。端末・ブラウザが対応している範囲で確認します。「保護済み」でも、機種変更に備えてクラウド同期またはデータ書き出しを併用してください。</p>
   </div>
   <div class="card"><h3>データとAIの取り扱い</h3>
     <details class="nutrition-guide"><summary>送信・保存される内容を確認</summary><div class="nutrition-guide-grid">
@@ -703,6 +705,8 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
       <div><b>日々の記録</b><br>ログイン前はこの端末へ保存し、ログイン後は本人の端末と本人専用クラウドへ保存します。設定から書き出し・復元・全削除ができます。</div>
       <div><b>推定値</b><br>食事・消費カロリー・体重予測・AI助言は推定です。写真の誤読や実量との差があるため、保存前に本人が確認・修正します。</div>
     </div></details>
+    <div id="aiConsentState" class="small" style="margin-top:12px"></div>
+    <button type="button" class="sub" onclick="resetAiConsent()">AI送信の確認をリセット</button>
   </div>
 </section>
 </main>
@@ -730,8 +734,9 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='21.3';
+const APP_VERSION='21.4';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
+const AI_CONSENT_VERSION='1';
 async function fetchWithTimeout(url,options={},timeoutMs=60000){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
  try{return await fetch(url,{...options,signal:controller.signal})}catch(error){if(error&&error.name==='AbortError')throw new Error(`通信が${Math.round(timeoutMs/1000)}秒以内に完了しませんでした。入力内容は残っています。通信を確認して、もう一度お試しください。`);throw error}finally{clearTimeout(timer)}
@@ -751,6 +756,14 @@ let serverClockOffsetMs=Number(localStorage.getItem('shinDietServerClockOffsetMs
 const appNowMs=()=>Date.now()+serverClockOffsetMs;
 const appNowIso=()=>new Date(appNowMs()).toISOString();
 const storageKey=(kind,id=activeStorageId)=>id==='legacy'?`shinDiet${kind}`:`shinDiet:${id}:${kind.toLowerCase()}`;
+function aiConsentRecord(){const value=readJson(storageKey('AiConsent'),null);return value&&value.version===AI_CONSENT_VERSION?value:null}
+function renderAiConsentState(){const el=$('aiConsentState');if(!el)return;const accepted=aiConsentRecord();el.textContent=accepted?`AI送信の確認済み：${new Date(accepted.acceptedAt).toLocaleDateString('ja-JP')}`:'AI機能の初回利用時に、送信内容を確認します。'}
+function ensureAiConsent(){
+ if(aiConsentRecord())return true;
+ const accepted=confirm('AI機能を使う前に確認してください。\n\n写真解析：選んだ写真を専用WorkerとOpenAI APIへ送信します。写真自体は記録・クラウドへ保存しません。\nAI相談・筋トレ調整：質問、目標、直近最大14日の記録、筋トレ履歴最大20回を送信します。\n\n送信してAI機能を使いますか？');
+ if(!accepted)return false;localStorage.setItem(storageKey('AiConsent'),JSON.stringify({version:AI_CONSENT_VERSION,acceptedAt:new Date().toISOString()}));renderAiConsentState();return true
+}
+function resetAiConsent(){localStorage.removeItem(storageKey('AiConsent'));renderAiConsentState();const el=$('aiConsentState');if(el)el.textContent='AI送信の確認をリセットしました。次回のAI利用時にもう一度確認します。'}
 function readJson(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v??fallback}catch(e){return fallback}}
 function recs(){const v=readJson(storageKey('Records'),[]);return Array.isArray(v)?v.filter(r=>r&&!r._deleted):[]}
 function deletedRecords(){const v=readJson(storageKey('DeletedRecords'),[]);return Array.isArray(v)?v.filter(r=>r&&r._deleted&&r.date):[]}
@@ -1014,6 +1027,7 @@ function buildBaseWorkoutPlan(part='fullbody',level='intermediate',minutes=60){
 }
 async function coachRequest(question){
  if(!cloudClient||!cloudUser)throw new Error('履歴でのAI調整にはログインが必要です。');
+ if(!ensureAiConsent())throw new Error('AIへの送信を中止しました。入力内容は残っています。');
  const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();if(sessionError||!sessionData.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
  const response=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({kind:'coach_chat',message:coachStyledQuestion(question),context:coachContext(recs(),sets())})},90000);
  const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'相談に回答できませんでした。');return body.answer||'回答がありませんでした。'
@@ -1271,6 +1285,7 @@ async function analyzeMeal(id,label){
   btn.disabled=true;btn.textContent='解析中…';status.textContent='写真から料理と栄養を推定しています。';status.style.color='var(--muted)';
   try{
     if(!cloudClient||!cloudUser)throw new Error('写真解析にはログインが必要です。設定からログインしてください。');
+    if(!ensureAiConsent())throw new Error('AIへの送信を中止しました。写真と入力内容は残っています。');
     const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();if(sessionError||!sessionData.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
     const image=await imageForAnalysis(file),res=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionData.session.access_token}`},body:JSON.stringify({image,meal_type:label,portion_note:$(id+'PortionNote').value.trim()})},90000);
     const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'解析に失敗しました。');applyMealAnalysis(id,body);renderMealAnalysisAdvice(id,body);
@@ -1287,7 +1302,7 @@ async function analyzeMeal(id,label){
 async function analyzeMealText(id,label){
  const text=$(id).value.trim(),btn=$(id+'TextAnalyze'),status=$(id+'AnalysisStatus');if(!text){status.textContent='先に料理名と量を文章で入力してください。';status.style.color='var(--bad)';return}
  btn.disabled=true;btn.textContent='再計算中…';status.textContent='修正した文章から栄養値を推定しています。';status.style.color='var(--muted)';
- try{if(!cloudClient||!cloudUser)throw new Error('文章からの再計算にはログインが必要です。設定からログインしてください。');const {data,error}=await cloudClient.auth.getSession();if(error||!data.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');const response=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${data.session.access_token}`},body:JSON.stringify({kind:'meal_text_analysis',meal_type:label,meal_text:text})},90000);const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'再計算に失敗しました。');mealAnalysisBase[id]={};renderPortionEditor(id,body.items);recalculatePortions(id);$(id+'Source').value='mixed';renderMealAnalysisAdvice(id,body);status.textContent=`修正後の文章を基準に再計算しました（確信度 ${body.confidence}）。量と数値を確認して保存してください。`;status.style.color='var(--good)'}catch(error){status.textContent=error.message||'再計算に失敗しました。';status.style.color='var(--bad)'}finally{btn.disabled=false;btn.textContent='修正した文章でカロリー・PFCを再計算'}
+ try{if(!cloudClient||!cloudUser)throw new Error('文章からの再計算にはログインが必要です。設定からログインしてください。');if(!ensureAiConsent())throw new Error('AIへの送信を中止しました。入力内容は残っています。');const {data,error}=await cloudClient.auth.getSession();if(error||!data.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');const response=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${data.session.access_token}`},body:JSON.stringify({kind:'meal_text_analysis',meal_type:label,meal_text:text})},90000);const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'再計算に失敗しました。');mealAnalysisBase[id]={};renderPortionEditor(id,body.items);recalculatePortions(id);$(id+'Source').value='mixed';renderMealAnalysisAdvice(id,body);status.textContent=`修正後の文章を基準に再計算しました（確信度 ${body.confidence}）。量と数値を確認して保存してください。`;status.style.color='var(--good)'}catch(error){status.textContent=error.message||'再計算に失敗しました。';status.style.color='var(--bad)'}finally{btn.disabled=false;btn.textContent='修正した文章でカロリー・PFCを再計算'}
 }
 function applyBodyCompositionAnalysis(result){
  const values=result&&result.values||{},set=(id,value)=>{if(value!==null&&value!==undefined&&Number.isFinite(+value))$(id).value=+value};
@@ -1314,6 +1329,7 @@ async function analyzeBodyComposition(){
  btn.disabled=true;btn.textContent='読み取り中…';status.textContent='写真に表示された数値を確認しています。';status.style.color='var(--muted)';
  try{
   if(!cloudClient||!cloudUser)throw new Error('写真の読み取りにはログインが必要です。設定からログインしてください。');
+  if(!ensureAiConsent())throw new Error('AIへの送信を中止しました。写真と入力内容は残っています。');
   const {data,error}=await cloudClient.auth.getSession();if(error||!data.session?.access_token)throw new Error('ログイン状態を確認できません。もう一度ログインしてください。');
   const image=await imageForAnalysis(file),response=await fetchWithTimeout(MEAL_ANALYSIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${data.session.access_token}`},body:JSON.stringify({kind:'body_composition',image})},90000);
   const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'数値を読み取れませんでした。');applyBodyCompositionAnalysis(body);renderBodyAnalysisAdvice(body);
@@ -1636,7 +1652,7 @@ function saveSettings(){
  writeSettings(s);update();alert('個人設定を保存しました')
 }
 function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('設定'));if(tab)show('settings',tab)}
-function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings')renderAppDiagnostics()}
+function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings'){renderAppDiagnostics();renderAiConsentState()}}
 
 function update(){
  const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('fatGoal').value=s.fatGoal||'';$('carbsGoal').value=s.carbsGoal||'';$('cardioGoal').value=s.cardioGoal||35;$('displayMode').value=displayModeKey(s.displayMode);$('usageMode').value=usageModeKey(s.usageMode);$('adviceFood').checked=!!s.adviceFood;$('adviceSleep').checked=!!s.adviceSleep;$('adviceSupplement').checked=!!s.adviceSupplement;$('adviceExercise').checked=!!s.adviceExercise;$('coachStyle').value=coachStyleKey(s);$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';renderCoachStyleDescription();applyDisplayMode(s.displayMode);applyUsageMode(s.usageMode);
@@ -2056,16 +2072,26 @@ function openTodayRecord(){
 function dismissReminderToday(){localStorage.setItem(storageKey('ReminderDismissed'),today());renderRecordReminder()}
 
 function formatStorageBytes(bytes){if(!Number.isFinite(+bytes))return '確認不可';if(+bytes<1024)return `${Math.round(+bytes)}B`;if(+bytes<1048576)return `${(+bytes/1024).toFixed(1)}KB`;return `${(+bytes/1048576).toFixed(1)}MB`}
+function backupFreshness(value,now=Date.now()){
+ const time=Date.parse(value||'');if(!Number.isFinite(time))return value?'日時判定不可':'未実施';const days=Math.max(0,Math.floor((now-time)/86400000));return days>=30?`${days}日前・書き出し推奨`:`${days}日前`
+}
 async function appDiagnosticState(){
  const installed=!!(window.matchMedia?.('(display-mode: standalone)').matches||window.navigator.standalone),online=navigator.onLine!==false,controlled=!!navigator.serviceWorker?.controller;
  let persistent=null,usage=null,quota=null;
  try{if(navigator.storage?.persisted)persistent=await navigator.storage.persisted();if(navigator.storage?.estimate){const estimate=await navigator.storage.estimate();usage=estimate.usage;quota=estimate.quota}}catch(e){}
- return {version:APP_VERSION,installed,online,controlled,persistent,usage,quota,records:recs().length,signedIn:!!cloudUser,lastSync:lastSyncAt||null,lastExport:localStorage.getItem(storageKey('LastExport'))||null}
+ return {version:APP_VERSION,installed,online,controlled,persistent,usage,quota,records:recs().length,signedIn:!!cloudUser,pending:pendingCloudChanges(),lastSync:lastSyncAt||null,lastExport:localStorage.getItem(storageKey('LastExport'))||null,lastExportIso:localStorage.getItem(storageKey('LastExportIso'))||null}
 }
 async function renderAppDiagnostics(){
  const root=$('appDiagnostics');if(!root)return;root.textContent='確認中…';const x=await appDiagnosticState(),storage=x.usage===null?'確認不可':`${formatStorageBytes(x.usage)} / ${formatStorageBytes(x.quota)}`;
  const sync=x.signedIn?(x.lastSync?`ログイン済み・最終同期 ${x.lastSync}`:'ログイン済み・同期確認中'):'未ログイン・この端末だけに保存';
- root.textContent=`版：v${x.version}\n起動：${x.installed?'ホーム画面アプリ':'ブラウザ表示'}\n通信：${x.online?'オンライン':'オフライン'}\n更新機能：${x.controlled?'動作中':'初回読込または確認不可'}\n保存記録：${x.records}日分\nクラウド：${sync}\n端末保存：${x.persistent===true?'保護済み':x.persistent===false?'通常保存':'確認不可'}\n使用容量：${storage}\n最終書き出し：${x.lastExport||'未実施'}`
+ root.textContent=`版：v${x.version}\n起動：${x.installed?'ホーム画面アプリ':'ブラウザ表示'}\n通信：${x.online?'オンライン':'オフライン'}\n更新機能：${x.controlled?'動作中':'初回読込または確認不可'}\n保存記録：${x.records}日分\nクラウド：${sync}\n端末保存：${x.persistent===true?'保護済み':x.persistent===false?'通常保存':'確認不可'}\n使用容量：${storage}\n最終書き出し：${x.lastExport||'未実施'}（${backupFreshness(x.lastExportIso)}）`
+}
+function diagnosticText(x,userAgent=''){
+ return `AI Diet サポート用状態\n版：v${x.version}\n表示：${x.installed?'ホーム画面アプリ':'ブラウザ'}\n通信：${x.online?'オンライン':'オフライン'}\n更新機能：${x.controlled?'動作中':'未確認'}\nログイン：${x.signedIn?'あり':'なし'}\n同期待ち：${x.pending||0}件\n保存記録数：${x.records}日分\n端末保存：${x.persistent===true?'保護済み':x.persistent===false?'通常保存':'確認不可'}\nバックアップ：${backupFreshness(x.lastExportIso)}\n環境：${String(userAgent).slice(0,300)}`
+}
+async function copyAppDiagnostics(){
+ const status=$('diagnosticsCopyStatus');if(status){status.className='status';status.textContent='状態を確認中…'}
+ try{const state=await appDiagnosticState(),text=diagnosticText(state,navigator.userAgent);await navigator.clipboard.writeText(text);if(status){status.className='status ok';status.textContent='サポート用状態をコピーしました。食事・体重・相談文・メールアドレスは含みません。'}}catch(error){if(status){status.className='status ng';status.textContent='コピーできませんでした。ブラウザのクリップボード許可を確認してください。'}}
 }
 async function runConnectionCheck(){
  const status=$('connectionCheckStatus'),button=$('connectionCheckBtn');if(!status||!button)return;
@@ -2173,7 +2199,7 @@ function drawChart(){
 
 function exportData(){
  const payload={version:APP_VERSION,storageUser:cloudUser?cloudUser.id:'guest',exportedAt:new Date().toISOString(),records:recs(),deletedRecords:deletedRecords(),settings:sets()};
- const b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href);localStorage.setItem(storageKey('LastExport'),new Date().toLocaleString('ja-JP'));renderAppDiagnostics()
+ const b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`shin-diet-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href);localStorage.setItem(storageKey('LastExport'),new Date().toLocaleString('ja-JP'));localStorage.setItem(storageKey('LastExportIso'),new Date().toISOString());renderAppDiagnostics()
 }
 function validBackupDate(value){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return false;const date=new Date(`${value}T00:00:00Z`);return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value
