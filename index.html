@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v21.4 公開準備版</title>
+<title>AI Diet v21.5 写真解析復旧版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -281,7 +281,7 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v21.4 公開準備版</div>
+  <div class="version-pill">v21.5 写真解析復旧版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -734,7 +734,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='21.4';
+const APP_VERSION='21.5';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const AI_CONSENT_VERSION='1';
 async function fetchWithTimeout(url,options={},timeoutMs=60000){
@@ -1115,7 +1115,7 @@ $('strength').addEventListener('input',()=>{if(isRestDay({strength:$('strength')
 function fillMeal(id,text){const el=$(id);if(el)el.value=text}
 function renderMealEntries(){
   const mode=displayModeKey(sets().displayMode);
-  $('mealEntries').innerHTML=mealTypes.map(([id,label],index)=>`<details id="${id}Block" class="mealBlock" ${index===0?'open':''}><summary><span>${label}</span><span id="${id}Summary" class="mealDone">未入力</span></summary><div class="mealBody"><button type="button" class="sub" onclick="copyPreviousMeal('${id}','${label}')">前回の${label}を追加</button><div id="${id}Favorites" class="meal-favorites"></div><div id="${id}AddGuide" class="analysisStatus">保存履歴と写真解析は、この食事へ順番に追加されます。</div><div class="label">${label}写真（撮影・保存済み写真・フォルダーから選択できます）</div><input id="${id}Photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><textarea id="${id}PortionNote" class="portionNote" placeholder="任意：ご飯は半分、唐揚げ3個、味噌汁は飲まない など"></textarea><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析して追加</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><div id="${id}AnalysisAdvice" class="analysis-advice" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div id="${id}PortionEditor" class="portionEditor"></div><div class="label">内容（確認・修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><button id="${id}TextAnalyze" type="button" class="sub" onclick="analyzeMealText('${id}','${label}')">修正した文章でカロリー・PFCを再計算</button><p class="small">文章を直しただけでは数値は変わりません。このボタンで、修正後の料理名と量を基準にAI推定を更新します。</p><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option><option value="mixed">本人入力＋AI推定</option></select></div><div><div class="label">カロリー kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label" data-nutrition-name="たんぱく質" data-nutrition-code="P">${nutritionLabel('たんぱく質','P',mode)}g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label" data-nutrition-name="脂質" data-nutrition-code="F">${nutritionLabel('脂質','F',mode)}g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label" data-nutrition-name="炭水化物" data-nutrition-code="C">${nutritionLabel('炭水化物','C',mode)}g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div></details>`).join('');
+  $('mealEntries').innerHTML=mealTypes.map(([id,label],index)=>`<details id="${id}Block" class="mealBlock" ${index===0?'open':''}><summary><span>${label}</span><span id="${id}Summary" class="mealDone">未入力</span></summary><div class="mealBody"><button type="button" class="sub" onclick="copyPreviousMeal('${id}','${label}')">前回の${label}を追加</button><div id="${id}Favorites" class="meal-favorites"></div><div id="${id}AddGuide" class="analysisStatus">保存履歴と写真解析は、この食事へ順番に追加されます。</div><div class="label">${label}写真（撮影・保存済み写真・フォルダーから選択できます）</div><input id="${id}Photo" type="file" accept="image/*"><img id="${id}Preview" class="photo" alt="${label}プレビュー"><textarea id="${id}PortionNote" class="portionNote" placeholder="任意：ご飯は半分、唐揚げ3個、味噌汁は飲まない など"></textarea><button id="${id}Analyze" type="button" class="analyzeBtn" onclick="analyzeMeal('${id}','${label}')">AIで写真を解析して追加</button><div id="${id}AnalysisStatus" class="analysisStatus" role="status" aria-live="polite"></div><div id="${id}AnalysisAdvice" class="analysis-advice" role="status" aria-live="polite"></div><button id="${id}Clear" type="button" class="sub photoClear" onclick="clearPhoto('${id}Photo','${id}Preview','${id}Clear')">写真を消す</button><div id="${id}PortionEditor" class="portionEditor"></div><div class="label">内容（確認・修正できます）</div><textarea id="${id}" placeholder="料理名・量"></textarea><button id="${id}TextAnalyze" type="button" class="sub" onclick="analyzeMealText('${id}','${label}')">修正した文章でカロリー・PFCを再計算</button><p class="small">文章を直しただけでは数値は変わりません。このボタンで、修正後の料理名と量を基準にAI推定を更新します。</p><div class="grid"><div><div class="label">入力区分</div><select id="${id}Source"><option value="manual">本人入力</option><option value="ai">AI推定</option><option value="mixed">本人入力＋AI推定</option></select></div><div><div class="label">カロリー kcal</div><input id="${id}Kcal" type="number" inputmode="numeric"></div><div><div class="label" data-nutrition-name="たんぱく質" data-nutrition-code="P">${nutritionLabel('たんぱく質','P',mode)}g</div><input id="${id}Protein" type="number" step="0.1" inputmode="decimal"></div><div><div class="label" data-nutrition-name="脂質" data-nutrition-code="F">${nutritionLabel('脂質','F',mode)}g</div><input id="${id}Fat" type="number" step="0.1" inputmode="decimal"></div><div><div class="label" data-nutrition-name="炭水化物" data-nutrition-code="C">${nutritionLabel('炭水化物','C',mode)}g</div><input id="${id}Carbs" type="number" step="0.1" inputmode="decimal"></div></div></div></details>`).join('');
   mealTypes.forEach(([id,label])=>{
    pv($(id+'Photo'),$(id+'Preview'),$(id+'Clear'));[id,...mealSuffixes.slice(1).map(s=>id+s)].forEach(fid=>$(fid).addEventListener('input',()=>{calculateMealTotals();updateMealSummary(id)}));
    const saveFavorite=document.createElement('button');saveFavorite.type='button';saveFavorite.className='sub';saveFavorite.textContent='現在の内容を「いつもの食事」に登録・更新';saveFavorite.addEventListener('click',()=>saveCurrentMealFavorite(id,label));$(id+'Block').querySelector('.mealBody').append(saveFavorite)
@@ -1239,15 +1239,17 @@ function goToRecordSave(){calculateMealTotals();$('recordSaveCard').scrollIntoVi
 
 function pv(input,img,btn){input.onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{img.src=r.result;img.style.display='block';btn.style.display='block'};r.readAsDataURL(f)}}
 async function imageForAnalysis(file){
-  if(!file||!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('JPEG・PNG・WebPの写真を選んでください。');
-  if(file.size>12*1024*1024)throw new Error('写真が大きすぎます。12MB以下にしてください。');
+  if(!file)throw new Error('写真を選んでください。');
+  const photoName=/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name||'');
+  if(file.type&&!file.type.startsWith('image/')&&!photoName)throw new Error('写真ファイルを選んでください。');
+  if(file.size>30*1024*1024)throw new Error('写真が大きすぎます。30MB以下にしてください。');
   let source,release=()=>{};
   try{
     if(typeof createImageBitmap==='function'){source=await createImageBitmap(file);release=()=>source.close?.()}
   }catch(e){source=null}
   if(!source){
     const objectUrl=URL.createObjectURL(file);
-    try{source=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('写真を読み込めませんでした。別の写真を選ぶか、写真を開いてスクリーンショットを撮ってお試しください。'));img.src=objectUrl})}
+    try{source=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('この写真形式を端末で読み込めませんでした。写真を開いてスクリーンショットを撮り、その画像を選んでください。'));img.src=objectUrl})}
     finally{URL.revokeObjectURL(objectUrl)}
   }
   const max=1024,scale=Math.min(1,max/Math.max(source.width,source.height));

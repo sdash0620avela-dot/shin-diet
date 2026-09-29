@@ -796,18 +796,26 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
 });
 
-test('v21.4 keeps the larger anime-style submitted illustration', () => {
-  assert.match(html,/v21\.4 公開準備版/);
+test('v21.5 keeps the larger anime-style submitted illustration', () => {
+  assert.match(html,/v21\.5 写真解析復旧版/);
   assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
   assert.match(html,/grid-template-columns:170px 1fr/);
   assert.match(html,/\.coach-sprite\{width:170px/);
   assert.match(html,/background-size:cover/);
   assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='21\.4'/);
-  assert.match(serviceWorker,/shin-diet-v21-4-release-readiness/);
+  assert.match(html,/const APP_VERSION='21\.5'/);
+  assert.match(serviceWorker,/shin-diet-v21-5-photo-recovery/);
   assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(serviceWorker,/version:'21\.4'/);
-  assert.match(manifest,/v21\.4 公開準備版/);
+  assert.match(serviceWorker,/version:'21\.5'/);
+  assert.match(manifest,/v21\.5 写真解析復旧版/);
+});
+
+test('v21.5 accepts iPhone HEIC and converts readable photos before upload', () => {
+  assert.match(html,/accept="image\/\*"/);
+  assert.match(html,/jpe\?g\|png\|webp\|heic\|heif/);
+  assert.match(html,/file\.size>30\*1024\*1024/);
+  assert.doesNotMatch(html,/JPEG・PNG・WebPの写真を選んでください/);
+  assert.match(html,/canvas\.toDataURL\('image\/jpeg',\.78\)/);
 });
 
 test('v21.0 shows daily nutrition progress without inventing optional macro goals', () => {
