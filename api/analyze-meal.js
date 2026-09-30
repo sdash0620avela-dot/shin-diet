@@ -45,16 +45,25 @@ function outputText(data) {
   return data.output?.flatMap(item => item.content || []).find(item => item.type === 'output_text')?.text || '';
 }
 
-const AI_MODEL = 'gpt-5.4-mini';
-const RETRYABLE_OPENAI_STATUS = new Set([408, 409, 429, 500, 502, 503, 504]);
+const AI_MODELS = ['gpt-5.4-mini', 'gpt-5-mini'];
+const AI_MODEL = AI_MODELS[0];
+const ACTION_REQUIRED_OPENAI_CODES = new Set([
+  'credit_balance_exhausted', 'insufficient_quota', 'billing_hard_limit_reached',
+  'organization_spend_limit_exceeded', 'project_spend_limit_exceeded', 'organization_usage_limit_exceeded'
+]);
 
 function openAIProblem(response, data, fallback) {
   const status = response?.status || 502;
   const reason = String(data?.error?.code || data?.error?.type || `openai_${status}`).slice(0, 80);
-  if (reason === 'insufficient_quota') return { error: 'AI解析の利用上限に達しています。管理者側でOpenAIの利用状況を確認する必要があります。', reason };
+  if (reason === 'credit_balance_exhausted' || reason === 'insufficient_quota' || reason === 'billing_hard_limit_reached') return { error: `OpenAI APIの利用残高がありません。管理者側でクレジット残高を確認してください。（原因：${reason}）`, reason };
+  if (reason === 'organization_spend_limit_exceeded' || reason === 'project_spend_limit_exceeded' || reason === 'organization_usage_limit_exceeded') return { error: `OpenAI APIの月間利用上限に達しています。管理者側で利用上限を確認してください。（原因：${reason}）`, reason };
   if (reason === 'invalid_api_key' || status === 401) return { error: 'AI解析サーバーの認証設定を確認する必要があります。', reason };
   if (reason === 'model_not_found') return { error: 'AI解析モデルを利用できません。管理者側でモデル設定を更新する必要があります。', reason };
-  if (status === 429 || reason.includes('rate_limit')) return { error: 'AI解析が混み合っています。1分ほど待ってから、もう一度お試しください。', reason };
+  if (status === 429 || reason.includes('rate_limit') || reason === 'slow_down') {
+    const retryAfter = Number(response?.headers?.get('retry-after'));
+    const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? `${Math.ceil(retryAfter)}秒以上待って` : '少し時間を置いて';
+    return { error: `別のAIモデルでも回数制限になりました。${wait}から、もう一度お試しください。（原因：${reason}）`, reason };
+  }
   return { error: `${fallback}（エラー番号：${reason}）`, reason };
 }
 
@@ -72,18 +81,20 @@ function cleanWorkoutExercises(items) {
 
 async function openAIResponse(env, payload) {
   let result;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < AI_MODELS.length; attempt++) {
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ ...payload, model: AI_MODELS[attempt] })
     });
     const responseText = await response.text();
     let data;
     try { data = JSON.parse(responseText); } catch { data = null; }
     result = { response, data };
-    if (response.ok || !RETRYABLE_OPENAI_STATUS.has(response.status) || attempt === 1) return result;
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const reason = String(data?.error?.code || data?.error?.type || '');
+    if (response.ok || ACTION_REQUIRED_OPENAI_CODES.has(reason) || attempt === AI_MODELS.length - 1) return result;
+    const canFallback = response.status === 429 || response.status >= 500 || reason === 'model_not_found';
+    if (!canFallback) return result;
   }
   return result;
 }

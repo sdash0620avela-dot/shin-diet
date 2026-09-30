@@ -796,18 +796,18 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
 });
 
-test('v21.6 keeps the larger anime-style submitted illustration', () => {
-  assert.match(html,/v21\.6 AI接続復旧版/);
+test('v21.7 keeps the larger anime-style submitted illustration', () => {
+  assert.match(html,/v21\.7 AI制限判別版/);
   assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
   assert.match(html,/grid-template-columns:170px 1fr/);
   assert.match(html,/\.coach-sprite\{width:170px/);
   assert.match(html,/background-size:cover/);
   assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='21\.6'/);
-  assert.match(serviceWorker,/shin-diet-v21-6-ai-recovery/);
+  assert.match(html,/const APP_VERSION='21\.7'/);
+  assert.match(serviceWorker,/shin-diet-v21-7-ai-limit-diagnostics/);
   assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(serviceWorker,/version:'21\.6'/);
-  assert.match(manifest,/v21\.6 AI接続復旧版/);
+  assert.match(serviceWorker,/version:'21\.7'/);
+  assert.match(manifest,/v21\.7 AI制限判別版/);
 });
 
 test('v21.5 accepts iPhone HEIC and converts readable photos before upload', () => {
@@ -818,14 +818,18 @@ test('v21.5 accepts iPhone HEIC and converts readable photos before upload', () 
   assert.match(html,/canvas\.toDataURL\('image\/jpeg',\.78\)/);
 });
 
-test('v21.6 retries transient OpenAI failures and reports actionable causes', () => {
-  assert.match(worker,/const AI_MODEL = 'gpt-5\.4-mini'/);
-  assert.match(worker,/RETRYABLE_OPENAI_STATUS/);
-  assert.match(worker,/attempt < 2/);
+test('v21.7 falls back once and distinguishes temporary limits from billing limits', () => {
+  assert.match(worker,/const AI_MODELS = \['gpt-5\.4-mini', 'gpt-5-mini'\]/);
+  assert.match(worker,/ACTION_REQUIRED_OPENAI_CODES/);
+  assert.match(worker,/attempt < AI_MODELS\.length/);
+  assert.match(worker,/model: AI_MODELS\[attempt\]/);
+  assert.match(worker,/credit_balance_exhausted/);
+  assert.match(worker,/project_spend_limit_exceeded/);
+  assert.match(worker,/retry-after/);
   assert.match(worker,/insufficient_quota/);
   assert.match(worker,/invalid_api_key/);
   assert.match(worker,/model_not_found/);
-  assert.match(worker,/エラー番号/);
+  assert.doesNotMatch(worker,/setTimeout\(resolve, 500\)/);
 });
 
 test('v21.0 shows daily nutrition progress without inventing optional macro goals', () => {
