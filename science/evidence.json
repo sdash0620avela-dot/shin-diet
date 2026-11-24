@@ -1,0 +1,98 @@
+{
+  "version": "2026-11-24",
+  "verifiedAt": "2026-11-24",
+  "verificationMethod": "PubMed E-utilities (esummary + efetch abstract) で書誌情報・DOI・抄録の結論部を原典照合",
+  "note": "verified=true の項目だけをメニュー設計ルールに使用する。新しい候補は science/candidates.json に収集され、原典照合後にここへ追加する。",
+  "items": [
+    {
+      "id": "volume-dose",
+      "verified": true,
+      "pmid": "27433992",
+      "doi": "10.1080/02640414.2016.1210197",
+      "citation": "Schoenfeld BJ, Ogborn D, Krieger JW. J Sports Sci. 2017;35(11):1073-1082",
+      "finding": "週あたりセット数と筋肥大には段階的な用量反応関係がある（10セット以上/部位/週で効果が大きい傾向）。",
+      "rule": "部位ごとの週セット数を記録から数え、少なければセットを増やし、多く疲労が強ければ増やさない。"
+    },
+    {
+      "id": "dose-diminishing",
+      "verified": true,
+      "pmid": "41343037",
+      "doi": "10.1007/s40279-025-02344-w",
+      "citation": "Pelland JC, et al. Sports Med. 2026;56(2):481-505",
+      "finding": "量を増やすほど筋肥大・筋力は伸びるが収穫逓減がある。頻度は筋肥大への影響が小さく、筋力には正の効果。",
+      "rule": "1回のセッションでセットを大きく増やさず（1種目+1セットまで）、伸びが止まった種目は頻度・種目選択で調整する。"
+    },
+    {
+      "id": "load-range",
+      "verified": true,
+      "pmid": "28834797",
+      "doi": "10.1519/JSC.0000000000002200",
+      "citation": "Schoenfeld BJ, Grgic J, Ogborn D, Krieger JW. J Strength Cond Res. 2017;31(12):3508-3523",
+      "finding": "筋肥大は幅広い負荷域で同程度、最大筋力は高負荷が有利。",
+      "rule": "痛みがある部位・種目は重量を下げて回数域を上げても筋肥大刺激を保てる。筋力目的の主種目は6〜10回域を使う。"
+    },
+    {
+      "id": "progression-reps-or-load",
+      "verified": true,
+      "pmid": "36199287",
+      "doi": "10.7717/peerj.14142",
+      "citation": "Plotkin D, et al. PeerJ. 2022;10:e14142",
+      "finding": "回数を伸ばす漸進と重量を伸ばす漸進はどちらも筋肥大・筋力に有効。",
+      "rule": "マシンの重量刻みが大きい場合は回数で漸進し、回数域上限に達したら重量を上げる（ダブルプログレッション）。"
+    },
+    {
+      "id": "rir-near-failure",
+      "verified": true,
+      "pmid": "38393985",
+      "doi": "10.1080/02640414.2024.2321021",
+      "citation": "Refalo MC, et al. J Sports Sci. 2024;42(1):85-101",
+      "finding": "限界まで行う場合と1〜2回余力を残す場合で8週間の筋肥大は同程度。",
+      "rule": "通常は目標RIR 1〜2で設定し、毎セット限界まで追い込まない。"
+    },
+    {
+      "id": "failure-fatigue",
+      "verified": true,
+      "pmid": "36752989",
+      "doi": "10.1186/s40798-023-00554-y",
+      "citation": "Refalo MC, Helms ER, Hamilton DL, Fyfe JJ. Sports Med Open. 2023;9(1):10",
+      "finding": "限界に近いほど急性の神経筋疲労と主観的負担が直線的に増え、24時間後も残る。",
+      "rule": "疲労感が高い日・前回きつかった日は目標RIRを2〜3にし、セットを減らす。"
+    },
+    {
+      "id": "rir-scale",
+      "verified": true,
+      "pmid": "26049792",
+      "doi": "10.1519/JSC.0000000000001049",
+      "citation": "Zourdos MC, et al. J Strength Cond Res. 2016;30(1):267-75",
+      "finding": "RIR（残り回数）ベースのRPEは日々の負荷調整に実用的。",
+      "rule": "各種目に目標RIRを示し、終了時の『余裕/ちょうど/きつい』を次回重量の調整に使う。"
+    },
+    {
+      "id": "rest-strength",
+      "verified": true,
+      "pmid": "28933024",
+      "doi": "10.1007/s40279-017-0788-x",
+      "citation": "Grgic J, et al. Sports Med. 2018;48(1):137-151",
+      "finding": "トレーニング経験者の筋力最大化には2分超の休憩が必要とみられる。",
+      "rule": "複合種目（プレス・ロー・レッグプレス等）は休憩120〜180秒、単関節種目は60〜90秒。"
+    },
+    {
+      "id": "rest-hypertrophy",
+      "verified": true,
+      "pmid": "26605807",
+      "doi": "10.1519/JSC.0000000000001272",
+      "citation": "Schoenfeld BJ, et al. J Strength Cond Res. 2016;30(7):1805-12",
+      "finding": "長い休憩（3分）は短い休憩（1分）より筋力・筋肥大を高めた（トレーニング経験者男性）。",
+      "rule": "時間が許せば主種目の休憩を短縮しすぎない。時間が足りない場合は種目数を減らす。"
+    },
+    {
+      "id": "frequency",
+      "verified": true,
+      "pmid": "30558493",
+      "doi": "10.1080/02640414.2018.1555906",
+      "citation": "Schoenfeld BJ, Grgic J, Krieger J. J Sports Sci. 2019;37(11):1286-1295",
+      "finding": "総量が同じなら頻度は筋肥大に大きく影響しない。",
+      "rule": "部位の分割は本人の好みと通える日程を優先し、週合計セットで管理する。"
+    }
+  ]
+}

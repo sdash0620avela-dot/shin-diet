@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v21.7 AI制限判別版</title>
+<title>AI Diet v22.0 筋トレAIコーチ版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -274,6 +274,27 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
   .workout-exercise-grid{grid-template-columns:1fr}.workout-exercise-grid .wide{grid-column:auto}
 }
 
+/* 筋トレコーチ */
+.wc-card{animation:none}.wc-title{font-size:13px;color:var(--muted);font-weight:700;margin:12px 0 8px}.wc-title:first-child{margin-top:0}
+.wc-segs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wc-seg{margin:0;min-height:52px;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line)}.wc-seg.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.wc-chips{display:flex;flex-wrap:wrap;gap:8px}.wc-chip{width:auto;margin:0;min-height:44px;padding:10px 16px;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line);font-size:16px;display:inline-flex;flex-direction:column;align-items:center;line-height:1.1}.wc-chip small{font-size:10px;color:var(--good);font-weight:800;margin-top:2px}.wc-chip.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}.wc-chip.on small{color:var(--accent)}.wc-chip.small{font-size:14px;padding:8px 12px}
+.wc-request summary{cursor:pointer;color:var(--accent);font-weight:700;margin-top:12px}.wc-request textarea{margin-top:8px}.wc-request button{margin-top:8px}
+.wc-plan-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}.wc-badge{border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800}.wc-badge.ai{background:#EAF8EE;color:#248A3D}.wc-badge.local{background:#EEF2FF;color:var(--accent)}.wc-badge.chat{background:#FFF4E5;color:#A35D00}
+.wc-summary{margin:4px 0 6px!important;font-size:17px}.wc-status{min-height:18px}.wc-link{width:auto;display:inline;margin:0;padding:0;background:none;color:var(--accent);box-shadow:none;font-size:inherit;text-decoration:underline}
+.wc-warn{background:#FFF9E6;border:1px solid rgba(255,149,0,.3);border-radius:12px;padding:10px;font-size:13px;line-height:1.55;margin:8px 0;color:#8B6914}
+.wc-list{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:10px}.wc-ex{border:1px solid var(--line);border-radius:14px;padding:12px;background:#FCFCFE}.wc-ex-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:16px}.wc-ex-main{font-size:20px;font-weight:800;margin:4px 0}.wc-tag{font-size:11px;font-weight:800;background:#FFF4E5;color:#A35D00;border-radius:999px;padding:2px 8px}.wc-reason{margin-top:4px;color:var(--ink2)}.wc-ref{color:#8B6914}
+.wc-ex-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.wc-mini{width:auto;margin:0;padding:8px 12px;min-height:36px;font-size:13px;background:#F2F2F7;color:var(--ink2);box-shadow:none;border:1px solid var(--line)}.wc-mini.on{background:var(--accent);color:#fff}.wc-mini.danger{color:var(--bad)}
+.wc-evidence{margin-top:12px}.wc-evidence summary{cursor:pointer;color:var(--accent);font-weight:700}.wc-evidence div{margin-top:8px;line-height:1.5}
+.wc-chat-log{display:grid;gap:8px;margin-bottom:8px}.wc-msg{white-space:pre-wrap;padding:10px 12px;border-radius:14px;font-size:14px;line-height:1.55}.wc-msg.me{background:var(--accent-soft);justify-self:end;max-width:90%}.wc-msg.coach{background:#F2F2F7;max-width:95%}
+#wcChatInput{min-height:64px}#wcChatSend{margin-top:8px}
+.wc-pref{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}#wcPrefs summary{cursor:pointer}
+#trainRoot{padding-bottom:96px}body[data-page="train"] .app-header{padding:calc(10px + var(--safe-t)) 20px 16px}body[data-page="train"] .app-header h1{font-size:20px;margin:0}body[data-page="train"] .app-header .subhead,body[data-page="train"] .version-pill{display:none}body[data-page="train"] .card.hero-coach{margin-top:14px}.wc-bar{position:fixed;left:0;right:0;bottom:calc(var(--tab-h) + var(--safe-b));z-index:90;padding:10px 16px;background:rgba(242,242,247,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}.wc-bar button{min-height:54px;font-size:18px}.wc-rest{display:none;font-weight:800;color:var(--accent);white-space:nowrap;font-size:16px}.wc-rest.on{display:block}
+.wc-live-head{display:flex;justify-content:space-between;align-items:center}.wc-progress-num{font-size:26px;font-weight:800;color:var(--accent)}.wc-saved{margin-top:6px;color:var(--good)}
+.wc-sets{display:grid;gap:8px;margin-top:10px}.wc-set{display:grid;grid-template-columns:16px 1fr 1fr 50px;gap:5px;align-items:center;padding:6px;border-radius:12px;background:#F8F8FB}.wc-set.done{background:#EAF8EE}.wc-set-no{font-weight:800;color:var(--muted);text-align:center}
+.wc-step{display:grid;grid-template-columns:28px 1fr 28px;align-items:center;gap:2px}.wc-step input{padding:10px 0;text-align:center;font-size:17px;font-weight:700;min-width:0;letter-spacing:-.3px}.wc-pm{margin:0;padding:0;height:44px;width:28px;font-size:20px;background:#fff;color:var(--ink2);border:1px solid var(--line);box-shadow:none;border-radius:10px}
+.wc-check{margin:0;width:50px;height:50px;padding:0;border-radius:14px;font-size:24px;background:#fff;color:var(--good);border:2px solid var(--line);box-shadow:none}.wc-set.done .wc-check{background:var(--good);color:#fff;border-color:var(--good)}
+.wc-result{border-color:rgba(52,199,89,.35);background:#F1FFF5}.wc-toast{position:fixed;left:16px;right:16px;bottom:calc(var(--tab-h) + var(--safe-b) + 84px);z-index:95;background:#1C1C1E;color:#fff;border-radius:14px;padding:12px 14px;font-size:14px;font-weight:700;display:none}.wc-toast.show{display:block}
+
 .updateNotice{display:none;position:fixed;left:16px;right:16px;top:max(12px,env(safe-area-inset-top));z-index:9999;background:#1C1C1E;color:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 8px 28px #0004;align-items:center;gap:12px;font-size:14px;font-weight:700}.updateNotice.show{display:flex}.updateNotice button{margin-left:auto;width:auto;white-space:nowrap;padding:9px 14px;background:#fff;color:#007AFF;border-radius:10px}
 </style>
 </head>
@@ -281,13 +302,14 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v21.7 AI制限判別版</div>
+  <div class="version-pill">v22.0 筋トレAIコーチ版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
 
 <main class="wrap">
 <section id="home" class="page active">
+  <div id="trainHomeCard" class="card wc-home"></div>
   <div id="offlineNotice" class="card" style="display:none;border-color:rgba(255,149,0,.35);background:#FFF9E6" role="status" aria-live="polite"><b>オフラインです</b><p class="muted" style="margin-bottom:0">記録はこの端末へ保存できます。通信が戻ったらクラウド同期します。</p></div>
   <div id="recordReminder" class="card record-reminder" role="status" aria-live="polite">
     <h3>今日の記録が残っています</h3>
@@ -545,6 +567,8 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
   </div>
 </section>
 
+<section id="train" class="page"><div id="trainRoot"></div><div id="wcToast" class="wc-toast" role="status" aria-live="polite"></div></section>
+
 <section id="graph" class="page">
   <div class="card"><h3 id="chartTitle">体重推移</h3><div class="summary-switch" style="grid-template-columns:repeat(3,1fr)"><button id="graphWeightBtn" type="button" onclick="selectGraphMode('weight')">体重</button><button id="graphFatBtn" type="button" class="off" onclick="selectGraphMode('fat')">体脂肪</button><button id="graphMuscleBtn" type="button" class="off" onclick="selectGraphMode('muscle')">骨格筋</button></div><canvas id="chart" class="chart-canvas" width="380" height="260"></canvas><div id="chartNote" class="small">実線：実測値｜点線：7日平均</div></div>
   <div class="card"><h3>身体サイズの変化</h3><div id="measurementProgress" class="muted">サイズを記録すると開始時と現在を比較します</div></div>
@@ -714,7 +738,7 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
 <nav class="tabs">
   <div class="tab on" onclick="show('home',this)"><span class="tab-icon">🏠</span>ホーム</div>
   <div class="tab" onclick="openRecordMode('daily',this)"><span class="tab-icon">🍽</span>食事など</div>
-  <div class="tab" onclick="openRecordMode('workout',this)"><span class="tab-icon">🏋️</span>筋トレ</div>
+  <div class="tab" onclick="show('train',this)"><span class="tab-icon">🏋️</span>筋トレ</div>
   <div class="tab pro-tab" onclick="show('graph',this)"><span class="tab-icon">📈</span>グラフ</div>
   <div class="tab" onclick="show('chat',this)"><span class="tab-icon">💬</span>相談</div>
   <div class="tab" onclick="show('settings',this)"><span class="tab-icon">⚙️</span>設定</div>
@@ -722,6 +746,7 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./supabase-config.js"></script>
+<script src="./workout-engine.js"></script>
 <script>
 function showUpdateNotice(){const notice=document.getElementById('updateNotice');if(notice)notice.classList.add('show')}
 if('serviceWorker' in navigator){
@@ -734,7 +759,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='21.7';
+const APP_VERSION='22.0';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const AI_CONSENT_VERSION='1';
 async function fetchWithTimeout(url,options={},timeoutMs=60000){
@@ -760,7 +785,7 @@ function aiConsentRecord(){const value=readJson(storageKey('AiConsent'),null);re
 function renderAiConsentState(){const el=$('aiConsentState');if(!el)return;const accepted=aiConsentRecord();el.textContent=accepted?`AI送信の確認済み：${new Date(accepted.acceptedAt).toLocaleDateString('ja-JP')}`:'AI機能の初回利用時に、送信内容を確認します。'}
 function ensureAiConsent(){
  if(aiConsentRecord())return true;
- const accepted=confirm('AI機能を使う前に確認してください。\n\n写真解析：選んだ写真を専用WorkerとOpenAI APIへ送信します。写真自体は記録・クラウドへ保存しません。\nAI相談・筋トレ調整：質問、目標、直近最大14日の記録、筋トレ履歴最大20回を送信します。\n\n送信してAI機能を使いますか？');
+ const accepted=confirm('AI機能を使う前に確認してください。\n\n写真解析：選んだ写真を専用WorkerとOpenAI APIへ送信します。写真自体は記録・クラウドへ保存しません。\nAI相談：質問、目標、直近最大14日の記録、筋トレ履歴最大20回を送信します。\n筋トレコーチ：店舗・部位・時間、全筋トレ履歴の集計（種目別の重量・回数・成長率）、痛み・疲労、恒久設定を送信します。\n\n送信してAI機能を使いますか？');
  if(!accepted)return false;localStorage.setItem(storageKey('AiConsent'),JSON.stringify({version:AI_CONSENT_VERSION,acceptedAt:new Date().toISOString()}));renderAiConsentState();return true
 }
 function resetAiConsent(){localStorage.removeItem(storageKey('AiConsent'));renderAiConsentState();const el=$('aiConsentState');if(el)el.textContent='AI送信の確認をリセットしました。次回のAI利用時にもう一度確認します。'}
@@ -800,9 +825,11 @@ function activateUserStorage(uid){
   if(legacySettings)localStorage.setItem(targetSettings,legacySettings);
   localStorage.setItem('shinDietLegacyOwner',uid);
  }
- activeStorageId=uid;
+ activeStorageId=uid;localStorage.setItem('shinDietLastUserId',uid);
 }
 function activateGuestStorage(){activeStorageId='guest'}
+// オフライン起動・クラウド読込失敗時も、最後にログインした本人の端末内データで起動する
+function activateOfflineUserStorage(){const uid=localStorage.getItem('shinDietLastUserId');if(!uid)return false;activeStorageId=uid;return true}
 let cloudClient=null,cloudUser=null,cloudSyncTimer=null,cloudRetryTimer=null,cloudRetryAttempt=0,cloudSyncing=false,lastSyncAt=null,lastSyncEpoch=0,loginCooldownTimer=null;
 function cloudConfigured(){const c=window.SHIN_DIET_SUPABASE||{};return /^https:\/\/.+\.supabase\.co$/.test(c.url||'')&&!String(c.publishableKey||'').startsWith('REPLACE_')}
 function cloudMessage(message,ok=true){const el=$('cloudState');if(el){el.textContent=message;el.style.color=ok?'var(--good)':'var(--bad)'}}
@@ -826,7 +853,8 @@ function renderSyncQueueState(){
  el.textContent=offline?(pending?`オフライン保存済み・同期待ち ${pending}件`:'オフライン・同期待ちはありません'):(cloudSyncing?'クラウドへ同期中…':pending?`クラウド同期待ち ${pending}件`:`クラウド同期済み${lastSyncAt?'（'+lastSyncAt+'）':''}`);
  el.style.color=offline||pending?'#9A6700':'var(--good)'
 }
-function scheduleCloudSync(){if(!cloudUser||cloudSyncing)return;renderSyncQueueState();if(navigator.onLine===false)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>syncNow(true),700)}
+let cloudSyncQueued=false;
+function scheduleCloudSync(){if(cloudUser&&cloudSyncing){cloudSyncQueued=true;return}if(!cloudUser)return;renderSyncQueueState();if(navigator.onLine===false)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>syncNow(true),700)}
 function transientSyncError(error){return /failed to fetch|network|load failed|timeout|timed out|temporar|502|503|504/i.test(String(error&&error.message||error||''))}
 function scheduleCloudRetry(){
  if(!cloudUser||navigator.onLine===false||cloudRetryAttempt>=3)return;
@@ -835,16 +863,18 @@ function scheduleCloudRetry(){
 }
 async function initCloud(){
  if(!cloudConfigured()){bootStorageReady=true;cloudMessage('クラウドの接続設定前です。端末内保存はそのまま使えます。',false);$('signedOutBox').style.display='none';update();return}
- if(!window.supabase||!window.supabase.createClient){bootStorageReady=true;cloudMessage('クラウド機能の読込みに失敗しました。端末内には保存されます。',false);update();return}
+ if(!window.supabase||!window.supabase.createClient){const offlineUser=activateOfflineUserStorage();bootStorageReady=true;cloudMessage(offlineUser?'オフラインのため、この端末に保存した本人の記録で起動しました。通信が戻ったら開き直すと同期します。':'クラウド機能の読込みに失敗しました。端末内には保存されます。',false);update();loadRecordForDate();return}
  const c=window.SHIN_DIET_SUPABASE;cloudClient=window.supabase.createClient(c.url,c.publishableKey);
  cloudClient.auth.onAuthStateChange((event,session)=>{
   const nextUser=session&&session.user||null;
-  if(nextUser){activateUserStorage(nextUser.id)}else if(cloudUser){activateGuestStorage()}
+  if(nextUser){activateUserStorage(nextUser.id)}else if(cloudUser){activateGuestStorage()}else if(navigator.onLine===false&&activateOfflineUserStorage()){bootStorageReady=true;update();return}
+  if(event==='SIGNED_OUT')localStorage.removeItem('shinDietLastUserId');
   cloudUser=nextUser;bootStorageReady=true;renderAuthState();update();loadRecordForDate();
   if(cloudUser&&(event==='SIGNED_IN'||event==='INITIAL_SESSION'))setTimeout(()=>syncNow(true),0)
  });
- const {data,error}=await cloudClient.auth.getSession();if(error){bootStorageReady=true;cloudMessage('ログイン状態を確認できません：'+authErrorMessage(error),false);update();return}
- cloudUser=data.session&&data.session.user||null;if(cloudUser){activateUserStorage(cloudUser.id);lastSyncEpoch=Number(localStorage.getItem(storageKey('LastSync'))||0);lastSyncAt=lastSyncEpoch?new Date(lastSyncEpoch).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):null}else activateGuestStorage();bootStorageReady=true;renderAuthState();update();loadRecordForDate();if(cloudUser)await syncNow(true)
+ const {data,error}=await cloudClient.auth.getSession();if(error){activateOfflineUserStorage();bootStorageReady=true;cloudMessage('ログイン状態を確認できません：'+authErrorMessage(error),false);update();loadRecordForDate();return}
+ cloudUser=data.session&&data.session.user||null;if(!cloudUser&&navigator.onLine===false&&activateOfflineUserStorage()){bootStorageReady=true;cloudMessage('オフラインのため、この端末に保存した本人の記録で起動しました。',false);update();loadRecordForDate();return}
+ if(cloudUser){activateUserStorage(cloudUser.id);lastSyncEpoch=Number(localStorage.getItem(storageKey('LastSync'))||0);lastSyncAt=lastSyncEpoch?new Date(lastSyncEpoch).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):null}else activateGuestStorage();bootStorageReady=true;renderAuthState();update();loadRecordForDate();if(cloudUser)await syncNow(true)
 }
 function renderAuthState(){
  $('signedOutBox').style.display=cloudUser?'none':'block';$('signedInBox').style.display=cloudUser?'block':'none';
@@ -907,6 +937,8 @@ async function syncNow(silent=false,retryCount=0){
   const localSettingsTime=Date.parse(localSettings.updatedAt||''),cloudSettingsTime=Date.parse(cloudSettings&&cloudSettings.updatedAt||profileResult.data&&profileResult.data.updated_at||'');
   const chosenSettings=cloudSettings&&Number.isFinite(cloudSettingsTime)&&(!Number.isFinite(localSettingsTime)||cloudSettingsTime>localSettingsTime)?{...localSettings,...cloudSettings}:localSettings;
   const mergedSettings={...chosenSettings,updatedAt:chosenSettings.updatedAt||appNowIso()};
+  const wcLocal=localSettings.workoutCoach,wcCloud=cloudSettings&&cloudSettings.workoutCoach,wcTime=x=>Date.parse(x&&x.updatedAt||'')||0;
+  if(wcLocal||wcCloud)mergedSettings.workoutCoach=wcTime(wcCloud)>wcTime(wcLocal)?wcCloud:wcLocal;
   localStorage.setItem(storageKey('Settings'),JSON.stringify(mergedSettings));
   const cloudStates=(recordsResult.data||[]).map(row=>({...row.record,date:row.record_date,updatedAt:row.updated_at||row.record&&row.record.updatedAt}));
   const localRecords=recs().map(r=>r.updatedAt?r:{...r,updatedAt:appNowIso()});
@@ -914,7 +946,9 @@ async function syncNow(silent=false,retryCount=0){
   const merged=mergedStates.filter(r=>!r._deleted),deleted=mergedStates.filter(r=>r._deleted);
   localStorage.setItem(storageKey('Records'),JSON.stringify(merged));setDeletedRecords(deleted);
   const profileUpsert=await cloudClient.from('diet_profiles').upsert({user_id:uid,settings:mergedSettings,updated_at:appNowIso()},{onConflict:'user_id'});if(profileUpsert.error)throw profileUpsert.error;
-  if(mergedStates.length){const rows=mergedStates.map(r=>({user_id:uid,record_date:r.date,record:r,updated_at:r.updatedAt||r.deletedAt||appNowIso()}));const recordsUpsert=await cloudClient.from('diet_records').upsert(rows,{onConflict:'user_id,record_date'});if(recordsUpsert.error)throw recordsUpsert.error}
+  // クラウドと内容が異なる日だけ送信（毎回全履歴を送らない）
+  const cloudByDate=new Map(cloudStates.map(r=>[r.date,r])),changedStates=mergedStates.filter(r=>{const c=cloudByDate.get(r.date);return !c||stateTime(c)!==stateTime(r)||!!c._deleted!==!!r._deleted||JSON.stringify(c)!==JSON.stringify(r)});
+  if(changedStates.length){const rows=changedStates.map(r=>({user_id:uid,record_date:r.date,record:r,updated_at:r.updatedAt||r.deletedAt||appNowIso()}));const recordsUpsert=await cloudClient.from('diet_records').upsert(rows,{onConflict:'user_id,record_date'});if(recordsUpsert.error)throw recordsUpsert.error}
   clearTimeout(cloudRetryTimer);cloudRetryAttempt=0;lastSyncEpoch=appNowMs();localStorage.setItem(storageKey('LastSync'),String(lastSyncEpoch));lastSyncAt=new Date(lastSyncEpoch).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});update();loadRecordForDate();renderAuthState();cloudMessage(`クラウド保存済み（${merged.length}日分｜${lastSyncAt}）`)
  }catch(e){
   const message=String(e&&e.message||'');
@@ -922,7 +956,7 @@ async function syncNow(silent=false,retryCount=0){
    cloudMessage('ログイン完了。クラウドの準備中です…',true);
    setTimeout(()=>syncNow(true,retryCount+1),10000);
   }else{cloudMessage('クラウド同期失敗：'+(message||'不明なエラー'),false);if(transientSyncError(e))scheduleCloudRetry()}
- }finally{cloudSyncing=false;renderSyncQueueState()}
+ }finally{cloudSyncing=false;renderSyncQueueState();if(cloudSyncQueued){cloudSyncQueued=false;scheduleCloudSync()}}
 }
 const MEAL_ANALYSIS_API='https://shin-diet-photo-analysis.sdash0620.workers.dev/';
 async function refreshServerClock(){
@@ -1628,6 +1662,7 @@ function saveRecord(skipConfirm=false){
   if(!$('date').value)throw new Error('日付を入力してください。');
   const exerciseErrors=exerciseInputErrors();if(exerciseErrors.length){setStatus(exerciseErrors.join(' '),false);return false}
   const r=collectRecord(),all=recs(),existing=all.find(x=>x.date===r.date);
+  if(existing&&Array.isArray(existing.workoutSessions)&&existing.workoutSessions.length)r.workoutSessions=existing.workoutSessions;
   if(!skipConfirm&&!confirmRecordSave(r,existing))return false;
   const a=all.filter(x=>x.date!==r.date);a.push(r);a.sort((x,y)=>x.date.localeCompare(y.date));removeDeletedRecord(r.date);setRecs(a);removeDraft(r.date);update();
   $('editState').textContent=`${r.date}の記録を保存済みです。再び保存すると上書きします。`;$('editState').className='edit-state on';
@@ -1654,7 +1689,7 @@ function saveSettings(){
  writeSettings(s);update();alert('個人設定を保存しました')
 }
 function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('設定'));if(tab)show('settings',tab)}
-function show(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings'){renderAppDiagnostics();renderAiConsentState()}}
+function show(id,el){document.body.dataset.page=id;document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings'){renderAppDiagnostics();renderAiConsentState()}if(id==='train'&&window.WorkoutUI)WorkoutUI.render()}
 
 function update(){
  const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('fatGoal').value=s.fatGoal||'';$('carbsGoal').value=s.carbsGoal||'';$('cardioGoal').value=s.cardioGoal||35;$('displayMode').value=displayModeKey(s.displayMode);$('usageMode').value=usageModeKey(s.usageMode);$('adviceFood').checked=!!s.adviceFood;$('adviceSleep').checked=!!s.adviceSleep;$('adviceSupplement').checked=!!s.adviceSupplement;$('adviceExercise').checked=!!s.adviceExercise;$('coachStyle').value=coachStyleKey(s);$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';renderCoachStyleDescription();applyDisplayMode(s.displayMode);applyUsageMode(s.usageMode);
@@ -1683,6 +1718,7 @@ function update(){
  motivationMessage(a,s,last,t);
  forecast(last,a,s);
  renderWeekly(a,s);renderMonthly(a,s);renderList();drawChart();drawForecastChart();renderMeasurementProgress(a);
+ if(window.WorkoutUI)WorkoutUI.onDataChanged();
 }
 
 function dayNumber(date){return Date.parse(date+'T00:00:00Z')/86400000}
@@ -2236,5 +2272,6 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 setInterval(renderRecordReminder,60000);
 update();loadRecordForDate();initCloud();
 </script>
+<script src="./workout-ui.js"></script>
 </body>
 </html>

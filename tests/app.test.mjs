@@ -796,18 +796,18 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
 });
 
-test('v21.7 keeps the larger anime-style submitted illustration', () => {
-  assert.match(html,/v21\.7 AI制限判別版/);
+test('v22.0 keeps the larger anime-style submitted illustration', () => {
+  assert.match(html,/v22\.0 筋トレAIコーチ版/);
   assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
   assert.match(html,/grid-template-columns:170px 1fr/);
   assert.match(html,/\.coach-sprite\{width:170px/);
   assert.match(html,/background-size:cover/);
   assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='21\.7'/);
-  assert.match(serviceWorker,/shin-diet-v21-7-ai-limit-diagnostics/);
+  assert.match(html,/const APP_VERSION='22\.0'/);
+  assert.match(serviceWorker,/shin-diet-v22-0-workout-coach/);
   assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(serviceWorker,/version:'21\.7'/);
-  assert.match(manifest,/v21\.7 AI制限判別版/);
+  assert.match(serviceWorker,/version:'22\.0'/);
+  assert.match(manifest,/v22\.0 筋トレAIコーチ版/);
 });
 
 test('v21.5 accepts iPhone HEIC and converts readable photos before upload', () => {
@@ -821,8 +821,9 @@ test('v21.5 accepts iPhone HEIC and converts readable photos before upload', () 
 test('v21.7 falls back once and distinguishes temporary limits from billing limits', () => {
   assert.match(worker,/const AI_MODELS = \['gpt-5\.4-mini', 'gpt-5-mini'\]/);
   assert.match(worker,/ACTION_REQUIRED_OPENAI_CODES/);
-  assert.match(worker,/attempt < AI_MODELS\.length/);
-  assert.match(worker,/model: AI_MODELS\[attempt\]/);
+  assert.match(worker,/attempt < models\.length/);
+  assert.match(worker,/model: models\[attempt\]/);
+  assert.match(worker,/async function openAIResponse\(env, payload, models = AI_MODELS\)/);
   assert.match(worker,/credit_balance_exhausted/);
   assert.match(worker,/project_spend_limit_exceeded/);
   assert.match(worker,/retry-after/);
@@ -874,9 +875,10 @@ test('v21.1 recalculates nutrition from corrected meal text', () => {
   assert.match(worker,/低めにも高めにも寄せない現実的な平均/);
 });
 
-test('v21.1 separates daily and workout recording in the bottom navigation', () => {
+test('v22.0 separates daily recording and the dedicated workout coach in the bottom navigation', () => {
   assert.match(html,/openRecordMode\('daily',this\)/);
-  assert.match(html,/openRecordMode\('workout',this\)/);
+  assert.match(html,/show\('train',this\)/);
+  assert.match(html,/<section id="train" class="page">/);
   assert.match(html,/>食事など</);
   assert.match(html,/>筋トレ</);
   assert.match(html,/data-record-focus="workout"/);

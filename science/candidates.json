@@ -1,0 +1,484 @@
+{
+  "collectedAt": "2026-11-24T03:45:56.693Z",
+  "windowDays": 45,
+  "note": "未検証の候補。メニュー設計には使用しない。原典照合後に science/evidence.json へ verified:true で追加する。",
+  "candidates": [
+    {
+      "pmid": "42974755",
+      "title": "Nonpharmacological and rehabilitative interventions for adults with myotonic dystrophy type 1: a systematic review.",
+      "journal": "Int J Rehabil Res",
+      "pubdate": "2026 Nov 3",
+      "firstAuthor": "Lazogkas Z",
+      "doi": "10.1097/MRR.0000000000000725",
+      "topics": [
+        "volume"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42950254",
+      "title": "Acute and Chronic Cardiovascular and Neuromuscular Effects of Blood Flow Restriction Resistance Training in Older Adults: A Systematic Review and Meta-Analysis.",
+      "journal": "Biol Res Nurs",
+      "pubdate": "2026 Oct 28",
+      "firstAuthor": "Norouzi K",
+      "doi": "10.1177/10998004261502747",
+      "topics": [
+        "volume"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42740707",
+      "title": "Exercise training for patients with heart failure with preserved ejection fraction: a systematic review and Bayesian network meta-analysis.",
+      "journal": "ESC Heart Fail",
+      "pubdate": "2026 Nov 6",
+      "firstAuthor": "Zheng J",
+      "doi": "10.1093/eschf/xvag237",
+      "topics": [
+        "proximity"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42406570",
+      "title": "Comparative Efficacy of Various Exercise Modes on Inflammatory Markers in Patients with Heart Failure: A Pairwise and Network Meta-Analysis.",
+      "journal": "Med Sci Sports Exerc",
+      "pubdate": "2026 Nov 1",
+      "firstAuthor": "Khalafi M",
+      "doi": "10.1249/MSS.0000000000004073",
+      "topics": [
+        "proximity"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42913481",
+      "title": "Dose-Response Associations of Exercise Modalities With Cardiorespiratory Fitness in Heart Failure: A Systematic Review and Bayesian Network Meta-Analysis.",
+      "journal": "Eur J Prev Cardiol",
+      "pubdate": "2026 Oct 23",
+      "firstAuthor": "Zhang W",
+      "doi": "10.1093/eurjpc/zwag560",
+      "topics": [
+        "proximity"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42113237",
+      "title": "The efficacy of strength exercise dosage on pain and disability in people with low back pain: a systematic review of randomized controlled trials.",
+      "journal": "Eur Spine J",
+      "pubdate": "2026 Nov",
+      "firstAuthor": "Mader de Oliveira G",
+      "doi": "10.1007/s00586-026-09901-5",
+      "topics": [
+        "frequency",
+        "pain"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42660338",
+      "title": "Effects of eccentric overload training on lower-limb muscle strength, gait performance, balance, and explosive power in older adults: A systematic review and meta-analysis.",
+      "journal": "Exp Gerontol",
+      "pubdate": "2026 Oct 15",
+      "firstAuthor": "Lan C",
+      "doi": "10.1016/j.exger.2026.113305",
+      "topics": [
+        "frequency"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42945167",
+      "title": "Is resistance training effective to increase BDNF in multiple sclerosis? An updated systematic review and meta-analysis of isolated interventions.",
+      "journal": "PLoS One",
+      "pubdate": "2026",
+      "firstAuthor": "Pedon WR",
+      "doi": "10.1371/journal.pone.0359019",
+      "topics": [
+        "progression"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42852644",
+      "title": "Effectiveness of aerobic exercise on motor function and functional capacity in children and adolescents with neuromuscular diseases: a systematic review and meta-analysis.",
+      "journal": "Disabil Rehabil",
+      "pubdate": "2026 Oct 9",
+      "firstAuthor": "Gómez-Del Horno L",
+      "doi": "10.1080/09638288.2026.2741341",
+      "topics": [
+        "progression"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "43047335",
+      "title": "Comparative efficacy of different rehabilitation exercise interventions on upper limb function and lymphedema in postoperative breast cancer patients: a network meta-analysis.",
+      "journal": "Front Oncol",
+      "pubdate": "2026",
+      "firstAuthor": "Li F",
+      "doi": "10.3389/fonc.2026.1915335",
+      "topics": [
+        "pain"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42580253",
+      "title": "Nonlinear dose-response effects of exercise modalities on handgrip strength and functional mobility in middle-aged and older adults with sarcopenia: A Bayesian network meta-analysis.",
+      "journal": "Geriatr Nurs",
+      "pubdate": "2026 Oct",
+      "firstAuthor": "Bai P",
+      "doi": "10.1016/j.gerinurse.2026.104220",
+      "topics": [
+        "volume"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42321444",
+      "title": "Effects of exercise interventions on sarcopenia-related outcomes in cancer patients and survivors: an umbrella review of systematic reviews and meta-analyses.",
+      "journal": "J Cancer Surviv",
+      "pubdate": "2026 Oct",
+      "firstAuthor": "Jiamin X",
+      "doi": "10.1007/s11764-026-02066-6",
+      "topics": [
+        "volume"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42775968",
+      "title": "Examining the Effects of Testosterone and Strength Training on Fat Mass and Functional Strength in Older Adult Males: A Systematic Review.",
+      "journal": "J Allied Health",
+      "pubdate": "2026 Sep 18",
+      "firstAuthor": "Etta R",
+      "doi": "10.21091/jah.2026.03065",
+      "topics": [
+        "volume"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42676087",
+      "title": "Tailoring Resistance Exercise for Knee Osteoarthritis: An Intervention Systematic Review With Dose-Response Meta-analysis of the Effects of Intensity and Volume.",
+      "journal": "J Orthop Sports Phys Ther",
+      "pubdate": "2026 Sep",
+      "firstAuthor": "Núñez-Cortés R",
+      "doi": "10.2519/jospt.2026.13477",
+      "topics": [
+        "volume",
+        "pain"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "43069040",
+      "title": "Efficacy and safety of blood flow restriction exercise training in adults aged 60 years and older: an umbrella review of systematic reviews.",
+      "journal": "BMC Geriatr",
+      "pubdate": "2026 Aug 27",
+      "firstAuthor": "Chen S",
+      "doi": "10.1186/s12877-026-08156-5",
+      "topics": [
+        "volume",
+        "proximity",
+        "load"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42977993",
+      "title": "Hypoxic exposure and air-quality reporting in normobaric hypoxic resistance training: a systematic evidence map and exploratory meta-analysis.",
+      "journal": "BMC Sports Sci Med Rehabil",
+      "pubdate": "2026 Aug 6",
+      "firstAuthor": "Guan Z",
+      "doi": "10.1186/s13102-026-01943-y",
+      "topics": [
+        "volume"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "41995957",
+      "title": "The Influence of Individual Resistance Training Variables on Muscle Strength: A Systematic Review and Meta-analysis.",
+      "journal": "Sports Med",
+      "pubdate": "2026 Aug",
+      "firstAuthor": "Lyristakis P",
+      "doi": "10.1007/s40279-026-02432-5",
+      "topics": [
+        "volume",
+        "frequency"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "41963142",
+      "title": "The missing pieces: A systematic review of the reporting of resistance training variables in studies of pregnant women.",
+      "journal": "J Sci Med Sport",
+      "pubdate": "2026 Aug",
+      "firstAuthor": "Geard A",
+      "doi": "10.1016/j.jsams.2026.02.017",
+      "topics": [
+        "volume",
+        "frequency"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "41951916",
+      "title": "The Effects of Advanced Resistance Training Prescription Methods on Strength, Power, Hypertrophy, and Performance Adaptations in Healthy Adults: A Systematic Review and Bayesian Network Meta-analysis.",
+      "journal": "Sports Med",
+      "pubdate": "2026 Aug",
+      "firstAuthor": "Cowley N",
+      "doi": "10.1007/s40279-026-02428-1",
+      "topics": [
+        "volume",
+        "load",
+        "frequency"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42726084",
+      "title": "Blood flow restriction improves lower limb muscle function in adults with musculoskeletal disorders: A systematic review and meta-analysis.",
+      "journal": "J Back Musculoskelet Rehabil",
+      "pubdate": "2026 Sep 11",
+      "firstAuthor": "Tan Y",
+      "doi": "10.1177/10538127261485421",
+      "topics": [
+        "proximity"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42269170",
+      "title": "Hemodynamic Response During Different Modalities of Resistance Training in Patients With Cardiovascular Disease: A Systematic Review and Meta-Analysis.",
+      "journal": "J Cardiopulm Rehabil Prev",
+      "pubdate": "2026 Sep 1",
+      "firstAuthor": "Schmidt T",
+      "doi": "10.1097/HCR.0000000000001039",
+      "topics": [
+        "proximity"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42903128",
+      "title": "Heavy or light: is muscle fiber growth load-specific? A systematic review and meta-regression.",
+      "journal": "Front Physiol",
+      "pubdate": "2026",
+      "firstAuthor": "Varovic D",
+      "doi": "10.3389/fphys.2026.1953601",
+      "topics": [
+        "load"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42803111",
+      "title": "Rehabilitative and Conditioning Exercises That Selectively Activate Individual Lower Extremity Muscles: A Systematic Review.",
+      "journal": "Sports Health",
+      "pubdate": "2026 Sep 28",
+      "firstAuthor": "Chiddarwar VV",
+      "doi": "10.1177/19417381261480238",
+      "topics": [
+        "load"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42773281",
+      "title": "The Effectiveness of Cluster vs. Rest-Redistribution Set Configurations to Maintain Movement Velocity During Resistance Training: A Systematic Review and Bayesian Network Meta-analysis.",
+      "journal": "Sports Med Open",
+      "pubdate": "2026 Sep 22",
+      "firstAuthor": "Nagatani T",
+      "doi": "10.1186/s40798-026-01106-w",
+      "topics": [
+        "rest"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42765482",
+      "title": "Resistance training combined with creatine supplementation: a three-level meta-analysis of multidimensional outcomes from strength enhancement to body composition remodeling.",
+      "journal": "J Int Soc Sports Nutr",
+      "pubdate": "2026 Dec 31",
+      "firstAuthor": "Wang H",
+      "doi": "10.1080/15502783.2026.2718316",
+      "topics": [
+        "frequency"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42560629",
+      "title": "Effects of different exercise types and intensities in older adults with sarcopenia: a systematic review and network meta-analysis.",
+      "journal": "Eur Geriatr Med",
+      "pubdate": "2026 Oct",
+      "firstAuthor": "Jin-Hao H",
+      "doi": "10.1007/s41999-026-01570-3",
+      "topics": [
+        "frequency"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "41963141",
+      "title": "It's never too late: The impact of resistance training on strength and body composition in females across the lifespan - A systematic review and meta-analysis.",
+      "journal": "J Sci Med Sport",
+      "pubdate": "2026 Sep",
+      "firstAuthor": "Isenmann E",
+      "doi": "10.1016/j.jsams.2026.03.002",
+      "topics": [
+        "frequency"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42712402",
+      "title": "Effects of resistance training combined with creatine supplementation on muscle strength, physical function, and muscle mass in older adults: a systematic review and three-level meta-analysis.",
+      "journal": "Front Nutr",
+      "pubdate": "2026",
+      "firstAuthor": "Yao L",
+      "doi": "10.3389/fnut.2026.1919884",
+      "topics": [
+        "frequency"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42603704",
+      "title": "The Role of Aquatic Training in Improving Risk of Falls in Older Adults: A Systematic Review With Meta-Analysis and Meta-Regression.",
+      "journal": "J Aging Phys Act",
+      "pubdate": "2026 Aug 14",
+      "firstAuthor": "Reichert T",
+      "doi": "10.1123/japa.2025-0083",
+      "topics": [
+        "frequency",
+        "progression"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "41622853",
+      "title": "Effects of different exercise training modalities in post-COVID-19 individuals: a systematic review of randomized controlled trials.",
+      "journal": "Disabil Rehabil",
+      "pubdate": "2026 Aug",
+      "firstAuthor": "Ferrari F",
+      "doi": "10.1080/09638288.2026.2619815",
+      "topics": [
+        "frequency"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42652708",
+      "title": "Lower-Limb Motor Function, Mobility, Balance, Falls and Intervention Effects in Inclusion Body Myositis: A Systematic Review.",
+      "journal": "J Clin Med",
+      "pubdate": "2026 Aug 14",
+      "firstAuthor": "Nandakumar D",
+      "doi": "10.3390/jcm15166304",
+      "topics": [
+        "progression"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42154220",
+      "title": "High-intensity resistance and impact exercise in menopausal women: a systematic review of intervention reporting quality and training content.",
+      "journal": "Osteoporos Int",
+      "pubdate": "2026 Aug",
+      "firstAuthor": "Tortoli E",
+      "doi": "10.1007/s00198-026-08078-3",
+      "topics": [
+        "progression"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "41996930",
+      "title": "Comparative efficacy of combined exercise and nutritional interventions for sarcopenia: A systematic review and network meta-analysis incorporating remote delivery models.",
+      "journal": "Arch Gerontol Geriatr",
+      "pubdate": "2026 Aug",
+      "firstAuthor": "Cao J",
+      "doi": "10.1016/j.archger.2026.106239",
+      "topics": [
+        "progression"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42681567",
+      "title": "Effects of Upper Extremity Strength Exercises in Subacromial Impingement Syndrome: A Systematic Review.",
+      "journal": "Clin J Sport Med",
+      "pubdate": "2026 Sep 2",
+      "firstAuthor": "Koç M",
+      "doi": "10.1097/JSM.0000000000001461",
+      "topics": [
+        "pain"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "43021367",
+      "title": "Comparative effectiveness of exercise-based prehabilitation before total knee arthroplasty: a systematic review and network meta-analysis of randomized controlled trials.",
+      "journal": "BMC Sports Sci Med Rehabil",
+      "pubdate": "2026 Aug 17",
+      "firstAuthor": "Wu Y",
+      "doi": "10.1186/s13102-026-01959-4",
+      "topics": [
+        "pain"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    },
+    {
+      "pmid": "42209866",
+      "title": "Efficacy of treatment for subacromial pain in older adults: a systematic review and meta-analysis with GRADE recommendations.",
+      "journal": "Eur Geriatr Med",
+      "pubdate": "2026 Aug",
+      "firstAuthor": "de Castro Mariz G",
+      "doi": "10.1007/s41999-026-01511-0",
+      "topics": [
+        "pain"
+      ],
+      "status": "unverified",
+      "collectedAt": "2026-11-24"
+    }
+  ]
+}

@@ -1,8 +1,10 @@
 {
   "name": "shin-diet",
   "private": true,
-  "version": "14.3.0",
+  "version": "22.0.0",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "e2e": "node e2e/run-e2e.mjs",
+    "science:collect": "node scripts/collect-science.mjs"
   }
 }

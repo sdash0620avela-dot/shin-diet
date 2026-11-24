@@ -1,0 +1,29 @@
+name: iPhone E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install Playwright
+        run: npm install --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - name: Run E2E (Supabase and AI are mocked; production data is never used)
+        run: node e2e/run-e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: e2e/artifacts/

@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - api/analyze-meal.js
+      - science/evidence.json
       - wrangler.toml
       - .github/workflows/deploy-worker.yml
 
