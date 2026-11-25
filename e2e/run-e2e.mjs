@@ -79,6 +79,10 @@ function seedHistory() {
     add(d(w * 7 + 1), { workoutPlace: '本店', workoutPart: 'chest', workoutExercises: [{ name: 'チェストプレス', weight: 40 + (10 - w) * 1.5, reps: 10, sets: 3 }, { name: 'ペックフライ', weight: 35, reps: 12, sets: 3 }], workoutFeedback: w === 1 ? '余裕あり' : '' });
     add(d(w * 7 + 3), { workoutPlace: '塩田店', workoutPart: 'back', workoutExercises: [{ name: 'ラットプルダウン', weight: 30 + (10 - w), reps: 12, sets: 3 }] });
   }
+  // v21.1より前の自由記述形式（店舗・重量なし）と、店舗名が判別できない記録
+  add(d(90), { strength: '胸25セット　1時間' });
+  add(d(88), { strength: '背中20セット' });
+  add(d(86), { workoutPlace: 'ジム', strength: 'ショルダープレス30kg×10×3' });
   add(d(5), { workoutSessions: [{ id: 's1', status: 'finished', store: 'shioda', part: 'legs', startedAt: `${d(5)}T10:00:00Z`, finishedAt: `${d(5)}T11:00:00Z`, feedback: { overall: 'ok', pain: '', note: '' }, exercises: [{ name: 'レッグプレス', sets: [{ weight: 100, reps: 12, done: true }, { weight: 100, reps: 11, done: true }, { weight: 100, reps: 10, done: true }] }] }] });
   recs.sort((a, b) => a.date.localeCompare(b.date));
   recs.forEach(r => cloud.diet_records.set(`${USER.id}|${r.date}`, { user_id: USER.id, record_date: r.date, record: r, updated_at: r.updatedAt }));
@@ -108,6 +112,11 @@ async function openTrain(page) {
   await page.locator('.tab', { hasText: '筋トレ' }).click();
   await page.locator('#wcPlanCard, .wc-live').first().waitFor();
 }
+async function pick(page, act, v) {
+  // 実際の利用者と同じく「変更 ▼」を開いてから選ぶ
+  if (!(await page.locator(`[data-act="${act}"][data-v="${v}"]`).isVisible())) await page.locator('#wcPicker > summary').click();
+  await page.locator(`[data-act="${act}"][data-v="${v}"]`).click();
+}
 const lsJson = (page, key) => page.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), key);
 const activeKey = `shinDiet:${USER.id}:workoutactive`, recordsKey = `shinDiet:${USER.id}:records`, settingsKey = `shinDiet:${USER.id}:settings`;
 
@@ -122,8 +131,8 @@ const seeded = seedHistory();
   // 2. 両店舗×全部位：即時表示 → AI最適化
   for (const store of ['honten', 'shioda']) for (const part of ['chest', 'back', 'shoulders', 'arms', 'legs', 'fullbody']) {
     const t0 = Date.now();
-    await page.locator(`[data-act="store"][data-v="${store}"]`).click();
-    await page.locator(`[data-act="part"][data-v="${part}"]`).click();
+    await pick(page, 'store', `${store}`);
+    await pick(page, 'part', `${part}`);
     const items = await page.locator('#wcPlanCard .wc-ex').count();
     const instant = Date.now() - t0;
     await page.waitForFunction(() => document.querySelector('.wc-badge.ai'), null, { timeout: 8000 }).catch(() => {});
@@ -132,25 +141,48 @@ const seeded = seedHistory();
     check(`生成 ${store}/${part}：即時表示とAI最適化`, items >= 2 && ai === 1 && summary.includes('AIモック'), `${items}種目・表示${instant}ms・${summary}`);
   }
   // 3. 店舗別の重量（他店舗の重量を流用しない・AIの根拠なし重量を除去）
-  await page.locator('[data-act="store"][data-v="honten"]').click(); await page.locator('[data-act="part"][data-v="chest"]').click();
+  await pick(page, 'store', 'honten'); await pick(page, 'part', 'chest');
   const hontenChest = await page.locator('#wcPlanCard .wc-ex').first().textContent();
-  await page.locator('[data-act="store"][data-v="shioda"]').click();
+  await pick(page, 'store', 'shioda');
   const shiodaChest = await page.locator('#wcPlanCard').textContent();
   check('本店の胸は本店の実績重量から設計（前回53.5kg×10回・余裕→同重量で12回へ漸進）', /チェストプレス[\s\S]*53\.5kg × 12回/.test(hontenChest), hontenChest.replace(/\s+/g, ' ').slice(0, 120));
   check('塩田店の胸は本店重量を流用せず確認重量・参考表示', !/99kg/.test(shiodaChest) && /確認重量/.test(shiodaChest) && /本店では/.test(shiodaChest));
   await page.screenshot({ path: join(OUT, '01-plan-shioda-chest.png'), fullPage: false });
+  // 3b. v22.1：使い方の案内・前回実績・履歴の読み取り・店舗不明の割当・種目追加
+  check('初回は「新しくなりました」の案内を表示', (await page.locator('#wcWhatsNew').count()) === 1);
+  await page.click('[data-act="hidenew"]');
+  check('案内は閉じると再表示しない', (await page.locator('#wcWhatsNew').count()) === 0);
+  await pick(page, 'store', 'honten'); await pick(page, 'part', 'chest');
+  await page.locator('#wcPlanCard .wc-ex').first().scrollIntoViewIfNeeded(); await page.evaluate(() => window.scrollBy(0, -80)); await page.screenshot({ path: join(OUT, '07-plan-list.png') });
+  check('各種目に前回の実績を表示', /前回 \d\d\/\d\d：53\.5×10/.test(await page.locator('#wcPlanCard .wc-ex').first().textContent()));
+  const hist = await page.locator('#wcHistory').textContent();
+  check('自由記述・店舗不明を含む全記録を読み取って表示', /24回を読み取り/.test(hist) && /部位・セット数のみ 2回/.test(hist) && /店舗不明 3回/.test(hist), hist.replace(/\s+/g, ' ').slice(0, 110));
+  await pick(page, 'part', 'shoulders');
+  const beforeAssign = await page.locator('#wcPlanCard').textContent();
+  await page.locator('[data-act="unknownas"][data-v="honten"]').click();
+  const afterAssign = await page.locator('#wcPlanCard').textContent();
+  check('店舗不明の記録は割り当てるまで重量に使わず、割当後は使う', /店舗不明では30kg/.test(beforeAssign) && /ショルダープレス[\s\S]*30kg × 1[12]回/.test(afterAssign), afterAssign.replace(/\s+/g, ' ').slice(0, 100));
+  await page.locator('[data-act="unknownas"][data-v=""]').click();
+  await pick(page, 'part', 'chest');
+  const nBefore = await page.locator('#wcPlanCard .wc-ex').count();
+  const addName = await page.locator('#wcAddSelect option').first().getAttribute('value');
+  await page.selectOption('#wcAddSelect', addName);
+  await page.click('[data-act="addex"]');
+  check('「＋ 種目を追加」でメニューに種目を追加', (await page.locator('#wcPlanCard .wc-ex').count()) === nBefore + 1 && (await page.locator('#wcPlanCard .wc-ex').last().textContent()).includes(addName), addName);
+  await page.locator('#wcPlanCard .wc-ex').last().locator('[data-act="remove"]').click();
+  await pick(page, 'store', 'shioda');
   // 4. 会話でメニュー変更・恒久設定
   await page.fill('#wcChatInput', '塩田店にはペックフライがない');
   await page.click('[data-act="chat"]');
   await page.waitForFunction(() => document.querySelector('#wcChatLog .wc-msg.coach'), null, { timeout: 8000 });
   const prefs = (await lsJson(page, settingsKey)).workoutCoach.prefs;
-  const afterChat = await page.locator('#wcPlanCard').textContent();
+  const afterChat = (await page.locator('#wcPlanCard .wc-ex').allTextContents()).join(' ');
   check('会話で恒久設定（塩田店にペックフライなし）を保存', prefs.stores.shioda.missing.includes('ペックフライ'));
   check('会話後のメニューからペックフライが消える', !/ペックフライ/.test(afterChat));
-  await page.locator('[data-act="store"][data-v="honten"]').click();
-  check('本店では恒久設定の影響を受けずペックフライが残る', /ペックフライ/.test(await page.locator('#wcPlanCard').textContent()));
+  await pick(page, 'store', 'honten');
+  check('本店では恒久設定の影響を受けずペックフライが残る', /ペックフライ/.test((await page.locator('#wcPlanCard .wc-ex').allTextContents()).join(' ')));
   // 5. 開始・入力・自動保存・再読み込み復元
-  await page.locator('[data-act="part"][data-v="chest"]').click();
+  await pick(page, 'part', 'chest');
   await page.click('[data-act="start"]');
   await page.locator('.wc-live').waitFor();
   let act = await lsJson(page, activeKey);
@@ -162,6 +194,11 @@ const seeded = seedHistory();
   act = await lsJson(page, activeKey);
   const s0 = act.exercises[0].sets[0];
   check('重量・回数・完了チェックを即時自動保存', s0.done && s0.reps === 11 && s0.weight > 0, JSON.stringify(s0));
+  const exBefore = act.exercises.length;
+  const liveAdd = await page.locator('#wcAddSelect option').first().getAttribute('value');
+  await page.selectOption('#wcAddSelect', liveAdd); await page.click('[data-act="addex"]');
+  act = await lsJson(page, activeKey);
+  check('実施中も「＋ 種目を追加」で追加・自動保存', act.exercises.length === exBefore + 1 && act.exercises[exBefore].name === liveAdd, liveAdd);
   await page.screenshot({ path: join(OUT, '02-session.png') });
   await page.waitForTimeout(4500);
   const mirrored = await lsJson(page, settingsKey);
@@ -218,7 +255,7 @@ const seeded = seedHistory();
   check('従来画面で保存しても workoutSessions を保持', afterLegacySave.workoutSessions && afterLegacySave.workoutSessions.length === 1 && afterLegacySave.intake === 1900);
   // 10. 別端末で実施中セッションを復元
   await page.locator('.tab', { hasText: '筋トレ' }).click();
-  await page.locator('[data-act="store"][data-v="shioda"]').click(); await page.locator('[data-act="part"][data-v="legs"]').click();
+  await pick(page, 'store', 'shioda'); await pick(page, 'part', 'legs');
   await page.click('[data-act="start"]');
   await page.locator('.wc-live-ex').first().locator('.wc-set').first().locator('[data-act="done"]').click();
   await page.waitForTimeout(5500); // クラウド同期間隔
@@ -241,7 +278,7 @@ const seeded = seedHistory();
   ai.mode = 'slow';
   const { context, page } = await newDevice();
   await openTrain(page);
-  await page.locator('[data-act="part"][data-v="arms"]').click();
+  await pick(page, 'part', 'arms');
   const status = await page.locator('#wcPlanStatus').textContent();
   const t0 = Date.now(); await page.click('[data-act="start"]'); await page.locator('.wc-live').waitFor({ timeout: 3000 });
   check('AI応答が遅くても即時に開始できる', /最適化/.test(status) && /待たずに/.test(status) && Date.now() - t0 < 3000, status);
@@ -254,20 +291,20 @@ const seeded = seedHistory();
     await openTrain(d.page);
     if (mode === 'error') {
       // 通信できる時にAIメニューを保存 → AI不通にして再起動 → 保存済みAIメニューが即時に出るか
-      await d.page.locator('[data-act="store"][data-v="honten"]').click();
-      await d.page.locator('[data-act="part"][data-v="shoulders"]').click();
+      await pick(d.page, 'store', 'honten');
+      await pick(d.page, 'part', 'shoulders');
       await d.page.locator('.wc-badge.ai').waitFor({ timeout: 8000 });
       ai.mode = 'error';
       const before = ai.calls.length;
       await d.page.reload(); await d.page.waitForFunction(() => window.WorkoutUI && activeStorageId !== 'legacy'); await d.page.waitForTimeout(500);
       await d.page.locator('.tab', { hasText: '筋トレ' }).click();
-      await d.page.locator('[data-act="store"][data-v="honten"]').click();
-      await d.page.locator('[data-act="part"][data-v="shoulders"]').click();
+      await pick(d.page, 'store', 'honten');
+      await pick(d.page, 'part', 'shoulders');
       await d.page.waitForTimeout(1600);
       check('AI不通でも保存済みのAIメニューを即時表示（AIへ再送しない）', (await d.page.locator('.wc-badge.ai').count()) === 1 && ai.calls.length === before, await d.page.locator('.wc-summary').textContent());
     }
-    await d.page.locator('[data-act="part"][data-v="shoulders"]').click();
-    await d.page.locator('[data-act="minutes"][data-v="90"]').click();
+    await pick(d.page, 'part', 'shoulders');
+    await pick(d.page, 'minutes', '90');
     await d.page.waitForFunction(() => /AIで再調整/.test(document.querySelector('#wcPlanStatus').textContent), null, { timeout: 8000 }).catch(() => {});
     const st = await d.page.locator('#wcPlanStatus').textContent();
     await d.page.click('[data-act="start"]');
@@ -296,7 +333,7 @@ const seeded = seedHistory();
   await page.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller, null, { timeout: 15000 }).catch(() => {});
   await page.reload(); await page.waitForFunction(() => window.WorkoutUI && activeStorageId !== 'legacy', null, { timeout: 15000 });
   await page.locator('.tab', { hasText: '筋トレ' }).click();
-  await page.locator('[data-act="part"][data-v="back"]').click();
+  await pick(page, 'part', 'back');
   await page.click('[data-act="start"]');
   await page.locator('.wc-live-ex').first().locator('.wc-set').first().locator('[data-act="done"]').click();
   await context.setOffline(true);

@@ -186,3 +186,27 @@ test('worker reports billing problems without retrying and rejects empty chat', 
   const e = await callWorker({ kind: 'workout_chat', message: ' ' }, okOutput({}));
   assert.equal(e.status, 400);
 });
+
+test('v22.1 reads free-text workout history from older versions', () => {
+  assert.deepEqual(E.parseFreeText('胸25セット　1時間').partSets, { chest: 25 });
+  assert.equal(E.parseFreeText('胸25セット　1時間').minutes, 60);
+  const ex = E.parseFreeText('チェストプレス50kg 10回3セット、ペックフライ35kg×12×3').exercises;
+  assert.deepEqual(ex.map(e => [e.name, e.sets.length, e.sets[0].weight, e.sets[0].reps]), [['チェストプレス', 3, 50, 10], ['ペックフライ', 3, 35, 12]]);
+  assert.equal(E.parseFreeText('今日は完全休養日'), null);
+  const recs = [{ date: '2026-11-20', strength: '胸25セット　1時間' }, { date: '2026-11-22', strength: '背中20セット' }, { date: '2026-11-23', strength: '今日は完全休養日', restDay: true }];
+  const a = E.analyze(recs, TODAY);
+  assert.equal(a.counts.total, 2); assert.equal(a.counts.textOnly, 2);
+  assert.equal(a.partLast.chest, '2026-11-20'); assert.equal(a.partLast.back, '2026-11-22');
+  assert.equal(a.weekSets.chest, 25);
+  assert.notEqual(E.recommendPart(a, {}, TODAY), 'back');
+});
+
+test('v22.1 records with unknown store are used only after the user assigns a store', () => {
+  const recs = [{ date: '2026-11-20', workoutPlace: '', strength: 'チェストプレス50kg×12×3' }];
+  const before = E.planSession({ store: 'honten', part: 'chest', records: recs, today: TODAY }).exercises.find(e => e.name === 'チェストプレス');
+  assert.equal(before.weight, null);
+  assert.match(before.reference, /店舗不明では50kg/);
+  const after = E.planSession({ store: 'honten', part: 'chest', records: recs, today: TODAY, prefs: { unknownStoreAs: 'honten' } }).exercises.find(e => e.name === 'チェストプレス');
+  assert.equal(after.weight, 52.5);
+  assert.equal(E.analyze(recs, TODAY, { unknownStoreAs: 'honten' }).counts.unknownStore, 0);
+});

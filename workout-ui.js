@@ -51,7 +51,7 @@
 
   /* ---------- 計画 ---------- */
   const planKey = (store, part) => `${store}:${part}`;
-  function analysis() { return E.analyze(recs(), today()); }
+  function analysis() { return E.analyze(recs(), today(), coach().prefs); }
   function currentDefaults() {
     const c = coach(), a = analysis();
     const store = E.normalizeStore(ui.store || c.lastStore) || 'honten';
@@ -287,15 +287,16 @@
     const mins = [45, 60, 75, 90].map(m => `<button type="button" class="wc-chip small ${m === ui.minutes ? 'on' : ''}" data-act="minutes" data-v="${m}">${m}分</button>`).join('');
     const result = ui.lastResult ? `<div class="card wc-result"><b>✓ ${h(ui.lastResult.date)} の筋トレを保存しました</b><div class="small">${h(E.storeLabel(ui.lastResult.store))}・${h(E.PARTS[ui.lastResult.part] || '')}｜${ui.lastResult.fields.workoutMinutes}分｜${ui.lastResult.fields.completedSets}/${ui.lastResult.fields.plannedSets}セット完了</div><div class="small">次回メニューを下に用意しました。</div></div>` : '';
     const history = a.totalSessions ? `全${a.totalSessions}回の記録を分析` : '筋トレ記録がまだないため、確認重量から始めます';
-    return `${result}
-    <div class="card wc-card">
+    return `${result}${whatsNewHtml()}
+    <details class="card wc-card wc-picker" id="wcPicker" ${ui.pickerOpen ? 'open' : ''}>
+      <summary><span class="wc-pick-now">${h(E.storeLabel(ui.store))}・${h(E.PARTS[ui.part] || '')}・${ui.minutes}分</span><span class="wc-pick-hint">変更 ▼</span></summary>
       <div class="wc-title">店舗</div><div class="wc-segs" role="group" aria-label="店舗">${stores}</div>
-      <div class="wc-title">部位</div><div class="wc-chips" role="group" aria-label="部位">${parts}</div>
-      <div class="wc-title">時間</div><div class="wc-chips">${mins}</div>
+      <div class="wc-title">部位</div><div class="wc-chips wc-grid6" role="group" aria-label="部位">${parts}</div>
+      <div class="wc-title">時間</div><div class="wc-chips wc-grid4">${mins}</div>
       <details class="wc-request" ${ui.request ? 'open' : ''}><summary>今日の痛み・体調・希望（任意）</summary>
         <textarea id="wcRequest" placeholder="例：右肩3/10、寝不足。ケーブルから始めたい">${h(ui.request)}</textarea>
         <button type="button" class="sub" data-act="request">この内容でメニューを作り直す</button></details>
-    </div>
+    </details>
     <div class="card wc-card" id="wcPlanCard">
       <div class="wc-plan-head">${sourceBadge(p)}<span class="small">${h(history)}</span></div>
       <h3 class="wc-summary">${h(p.summary)}</h3>
@@ -304,12 +305,15 @@
       <ol class="wc-list">${p.exercises.map((e, i) => `<li class="wc-ex">
         <div class="wc-ex-head"><b>${h(e.name)}</b>${e.unconfirmed ? '<span class="wc-tag">設備未確認</span>' : ''}</div>
         <div class="wc-ex-main">${h(loadLabel(e))} × ${e.reps}回 × ${e.sets}セット</div>
-        <div class="small">目標${e.repsTarget[0]}〜${e.repsTarget[1]}回・残り${e.rir}回・休憩${e.restSec}秒</div>
-        ${e.reason ? `<div class="small wc-reason">${h(e.reason)}</div>` : ''}${e.reference ? `<div class="small wc-ref">参考：${h(e.reference)}</div>` : ''}
+        ${lastLine(a, p.store, e.name)}
+        ${e.reference ? `<div class="small wc-ref">参考：${h(e.reference)}</div>` : ''}
+        <details class="small wc-why"><summary>なぜこの重量・回数？</summary>目標${e.repsTarget[0]}〜${e.repsTarget[1]}回・あと${e.rir}回できる余力で止める・休憩${e.restSec}秒。${h(e.reason)}</details>
         <div class="wc-ex-actions"><button type="button" class="wc-mini" data-act="swap" data-i="${i}">入替</button><button type="button" class="wc-mini" data-act="nostore" data-i="${i}">この店にない</button><button type="button" class="wc-mini danger" data-act="remove" data-i="${i}">今日は外す</button></div>
       </li>`).join('')}</ol>
+      ${addExerciseHtml(p.part, p.exercises.map(e => e.name))}
       ${evidenceHtml(p.evidence)}
     </div>
+    ${historyHtml(a, c.prefs)}
     ${chatHtml()}
     ${prefsHtml(c.prefs)}
     <p class="small" style="text-align:center"><button type="button" class="wc-link" data-act="legacy">従来の詳細入力（記録画面）を開く</button></p>
@@ -334,6 +338,7 @@
       </div>`).join('')}</div>
       <div class="wc-ex-actions"><button type="button" class="wc-mini" data-act="addset">＋セット</button>${['easy', 'ok', 'hard'].map(r => `<button type="button" class="wc-mini ${e.rating === r ? 'on' : ''}" data-act="rate" data-v="${r}">${{ easy: '余裕', ok: 'ちょうど', hard: 'きつい' }[r]}</button>`).join('')}</div>
     </div>`).join('')}
+    <div class="card wc-card">${addExerciseHtml(s.part, s.exercises.map(e => e.name))}</div>
     ${chatHtml()}
     ${ui.finishing ? `<div class="card wc-card" id="wcFinishCard"><h3>筋トレを終了</h3>
       <div class="wc-title">全体の感想</div><div class="wc-chips">${['easy', 'ok', 'hard'].map(r => `<button type="button" class="wc-chip ${ui.finishOverall === r ? 'on' : ''}" data-act="overall" data-v="${r}">${{ easy: '余裕あり', ok: 'ちょうど', hard: 'きつかった' }[r]}</button>`).join('')}</div>
@@ -343,6 +348,37 @@
       <button type="button" class="sub" data-act="cancelfinish" style="margin-top:8px">続ける</button>
       <button type="button" class="danger" data-act="discard" style="margin-top:8px">記録せず破棄</button></div>` : ''}
     <div class="wc-bar"><div id="wcRest" class="wc-rest"></div><button type="button" id="wcFinish" data-act="finish" class="${ui.finishing ? 'sub' : ''}">■ 終了する</button></div>`;
+  }
+  function whatsNewHtml() {
+    if (localStorage.getItem(storageKey('WorkoutWhatsNew22')) === '1') return '';
+    return `<div class="card wc-card wc-new" id="wcWhatsNew"><b>筋トレ画面が新しくなりました</b>
+      <ol class="small"><li><b>店舗と部位を選ぶだけ</b>で、過去の記録から今日の重量・回数が出ます。</li>
+      <li>下の<b>「▶ 筋トレ開始」</b>を押し、終わったセットの<b>✓</b>を押すだけで記録されます（自動保存）。</li>
+      <li><b>「■ 終了する」</b>で保存すると、<b>次回のメニュー</b>が自動でできます。</li>
+      <li>種目を足したい時は<b>「＋ 種目を追加」</b>、変えたい時は<b>「コーチに伝える」</b>に普通の言葉で書きます。</li></ol>
+      <button type="button" class="sub" data-act="hidenew">わかった（閉じる）</button></div>`;
+  }
+  function lastLine(a, store, name) {
+    const st = a.byKey[`${store}|${name}`];
+    if (!st || !st.last) return `<div class="small wc-last none">${h(E.storeLabel(store))}での記録はまだありません</div>`;
+    const l = st.last, sets = l.sets.map(t => `${t.weight ?? '自重'}×${t.reps}`).join(' / ');
+    return `<div class="small wc-last">前回 ${h(l.date.slice(5).replace('-', '/'))}：${h(sets)}${l.rating ? `（${{ easy: '余裕', ok: 'ちょうど', hard: 'きつい' }[l.rating] || ''}）` : ''}</div>`;
+  }
+  function addExerciseHtml(part, used) {
+    const usedSet = new Set(used || []);
+    const order = [part, ...Object.keys(E.PARTS).filter(k => k !== part && k !== 'fullbody')].filter(k => E.PARTS[k] && k !== 'fullbody');
+    const groups = order.map(k => `<optgroup label="${h(E.PARTS[k])}">${E.CATALOG.filter(x => x.part === k && !usedSet.has(x.name)).map(x => `<option value="${h(x.name)}">${h(x.name)}</option>`).join('')}</optgroup>`).join('');
+    return `<div class="wc-add"><div class="wc-title">＋ 種目を追加</div><div class="wc-add-row"><select id="wcAddSelect" aria-label="追加する種目">${groups}<option value="__other">その他（名前を入力）</option></select><button type="button" data-act="addex">追加</button></div><input id="wcAddOther" placeholder="種目名（例：スミスマシンプレス）" style="display:none;margin-top:8px"></div>`;
+  }
+  function historyHtml(a, prefs) {
+    const c = a.counts || { total: 0 };
+    if (!c.total) return `<div class="card wc-card"><div class="wc-title">これまでの筋トレ記録</div><p class="small">まだ読み取れる記録がありません。今日から自動で記録されます。</p></div>`;
+    const list = a.sessions.slice(-10).reverse().map(x => `<div class="wc-hist"><b>${h(x.date.slice(5).replace('-', '/'))}</b> ${h(E.storeLabel(x.store))}・${h(E.PARTS[x.part] || '部位不明')}<div class="small">${x.exercises.length ? h(x.exercises.map(e => `${e.name} ${e.sets[0] && e.sets[0].weight ? e.sets[0].weight + 'kg' : ''}×${e.sets.length}セット`).join('、')) : h(x.rawText || Object.entries(x.partSets || {}).map(([k, n]) => `${E.PARTS[k]}${n ? n + 'セット' : ''}`).join('・'))}</div></div>`).join('');
+    const unknown = c.unknownStore ? `<div class="wc-warn">店舗名がない（または本店・塩田店と判別できない）記録が${c.unknownStore}回あります。重量の引き継ぎに使うには、どちらの店舗か選んでください。<div class="wc-segs" style="margin-top:8px"><button type="button" class="wc-seg" data-act="unknownas" data-v="honten">本店として扱う</button><button type="button" class="wc-seg" data-act="unknownas" data-v="shioda">塩田店として扱う</button></div></div>` : '';
+    const assigned = prefs.unknownStoreAs ? `<p class="small">店舗不明の記録は「${h(E.storeLabel(prefs.unknownStoreAs))}」として扱っています。<button type="button" class="wc-link" data-act="unknownas" data-v="">解除</button></p>` : '';
+    return `<details class="card wc-card" id="wcHistory" ${c.unknownStore || prefs.unknownStoreAs ? 'open' : ''}><summary><b>これまでの筋トレ記録（${c.total}回を読み取り）</b></summary>
+      <p class="small">重量つき ${c.withWeights}回／部位・セット数のみ ${c.textOnly}回／本店 ${c.byStore.honten}回・塩田店 ${c.byStore.shioda}回・店舗不明 ${c.unknownStore}回</p>
+      ${unknown}${assigned}${list}</details>`;
   }
   function chatHtml() {
     return `<div class="card wc-card" id="wcChatCard"><div class="wc-title">コーチに伝える（会話でメニュー変更）</div>
@@ -403,6 +439,9 @@
     else if (act === 'request') { ui.request = ($('wcRequest').value || '').trim(); ui.plan = null; resolvePlan(); render(); }
     else if (act === 'ai') maybeAiPlan(true);
     else if (act === 'start') startSession();
+    else if (act === 'hidenew') { localStorage.setItem(storageKey('WorkoutWhatsNew22'), '1'); const el = $('wcWhatsNew'); if (el) el.remove(); }
+    else if (act === 'unknownas') { writeCoach(c => { c.prefs = { ...c.prefs, unknownStoreAs: v }; c.plans = {}; }); ui.plan = null; resolvePlan(); render(); toast(v ? `店舗不明の記録を${E.storeLabel(v)}として扱います` : '店舗不明の扱いを解除しました'); }
+    else if (act === 'addex') addExercise();
     else if (act === 'legacy') { const tab = [...document.querySelectorAll('.tab')].find(x => x.textContent.includes('食事など')); if (typeof openRecordMode === 'function') openRecordMode('workout', tab); }
     else if (act === 'remove' || act === 'swap' || act === 'nostore') editPlanExercise(act, +btn.dataset.i);
     else if (act === 'prefdel') { const it = prefItems()[+btn.dataset.i]; if (it) { writeCoach(c => { c.prefs = E.applyPreferenceChanges(c.prefs, [{ ...it, action: 'remove' }]); c.plans = {}; }); ui.plan = null; resolvePlan(); render(); } }
@@ -433,6 +472,24 @@
     const input = ev.target; if (!input.dataset || !input.dataset.f) return;
     const exEl = input.closest('[data-ei]'), setEl = input.closest('[data-si]'); if (!exEl || !setEl) return;
     mutateSession(s => { const x = s.exercises[+exEl.dataset.ei].sets[+setEl.dataset.si]; x[input.dataset.f] = input.value === '' ? null : +input.value; });
+  }
+  function addExercise() {
+    const sel = $('wcAddSelect'); if (!sel) return;
+    let name = sel.value;
+    if (name === '__other') { const other = $('wcAddOther'); name = (other && other.value || '').trim(); if (!name) { if (other) { other.style.display = 'block'; other.focus(); } return; } }
+    name = E.canonicalName(name);
+    const active = readActive(), base = active ? { store: active.store, part: active.part, minutes: 120 } : ui.plan;
+    const c = coach(), entry = E.catalogEntry(name);
+    const made = E.planSession({ store: base.store, part: entry ? entry.part : base.part, minutes: 120, prefs: { ...c.prefs, prefer: [name], avoid: [] }, analysis: analysis(), today: today() }).exercises.find(x => x.name === name)
+      || { id: Math.random().toString(36).slice(2), name, part: base.part, kind: 'isolation', loadType: 'total', weight: null, repsTarget: [10, 15], reps: 10, sets: 3, restSec: 90, rir: 2, reason: '追加した種目です。1セット目で重量を決めてください。', evidence: [], unconfirmed: true, reference: '' };
+    if (active) {
+      mutateSession(s => { s.exercises.push(E.newSession({ id: 'added', source: 'added', store: s.store, part: s.part, exercises: [made] }, s.date, appNowIso()).exercises[0]); }, true);
+    } else {
+      ui.plan.exercises.push(made); ui.plan.source = ui.plan.source === 'ai' ? 'ai' : 'chat'; ui.plan.basedOnSessions = analysis().totalSessions;
+      ui.plan.summary = `${E.storeLabel(ui.plan.store)}・${E.PARTS[ui.plan.part]}｜${ui.plan.exercises.length}種目 合計${ui.plan.exercises.reduce((a, x) => a + x.sets, 0)}セット`;
+      storePlan(ui.plan); render();
+    }
+    toast(`「${name}」を追加しました`);
   }
   function editPlanExercise(act, i) {
     const plan = ui.plan; const e = plan && plan.exercises[i]; if (!e) return;
@@ -477,6 +534,7 @@
   };
   document.addEventListener('click', ev => { if (ev.target.closest('#trainRoot')) onClick(ev); });
   document.addEventListener('input', ev => { if (ev.target.closest('#trainRoot')) onInput(ev); });
+  document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'wcPicker') ui.pickerOpen = ev.target.open; }, true);
   window.addEventListener('online', () => { const s = readActive(); if (s) saveActive(s, true); });
   window.addEventListener('pagehide', () => { const s = readActive(); if (s) { clearTimeout(mirrorTimer); writeCoach(c => { c.active = s; }); } });
   fetch('./science/evidence.json').then(r => r.json()).then(d => { ui.evidence = (d.items || []).filter(x => x.verified); if ($('train') && $('train').classList.contains('active') && !readActive()) render(); }).catch(() => { ui.evidence = []; });

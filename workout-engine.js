@@ -64,7 +64,7 @@
     if (/本店/.test(value)) return 'honten';
     return '';
   }
-  function storeLabel(id) { return STORES[id] ? STORES[id].label : (id || '未指定'); }
+  function storeLabel(id) { return STORES[id] ? STORES[id].label : (id || '店舗不明'); }
 
   function catalogEntry(name) {
     const key = clean(name);
@@ -100,15 +100,44 @@
     return out;
   }
 
+  /* ---------- 自由記述の筋トレ記録（v21.1より前の「胸25セット　1時間」形式など） ---------- */
+  const PART_WORDS = [['chest', '胸'], ['back', '背中'], ['shoulders', '肩'], ['arms', '腕|二頭|三頭'], ['legs', '脚|足|下半身'], ['fullbody', '全身']];
+  function toHalf(v) { return String(v || '').replace(/[０-９．]/g, d => String.fromCharCode(d.charCodeAt(0) - 65248)).replace(/[ｘＸ✕＊]/g, '×'); }
+  function parseFreeText(text) {
+    const value = toHalf(text);
+    if (!value.trim()) return null;
+    const partSets = {};
+    PART_WORDS.forEach(([id, words]) => {
+      const re = new RegExp(`(?:${words})[^0-9\\n、。]{0,6}?(\\d{1,3})\\s*セット`, 'g');
+      let m; while ((m = re.exec(value))) partSets[id] = (partSets[id] || 0) + Math.min(60, +m[1]);
+      if (!partSets[id] && new RegExp(`(?:${words})(?:の日|トレ|を|中心|[・、\\s]|$)`).test(value)) partSets[id] = partSets[id] || 0;
+    });
+    const exercises = [];
+    const re = /([ァ-ヶーA-Za-z一-龥]{2,20}?)\s*[：:]?\s*(\d{1,3}(?:\.\d)?)\s*(?:kg|キロ)(?:[（(][^）)]*[）)])?\s*[×x*]?\s*(\d{1,2})\s*回?(?:\s*[×x*]\s*(\d{1,2})\s*(?:セット|set)?|\s*(\d{1,2})\s*(?:セット|set))?/gi;
+    let m;
+    while ((m = re.exec(value))) {
+      const entry = catalogEntry(m[1]); if (!entry) continue;
+      const count = Math.max(1, Math.min(10, +(m[4] || m[5] || 1)));
+      exercises.push({ name: entry.name, rawName: m[1], equipment: '', loadType: 'total', rating: '', legacy: true, fromText: true, sets: Array.from({ length: count }, () => ({ weight: +m[2], reps: +m[3] })) });
+    }
+    const hm = value.match(/(\d+(?:\.\d+)?)\s*時間/), mm = value.match(/(\d{1,3})\s*分/);
+    const minutes = hm ? Math.round(+hm[1] * 60) : mm ? +mm[1] : null;
+    if (!exercises.length && !Object.keys(partSets).length) return null;
+    return { partSets, exercises, minutes };
+  }
+
   /* ---------- 履歴の抽出 ---------- */
-  // 新形式（workoutSessions：セット単位）と旧形式（workoutExercises：種目単位）の両方を読む。
-  function extractSessions(records) {
+  // 新形式（workoutSessions：セット単位）・旧形式（workoutExercises：種目単位）・自由記述（strength）をすべて読む。
+  // 店舗名が本店/塩田店と判別できない記録は、恒久設定 unknownStoreAs があればその店舗として扱う。
+  function extractSessions(records, prefs) {
     const sessions = [];
+    const unknownAs = prefs && STORES[prefs.unknownStoreAs] ? prefs.unknownStoreAs : '';
+    const storeOf = place => normalizeStore(place) || unknownAs;
     (Array.isArray(records) ? records : []).filter(r => r && r.date && !r._deleted).forEach(r => {
       const finished = Array.isArray(r.workoutSessions) ? r.workoutSessions.filter(s => s && s.status === 'finished') : [];
       if (finished.length) {
         finished.forEach(s => sessions.push({
-          date: r.date, store: normalizeStore(s.store), part: s.part || '', source: 'session',
+          date: r.date, store: storeOf(s.store), part: s.part || '', source: 'session',
           startedAt: s.startedAt, finishedAt: s.finishedAt, rating: s.feedback && s.feedback.overall || '',
           pain: parsePain(`${s.feedback && s.feedback.pain || ''} ${s.feedback && s.feedback.note || ''}`),
           fatigue: num(r.fatigue),
@@ -122,9 +151,17 @@
       }
       let items = r.workoutExercises;
       if (!Array.isArray(items)) { try { items = JSON.parse(r.workoutExercisesJson || '[]'); } catch (e) { items = []; } }
-      if (!Array.isArray(items) || !items.length) return;
+      if (!Array.isArray(items) || !items.length) {
+        const text = parseFreeText(r.strength);
+        if (!text || /^(?:今日は)?(?:完全)?休養日/.test(String(r.strength || '').trim()) || r.restDay) return;
+        const parts = Object.keys(text.partSets);
+        sessions.push({ date: r.date, store: storeOf(r.workoutPlace), part: r.workoutPart || (parts.length === 1 ? parts[0] : parts.length > 1 ? 'fullbody' : inferPart(text.exercises.map(e => e.name).join(' '))), source: 'text',
+          partSets: text.partSets, minutes: text.minutes, rating: /余裕|楽/.test(r.strength) ? 'easy' : /きつ|限界/.test(r.strength) ? 'hard' : '',
+          pain: parsePain(`${r.strength || ''} ${r.condition || ''}`), fatigue: num(r.fatigue), exercises: text.exercises, rawText: String(r.strength).slice(0, 80) });
+        return;
+      }
       if (r.workoutCompletion === 'stopped' && !items.some(i => num(i.weight) !== null)) return;
-      const store = normalizeStore(r.workoutPlace);
+      const store = storeOf(r.workoutPlace);
       const exercises = items.map(i => {
         const reps = firstInt(i.reps), count = Math.max(1, Math.min(10, firstInt(i.sets) || 1)), weight = num(i.weight);
         const planned = /メニューから自動入力/.test(String(i.note || '')) && weight === null;
@@ -143,8 +180,8 @@
   const e1rm = (w, r) => (w > 0 && r > 0) ? w * (1 + Math.min(r, 20) / 30) : null;
 
   // 種目×店舗ごとの成長・停滞を集計（全履歴）
-  function analyze(records, todayDate) {
-    const sessions = extractSessions(records);
+  function analyze(records, todayDate, prefs) {
+    const sessions = extractSessions(records, prefs);
     const now = dayIndex(todayDate || new Date().toISOString().slice(0, 10));
     const byKey = {};
     sessions.forEach(s => s.exercises.forEach(e => {
@@ -176,8 +213,12 @@
     sessions.forEach(s => {
       const parts = new Set(s.exercises.map(e => (catalogEntry(e.name) || {}).part || s.part).filter(Boolean));
       if (s.part && s.part !== 'fullbody') parts.add(s.part);
+      Object.keys(s.partSets || {}).forEach(p => parts.add(p));
       parts.forEach(p => { partLast[p] = s.date; });
-      if (now - dayIndex(s.date) < 7) s.exercises.forEach(e => { const p = (catalogEntry(e.name) || {}).part || s.part; if (p) weekSets[p] = (weekSets[p] || 0) + e.sets.length; });
+      if (now - dayIndex(s.date) < 7) {
+        s.exercises.forEach(e => { const p = (catalogEntry(e.name) || {}).part || s.part; if (p) weekSets[p] = (weekSets[p] || 0) + e.sets.length; });
+        if (!s.exercises.length) Object.entries(s.partSets || {}).forEach(([p, n]) => { weekSets[p] = (weekSets[p] || 0) + n; });
+      }
     });
     const recent = (Array.isArray(records) ? records : []).filter(r => r && r.date && now - dayIndex(r.date) <= 2 && now - dayIndex(r.date) >= 0);
     const fatigue = Math.max(0, ...recent.map(r => num(r.fatigue) || 0));
@@ -187,7 +228,8 @@
     recent.forEach(r => Object.entries(parsePain(`${r.condition || ''} ${r.workoutRequest || ''}`)).forEach(([k, v]) => { pain[k] = Math.max(pain[k] || 0, v); }));
     const storeExercises = {};
     sessions.forEach(s => { if (!s.store) return; const set = storeExercises[s.store] = storeExercises[s.store] || new Set(); s.exercises.forEach(e => set.add(e.name)); });
-    return { sessions, byKey, partLast, weekSets, fatigue, pain, storeExercises: Object.fromEntries(Object.entries(storeExercises).map(([k, v]) => [k, [...v]])), totalSessions: sessions.length };
+    const counts = { total: sessions.length, withWeights: sessions.filter(x => x.exercises.some(e => e.sets.some(t => t.weight > 0))).length, textOnly: sessions.filter(x => x.source === 'text' && !x.exercises.length).length, unknownStore: sessions.filter(x => !x.store).length, byStore: { honten: sessions.filter(x => x.store === 'honten').length, shioda: sessions.filter(x => x.store === 'shioda').length } };
+    return { sessions, byKey, partLast, weekSets, fatigue, pain, counts, storeExercises: Object.fromEntries(Object.entries(storeExercises).map(([k, v]) => [k, [...v]])), totalSessions: sessions.length };
   }
 
   function recommendPart(analysis, prefs, todayDate) {
@@ -207,7 +249,7 @@
     const list = v => Array.isArray(v) ? v.map(x => String(x).trim()).filter(Boolean) : [];
     const stores = {};
     Object.keys(STORES).forEach(id => { const s = p.stores && p.stores[id] || {}; stores[id] = { missing: list(s.missing).map(canonicalName), available: list(s.available).map(canonicalName) }; });
-    return { avoid: list(p.avoid).map(canonicalName), prefer: list(p.prefer).map(canonicalName), notes: list(p.notes), split: list(p.split).filter(x => PARTS[x]), stores, defaultMinutes: num(p.defaultMinutes), level: ['beginner', 'intermediate', 'high'].includes(p.level) ? p.level : '' };
+    return { unknownStoreAs: STORES[p.unknownStoreAs] ? p.unknownStoreAs : '', avoid: list(p.avoid).map(canonicalName), prefer: list(p.prefer).map(canonicalName), notes: list(p.notes), split: list(p.split).filter(x => PARTS[x]), stores, defaultMinutes: num(p.defaultMinutes), level: ['beginner', 'intermediate', 'high'].includes(p.level) ? p.level : '' };
   }
 
   function painPenalty(entry, pain) {
@@ -223,7 +265,7 @@
     const prefs = prefsNormalized(o.prefs);
     const level = ['beginner', 'intermediate', 'high'].includes(o.level) ? o.level : (prefs.level || 'intermediate');
     const minutes = Math.max(20, Math.min(120, num(o.minutes) || prefs.defaultMinutes || 60));
-    const analysis = o.analysis || analyze(o.records || [], o.today);
+    const analysis = o.analysis || analyze(o.records || [], o.today, o.prefs);
     const pain = { ...analysis.pain, ...parsePain(o.request || '') };
     const fatigue = Math.max(analysis.fatigue || 0, /疲れ|だる|寝不足|睡眠不足/.test(o.request || '') ? 4 : 0);
     const missing = new Set(prefs.stores[store].missing), avoid = new Set(prefs.avoid), prefer = prefs.prefer;
@@ -484,6 +526,6 @@
     return `【${plan.summary}】\n` + plan.exercises.map((e, i) => `${i + 1}. ${e.name}：${e.weight === null ? '確認重量' : e.weight + 'kg'}／${e.reps}回（${e.repsTarget[0]}〜${e.repsTarget[1]}）×${e.sets}セット／休憩${e.restSec}秒／残り${e.rir}回`).join('\n');
   }
 
-  const api = { STORES, PARTS, PART_ORDER, CATALOG, normalizeStore, storeLabel, catalogEntry, canonicalName, inferPart, parsePain, extractSessions, analyze, recommendPart, prefsNormalized, planSession, validateAiPlan, aiContext, localChat, applyPreferenceChanges, newSession, sessionRecordFields, planText, e1rm };
+  const api = { parseFreeText, STORES, PARTS, PART_ORDER, CATALOG, normalizeStore, storeLabel, catalogEntry, canonicalName, inferPart, parsePain, extractSessions, analyze, recommendPart, prefsNormalized, planSession, validateAiPlan, aiContext, localChat, applyPreferenceChanges, newSession, sessionRecordFields, planText, e1rm };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WorkoutEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);

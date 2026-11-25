@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v22.0 筋トレAIコーチ版</title>
+<title>AI Diet v22.1 筋トレAIコーチ版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -288,7 +288,13 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
 .wc-chat-log{display:grid;gap:8px;margin-bottom:8px}.wc-msg{white-space:pre-wrap;padding:10px 12px;border-radius:14px;font-size:14px;line-height:1.55}.wc-msg.me{background:var(--accent-soft);justify-self:end;max-width:90%}.wc-msg.coach{background:#F2F2F7;max-width:95%}
 #wcChatInput{min-height:64px}#wcChatSend{margin-top:8px}
 .wc-pref{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}#wcPrefs summary{cursor:pointer}
-#trainRoot{padding-bottom:96px}body[data-page="train"] .app-header{padding:calc(10px + var(--safe-t)) 20px 16px}body[data-page="train"] .app-header h1{font-size:20px;margin:0}body[data-page="train"] .app-header .subhead,body[data-page="train"] .version-pill{display:none}body[data-page="train"] .card.hero-coach{margin-top:14px}.wc-bar{position:fixed;left:0;right:0;bottom:calc(var(--tab-h) + var(--safe-b));z-index:90;padding:10px 16px;background:rgba(242,242,247,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}.wc-bar button{min-height:54px;font-size:18px}.wc-rest{display:none;font-weight:800;color:var(--accent);white-space:nowrap;font-size:16px}.wc-rest.on{display:block}
+#trainRoot{padding-bottom:96px}.wc-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}.wc-grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.wc-grid6 .wc-chip,.wc-grid4 .wc-chip{width:100%;padding:8px 0;font-size:15px;min-height:46px;justify-content:center}.wc-grid6 .wc-chip small{font-size:9px;letter-spacing:-.5px}
+body[data-page="train"] .wc-seg{min-height:46px}body[data-page="train"] .wc-title{margin:10px 0 6px}
+.wc-picker>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}.wc-picker>summary::-webkit-details-marker{display:none}.wc-pick-now{font-size:19px;font-weight:800}.wc-pick-hint{font-size:13px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:8px 12px;white-space:nowrap}.wc-picker[open]>summary{margin-bottom:6px}
+.wc-new{border-color:rgba(0,122,255,.35);background:#F4F8FF}.wc-new ol{padding-left:20px;line-height:1.8;margin:8px 0}.wc-new button{margin-top:4px}
+.wc-last{color:var(--ink);font-weight:700;margin-top:2px}.wc-last.none{color:var(--muted);font-weight:500}.wc-why{margin-top:6px}.wc-why summary{cursor:pointer;color:var(--accent);font-weight:700}
+.wc-add{margin-top:14px;border-top:1px solid var(--line);padding-top:4px}.wc-add-row{display:grid;grid-template-columns:1fr 88px;gap:8px}.wc-add-row button{margin:0;padding:12px 8px}
+.wc-hist{border-top:1px solid var(--line);padding:8px 0;font-size:14px}#wcHistory summary{cursor:pointer}body[data-page="train"] .app-header{padding:calc(10px + var(--safe-t)) 20px 16px}body[data-page="train"] .app-header h1{font-size:20px;margin:0}body[data-page="train"] .app-header .subhead,body[data-page="train"] .version-pill{display:none}body[data-page="train"] .card.hero-coach{margin-top:14px}.wc-bar{position:fixed;left:0;right:0;bottom:calc(var(--tab-h) + var(--safe-b));z-index:90;padding:10px 16px;background:rgba(242,242,247,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}.wc-bar button{min-height:54px;font-size:18px}.wc-rest{display:none;font-weight:800;color:var(--accent);white-space:nowrap;font-size:16px}.wc-rest.on{display:block}
 .wc-live-head{display:flex;justify-content:space-between;align-items:center}.wc-progress-num{font-size:26px;font-weight:800;color:var(--accent)}.wc-saved{margin-top:6px;color:var(--good)}
 .wc-sets{display:grid;gap:8px;margin-top:10px}.wc-set{display:grid;grid-template-columns:16px 1fr 1fr 50px;gap:5px;align-items:center;padding:6px;border-radius:12px;background:#F8F8FB}.wc-set.done{background:#EAF8EE}.wc-set-no{font-weight:800;color:var(--muted);text-align:center}
 .wc-step{display:grid;grid-template-columns:28px 1fr 28px;align-items:center;gap:2px}.wc-step input{padding:10px 0;text-align:center;font-size:17px;font-weight:700;min-width:0;letter-spacing:-.3px}.wc-pm{margin:0;padding:0;height:44px;width:28px;font-size:20px;background:#fff;color:var(--ink2);border:1px solid var(--line);box-shadow:none;border-radius:10px}
@@ -302,7 +308,7 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v22.0 筋トレAIコーチ版</div>
+  <div class="version-pill">v22.1 筋トレAIコーチ版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -759,7 +765,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='22.0';
+const APP_VERSION='22.1';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const AI_CONSENT_VERSION='1';
 async function fetchWithTimeout(url,options={},timeoutMs=60000){
