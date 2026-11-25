@@ -16,7 +16,7 @@
   /* ---------- 保存領域 ---------- */
   function coach(s = readSettings()) {
     const c = s.workoutCoach && typeof s.workoutCoach === 'object' ? s.workoutCoach : {};
-    return { prefs: E.prefsNormalized(c.prefs), plans: c.plans && typeof c.plans === 'object' ? c.plans : {}, active: c.active || null, activeClearedAt: c.activeClearedAt || '', lastStore: c.lastStore || '', next: c.next || null, updatedAt: c.updatedAt || '' };
+    return { prefs: E.prefsNormalized(c.prefs), plans: c.plans && typeof c.plans === 'object' ? c.plans : {}, active: c.active || null, activeClearedAt: c.activeClearedAt || '', lastStore: c.lastStore || '', next: c.next || null, updatedAt: c.updatedAt || '', imports: Array.isArray(c.imports) ? c.imports : [], brief: String(c.brief || '') };
   }
   function writeCoach(mutator) {
     const s = readSettings(), c = coach(s);
@@ -51,7 +51,7 @@
 
   /* ---------- 計画 ---------- */
   const planKey = (store, part) => `${store}:${part}`;
-  function analysis() { return E.analyze(recs(), today(), coach().prefs); }
+  function analysis() { const c = coach(); return E.analyze(recs(), today(), { ...c.prefs, imports: c.imports }); }
   function currentDefaults() {
     const c = coach(), a = analysis();
     const store = E.normalizeStore(ui.store || c.lastStore) || 'honten';
@@ -107,7 +107,7 @@
     renderPlanStatus();
     const s = readSettings(), c = coach(s), a = analysis();
     try {
-      const body = await aiPost({ kind: 'workout_plan', store: target.store, part: target.part, minutes: target.minutes, level: target.level, request: ui.request, healthNotes: s.healthNotes || '', context: E.aiContext(a, target.store, target.part, c.prefs), baseline: target.exercises.map(x => ({ name: x.name, weight: x.weight, reps: x.reps, repsTarget: x.repsTarget, sets: x.sets, restSec: x.restSec, rir: x.rir, reason: x.reason })) }, AI_PLAN_TIMEOUT);
+      const body = await aiPost({ kind: 'workout_plan', store: target.store, part: target.part, minutes: target.minutes, level: target.level, request: ui.request, healthNotes: s.healthNotes || '', context: E.aiContext(a, target.store, target.part, c.prefs), brief: c.brief, baseline: target.exercises.map(x => ({ name: x.name, weight: x.weight, reps: x.reps, repsTarget: x.repsTarget, sets: x.sets, restSec: x.restSec, rir: x.rir, reason: x.reason })) }, AI_PLAN_TIMEOUT);
       const plan = E.validateAiPlan(body, target, a, c.prefs);
       if (!plan) throw new Error('AIの計画を検証できなかったため、アプリ設計のメニューを使います。');
       plan.aiModel = body.model || '';
@@ -133,8 +133,9 @@
     saveActive(session, true);
     writeCoach(c => { c.lastStore = plan.store; c.active = session; });
     ui.chatLog = [];
+    const t = $('wcToast'); if (t) t.classList.remove('show');
     render();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
   function mutateSession(fn, rerender = false) {
     const s = readActive(); if (!s) return null;
@@ -198,7 +199,9 @@
 
   /* ---------- 会話 ---------- */
   async function sendChat() {
-    const input = $('wcChatInput'); const message = (input && input.value || '').trim(); if (!message) return;
+    const input = $('wcChatInput'); const raw = (input && input.value || '').trim(); if (!raw) return;
+    if (raw.length >= 80 && E.parseImport(raw, '').entries.filter(x => x.weight !== null || x.reps).length >= 2) { input.value = ''; return doImport(raw, '', 'chat'); } // メニューやプロンプトの貼り付けは取り込みへ
+    const message = raw.slice(0, 600);
     const active = readActive();
     const plan = active ? sessionAsPlan(active) : (ui.plan || resolvePlan());
     ui.chatLog.push({ who: 'me', text: message }); input.value = '';
@@ -208,7 +211,7 @@
     let result;
     try {
       if (!canAutoAi() && !ensureAiConsent()) throw new Error('AI送信を中止しました');
-      const body = await aiPost({ kind: 'workout_chat', message, store: plan.store, part: plan.part, minutes: plan.minutes, plan: { summary: plan.summary, exercises: plan.exercises.map(x => ({ name: x.name, weight: x.weight, reps: x.reps, sets: x.sets, restSec: x.restSec, rir: x.rir, done: x.doneSets || 0 })) }, context: E.aiContext(a, plan.store, plan.part, c.prefs) }, AI_CHAT_TIMEOUT);
+      const body = await aiPost({ kind: 'workout_chat', message, store: plan.store, part: plan.part, minutes: plan.minutes, plan: { summary: plan.summary, exercises: plan.exercises.map(x => ({ name: x.name, weight: x.weight, reps: x.reps, sets: x.sets, restSec: x.restSec, rir: x.rir, done: x.doneSets || 0 })) }, context: E.aiContext(a, plan.store, plan.part, c.prefs), brief: c.brief }, AI_CHAT_TIMEOUT);
       const updated = Array.isArray(body.exercises) && body.exercises.length ? E.validateAiPlan({ summary: '', exercises: body.exercises, warnings: [], evidence: plan.evidence }, plan, a, E.applyPreferenceChanges(c.prefs, body.preferenceChanges)) : null;
       result = { reply: body.reply || '変更内容を確認しました。', plan: updated, preferenceChanges: Array.isArray(body.preferenceChanges) ? body.preferenceChanges : [] };
     } catch (error) {
@@ -252,11 +255,13 @@
   function sourceBadge(plan) {
     if (plan.source === 'ai') return `<span class="wc-badge ai">AI設計${plan.aiModel ? '' : ''}</span>`;
     if (plan.source === 'chat') return '<span class="wc-badge chat">会話で調整</span>';
+    if (plan.source === 'import') return '<span class="wc-badge ai">📋 貼り付けたメニュー</span>';
     return '<span class="wc-badge local">アプリ設計（履歴分析）</span>';
   }
   function planStatusHtml() {
     if (!ui.plan) return '';
     const st = ui.aiState[planKey(ui.plan.store, ui.plan.part) + ':' + ui.plan.minutes] || {};
+    if (ui.plan.source === 'import') return '前のコーチのメニューの重量をそのまま入れています。「▶ 筋トレ開始」を押すと重量が入った状態で始まります。';
     if (ui.plan.source === 'ai') return `AIが全${ui.plan.basedOnSessions}回の履歴・痛み・店舗設備・根拠を統合して設計しました。`;
     if (st.state === 'queued') return 'まもなくAIが全履歴から最適化します。待たずにこのまま開始できます。';
     if (st.state === 'loading') return 'AIが全履歴から最適化中です。待たずにこのまま開始できます。';
@@ -287,7 +292,7 @@
     const mins = [45, 60, 75, 90].map(m => `<button type="button" class="wc-chip small ${m === ui.minutes ? 'on' : ''}" data-act="minutes" data-v="${m}">${m}分</button>`).join('');
     const result = ui.lastResult ? `<div class="card wc-result"><b>✓ ${h(ui.lastResult.date)} の筋トレを保存しました</b><div class="small">${h(E.storeLabel(ui.lastResult.store))}・${h(E.PARTS[ui.lastResult.part] || '')}｜${ui.lastResult.fields.workoutMinutes}分｜${ui.lastResult.fields.completedSets}/${ui.lastResult.fields.plannedSets}セット完了</div><div class="small">次回メニューを下に用意しました。</div></div>` : '';
     const history = a.totalSessions ? `全${a.totalSessions}回の記録を分析` : '筋トレ記録がまだないため、確認重量から始めます';
-    return `${result}${whatsNewHtml()}
+    return `${result}${whatsNewHtml()}${importHtml(c)}
     <details class="card wc-card wc-picker" id="wcPicker" ${ui.pickerOpen ? 'open' : ''}>
       <summary><span class="wc-pick-now">${h(E.storeLabel(ui.store))}・${h(E.PARTS[ui.part] || '')}・${ui.minutes}分</span><span class="wc-pick-hint">変更 ▼</span></summary>
       <div class="wc-title">店舗</div><div class="wc-segs" role="group" aria-label="店舗">${stores}</div>
@@ -349,13 +354,75 @@
       <button type="button" class="danger" data-act="discard" style="margin-top:8px">記録せず破棄</button></div>` : ''}
     <div class="wc-bar"><div id="wcRest" class="wc-rest"></div><button type="button" id="wcFinish" data-act="finish" class="${ui.finishing ? 'sub' : ''}">■ 終了する</button></div>`;
   }
+  function importHtml(c) {
+    const last = c.imports[c.imports.length - 1];
+    const done = last ? `<div class="wc-import-done">✓ ${h(last.date)} に取り込み済み：${h(last.summary || `${last.entries.length}種目`)}<button type="button" class="wc-link" data-act="undoimport">この取り込みを取り消す</button></div>` : '';
+    return `<details class="card wc-card wc-import" id="wcImport" ${ui.importOpen ?? !last ? 'open' : ''}>
+      <summary><b>📋 前のコーチのメニューを貼り付け</b><span class="small">${last ? '取り込み済み' : '重量つきで取り込み'}</span></summary>
+      <p class="small">前のAIコーチが作ったプロンプト・メニュー・実績をそのまま貼ってください。種目・重量・回数・セットを読み取り、店舗ごとの次回メニューと今後の重量の基準にします（毎回貼る必要はありません）。</p>
+      <textarea id="wcImportText" maxlength="12000" placeholder="ここに貼り付け（例：【本店】チェストプレス 55kg×10回×3セット …）"></textarea>
+      <div class="wc-add-row" style="margin-top:8px"><select id="wcImportStore" aria-label="店舗の記載がない種目の店舗"><option value="">店舗の記載がない種目：${h(E.storeLabel(ui.store))}</option><option value="honten">店舗の記載がない種目：本店</option><option value="shioda">店舗の記載がない種目：塩田店</option></select><button type="button" data-act="import" id="wcImportBtn">取り込む</button></div>
+      <div id="wcImportStatus" class="small wc-status" role="status" aria-live="polite"></div>${done}
+    </details>`;
+  }
+  async function doImport(text, store, from) {
+    const status = $('wcImportStatus'), btn = $('wcImportBtn');
+    const fallbackStore = E.normalizeStore(store) || ui.store || 'honten';
+    if (status) status.textContent = '読み取り中…';
+    if (btn) btn.disabled = true;
+    let entries = [], notes = [], via = '端末内で読み取り';
+    const local = E.parseImport(text, '');
+    try {
+      if (!canAutoAi() && !ensureAiConsent()) throw new Error('AI送信を中止');
+      const body = await aiPost({ kind: 'workout_import', text, store: fallbackStore }, 45000);
+      entries = (Array.isArray(body.entries) ? body.entries : []).map(e => ({ store: E.STORES[e.store] ? e.store : '', part: E.PARTS[e.part] ? e.part : E.inferPart(e.name), name: E.canonicalName(e.name).slice(0, 30),
+        weight: Number.isFinite(+e.weight) && e.weight !== null && +e.weight >= 0 && +e.weight <= 500 ? +e.weight : null, reps: e.reps > 0 && e.reps <= 50 ? Math.round(e.reps) : null, repsMax: e.repsMax > 0 && e.repsMax <= 50 ? Math.round(e.repsMax) : null,
+        sets: e.sets > 0 && e.sets <= 10 ? Math.round(e.sets) : null, restSec: e.restSec > 0 && e.restSec <= 600 ? Math.round(e.restSec) : null, note: e.loadNote || '' })).filter(e => e.name);
+      notes = Array.isArray(body.coachNotes) ? body.coachNotes.map(String) : [];
+      via = 'AIで読み取り';
+      if (entries.length < local.entries.length) { entries = local.entries; notes = notes.length ? notes : local.notes; via = '端末内で読み取り'; }
+    } catch (error) { entries = local.entries; notes = local.notes; }
+    entries = entries.map(e => ({ ...e, store: e.store || fallbackStore, part: e.part || E.inferPart(e.name) || ui.part }));
+    if (btn) btn.disabled = false;
+    if (!entries.length) { if (status) status.textContent = '種目と重量を読み取れませんでした。「チェストプレス 50kg×10回×3セット」のように種目名と数字が入った部分を貼ってください。'; return; }
+    const groups = {};
+    entries.forEach(e => { const k = `${e.store}|${e.part}`; groups[k] = (groups[k] || 0) + 1; });
+    const summary = Object.entries(groups).map(([k, n]) => { const [st, pt] = k.split('|'); return `${E.storeLabel(st)}・${E.PARTS[pt] || '部位不明'} ${n}種目`; }).join('／');
+    const imp = { id: Math.random().toString(36).slice(2), date: today(), importedAt: appNowIso(), entries, summary };
+    writeCoach(cc => {
+      cc.imports = [...(cc.imports || []), imp].slice(-10);
+      cc.brief = String(text).slice(0, 4000);
+      cc.prefs = E.applyPreferenceChanges(cc.prefs, notes.slice(0, 8).map(n => ({ action: 'add', type: 'note', value: n, store: null })));
+      cc.plans = Object.fromEntries(Object.entries(cc.plans || {}).filter(([, p]) => p && p.source !== 'import'));
+    });
+    const a = analysis(), c = coach();
+    const first = Object.keys(groups)[0].split('|');
+    writeCoach(cc => {
+      Object.keys(groups).forEach(k => { const [st, pt] = k.split('|'); if (!E.PARTS[pt]) return; const plan = E.planFromImport(entries, st, pt, c.prefs.defaultMinutes || 60); if (plan) { plan.basedOnSessions = a.totalSessions; plan.importId = imp.id; cc.plans[planKey(st, pt)] = plan; } });
+      cc.lastStore = first[0];
+    });
+    ui.store = first[0]; if (E.PARTS[first[1]]) ui.part = first[1]; ui.minutes = c.prefs.defaultMinutes || 60; ui.plan = null; ui.importOpen = false;
+    if (!readActive()) resolvePlan();
+    render();
+    const msg = `取り込みました（${via}）：${summary}。${E.storeLabel(ui.store)}・${E.PARTS[ui.part] || ''}のメニューに重量を入れました。`;
+    ui.chatLog.push({ who: 'coach', text: msg + (notes.length ? `\n方針として保存：${notes.slice(0, 3).join('／')}` : '') });
+    renderChat(); toast(msg);
+    const card = $('wcPlanCard'); if (card) card.scrollIntoView({ block: 'start', behavior: 'auto' }); // 取り込んだメニューを見せる
+  }
+  function undoImport() {
+    const c = coach(), last = c.imports[c.imports.length - 1]; if (!last) return;
+    if (!confirm(`${last.date} の取り込み（${last.summary}）を取り消しますか？筋トレの実績記録は消えません。`)) return;
+    writeCoach(cc => { cc.imports = (cc.imports || []).filter(x => x.id !== last.id); cc.plans = Object.fromEntries(Object.entries(cc.plans || {}).filter(([, p]) => p && p.importId !== last.id)); });
+    ui.plan = null; resolvePlan(); render(); toast('取り込みを取り消しました');
+  }
   function whatsNewHtml() {
     if (localStorage.getItem(storageKey('WorkoutWhatsNew22')) === '1') return '';
     return `<div class="card wc-card wc-new" id="wcWhatsNew"><b>筋トレ画面が新しくなりました</b>
       <ol class="small"><li><b>店舗と部位を選ぶだけ</b>で、過去の記録から今日の重量・回数が出ます。</li>
       <li>下の<b>「▶ 筋トレ開始」</b>を押し、終わったセットの<b>✓</b>を押すだけで記録されます（自動保存）。</li>
       <li><b>「■ 終了する」</b>で保存すると、<b>次回のメニュー</b>が自動でできます。</li>
-      <li>種目を足したい時は<b>「＋ 種目を追加」</b>、変えたい時は<b>「コーチに伝える」</b>に普通の言葉で書きます。</li></ol>
+      <li>種目を足したい時は<b>「＋ 種目を追加」</b>、変えたい時は<b>「コーチに伝える」</b>に普通の言葉で書きます。</li>
+      <li>前のコーチが作ったプロンプトやメニューは、<b>「📋 前のコーチのメニューを貼り付け」</b>に一度貼れば、重量つきで取り込まれ、以後のメニューにも反映されます。</li></ol>
       <button type="button" class="sub" data-act="hidenew">わかった（閉じる）</button></div>`;
   }
   function lastLine(a, store, name) {
@@ -368,7 +435,7 @@
     const usedSet = new Set(used || []);
     const order = [part, ...Object.keys(E.PARTS).filter(k => k !== part && k !== 'fullbody')].filter(k => E.PARTS[k] && k !== 'fullbody');
     const groups = order.map(k => `<optgroup label="${h(E.PARTS[k])}">${E.CATALOG.filter(x => x.part === k && !usedSet.has(x.name)).map(x => `<option value="${h(x.name)}">${h(x.name)}</option>`).join('')}</optgroup>`).join('');
-    return `<div class="wc-add"><div class="wc-title">＋ 種目を追加</div><div class="wc-add-row"><select id="wcAddSelect" aria-label="追加する種目">${groups}<option value="__other">その他（名前を入力）</option></select><button type="button" data-act="addex">追加</button></div><input id="wcAddOther" placeholder="種目名（例：スミスマシンプレス）" style="display:none;margin-top:8px"></div>`;
+    return `<div class="wc-add"><div class="wc-title">＋ 種目を追加</div><div class="wc-add-row"><select id="wcAddSelect" aria-label="追加する種目">${groups}</select><button type="button" data-act="addex">追加</button></div><input id="wcAddOther" placeholder="一覧にない時は種目名を入力（例：ケーブルロー片手）" style="margin-top:8px" aria-label="一覧にない種目名"></div>`;
   }
   function historyHtml(a, prefs) {
     const c = a.counts || { total: 0 };
@@ -383,7 +450,7 @@
   function chatHtml() {
     return `<div class="card wc-card" id="wcChatCard"><div class="wc-title">コーチに伝える（会話でメニュー変更）</div>
       <div id="wcChatLog" class="wc-chat-log" aria-live="polite"></div>
-      <textarea id="wcChatInput" maxlength="600" placeholder="例：塩田店にはペックフライがない／今日は肩が痛いので軽めに／今後スクワットは外して"></textarea>
+      <textarea id="wcChatInput" maxlength="12000" placeholder="例：塩田店にはペックフライがない／今日は肩が痛いので軽めに／今後スクワットは外して"></textarea>
       <button type="button" id="wcChatSend" data-act="chat">伝える</button>
       <p class="small">「今後」「いつも」などの希望や器具の有無は恒久設定に保存し、次回以降のメニューにも反映します。</p></div>`;
   }
@@ -442,6 +509,8 @@
     else if (act === 'hidenew') { localStorage.setItem(storageKey('WorkoutWhatsNew22'), '1'); const el = $('wcWhatsNew'); if (el) el.remove(); }
     else if (act === 'unknownas') { writeCoach(c => { c.prefs = { ...c.prefs, unknownStoreAs: v }; c.plans = {}; }); ui.plan = null; resolvePlan(); render(); toast(v ? `店舗不明の記録を${E.storeLabel(v)}として扱います` : '店舗不明の扱いを解除しました'); }
     else if (act === 'addex') addExercise();
+    else if (act === 'import') { const t = ($('wcImportText') || {}).value || ''; if (t.trim()) doImport(t.trim(), ($('wcImportStore') || {}).value || ''); else { const st = $('wcImportStatus'); if (st) st.textContent = '先に内容を貼り付けてください。'; } }
+    else if (act === 'undoimport') undoImport();
     else if (act === 'legacy') { const tab = [...document.querySelectorAll('.tab')].find(x => x.textContent.includes('食事など')); if (typeof openRecordMode === 'function') openRecordMode('workout', tab); }
     else if (act === 'remove' || act === 'swap' || act === 'nostore') editPlanExercise(act, +btn.dataset.i);
     else if (act === 'prefdel') { const it = prefItems()[+btn.dataset.i]; if (it) { writeCoach(c => { c.prefs = E.applyPreferenceChanges(c.prefs, [{ ...it, action: 'remove' }]); c.plans = {}; }); ui.plan = null; resolvePlan(); render(); } }
@@ -475,8 +544,8 @@
   }
   function addExercise() {
     const sel = $('wcAddSelect'); if (!sel) return;
-    let name = sel.value;
-    if (name === '__other') { const other = $('wcAddOther'); name = (other && other.value || '').trim(); if (!name) { if (other) { other.style.display = 'block'; other.focus(); } return; } }
+    const other = $('wcAddOther'), typed = (other && other.value || '').trim().slice(0, 30);
+    let name = typed || sel.value; if (!name) return;
     name = E.canonicalName(name);
     const active = readActive(), base = active ? { store: active.store, part: active.part, minutes: 120 } : ui.plan;
     const c = coach(), entry = E.catalogEntry(name);
@@ -534,7 +603,7 @@
   };
   document.addEventListener('click', ev => { if (ev.target.closest('#trainRoot')) onClick(ev); });
   document.addEventListener('input', ev => { if (ev.target.closest('#trainRoot')) onInput(ev); });
-  document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'wcPicker') ui.pickerOpen = ev.target.open; }, true);
+  document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'wcPicker') ui.pickerOpen = ev.target.open; if (ev.target && ev.target.id === 'wcImport') ui.importOpen = ev.target.open; }, true);
   window.addEventListener('online', () => { const s = readActive(); if (s) saveActive(s, true); });
   window.addEventListener('pagehide', () => { const s = readActive(); if (s) { clearTimeout(mirrorTimer); writeCoach(c => { c.active = s; }); } });
   fetch('./science/evidence.json').then(r => r.json()).then(d => { ui.evidence = (d.items || []).filter(x => x.verified); if ($('train') && $('train').classList.contains('active') && !readActive()) render(); }).catch(() => { ui.evidence = []; });

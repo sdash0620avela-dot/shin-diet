@@ -47,6 +47,14 @@ function aiPlan(body) {
   const ex = (body.baseline || []).map((b, i) => ({ name: b.name, loadType: 'total', weight: i === 0 && b.weight === null ? 99 : b.weight, reps: b.reps, repsMin: b.repsTarget[0], repsMax: b.repsTarget[1], sets: b.sets, restSec: b.restSec, rir: b.rir, reason: 'AIモック：' + String(b.reason).slice(0, 30), evidence: ['volume-dose'] }));
   return { summary: `AIモック設計（${body.store}/${body.part}）`, warnings: [], evidence: ['volume-dose', 'rir-near-failure'], exercises: ex, model: 'mock-model' };
 }
+function aiImport(body) {
+  // モック：本物のAIと同じ構造で、貼り付け文の塩田店・背中だけを返す
+  return { summary: 'mock', model: 'mock-model', coachNotes: ['ショルダープレスは避ける'], entries: [
+    { store: 'shioda', part: 'back', name: 'ラットプルダウン', weight: 47.5, reps: 10, repsMax: 12, sets: 3, restSec: 120, loadNote: '' },
+    { store: 'shioda', part: 'back', name: 'Tバーロー', weight: 30, reps: 10, repsMax: null, sets: 3, restSec: null, loadNote: '' },
+    { store: 'shioda', part: 'back', name: 'アシスト懸垂', weight: 20, reps: 8, repsMax: null, sets: 3, restSec: null, loadNote: '補助' },
+    { store: 'unknown', part: 'back', name: 'シーテッドロー', weight: 42.5, reps: 10, repsMax: null, sets: 3, restSec: null, loadNote: '' }] };
+}
 function aiChat(body) {
   const m = body.message;
   if (/ペックフライ/.test(m) && /ない/.test(m)) return { reply: '塩田店にはペックフライがないので外しました。', exercises: (body.plan.exercises || []).filter(e => e.name !== 'ペックフライ').map(e => ({ name: e.name, loadType: 'total', weight: e.weight, reps: e.reps || 10, repsMin: 8, repsMax: 12, sets: e.sets, restSec: e.restSec || 90, rir: 2, reason: '会話で変更', evidence: [] })), preferenceChanges: [{ action: 'add', type: 'missing_equipment', value: 'ペックフライ', store: 'shioda' }], model: 'mock-model' };
@@ -65,7 +73,7 @@ async function routeAll(context) {
     await new Promise(res => setTimeout(res, ai.mode === 'slow' ? 25000 : ai.delay));
     if (ai.mode === 'error') return r.fulfill({ status: 502, headers, body: JSON.stringify({ error: 'AIコーチでエラーが発生しました。（エラー番号：server_error）' }) });
     if (ai.mode === 'quota') return r.fulfill({ status: 502, headers, body: JSON.stringify({ error: 'OpenAI APIの利用残高がありません。' }) });
-    const out = body.kind === 'workout_plan' ? aiPlan(body) : body.kind === 'workout_chat' ? aiChat(body) : { answer: 'ok' };
+    const out = body.kind === 'workout_plan' ? aiPlan(body) : body.kind === 'workout_chat' ? aiChat(body) : body.kind === 'workout_import' ? aiImport(body) : { answer: 'ok' };
     r.fulfill({ status: 200, headers, body: JSON.stringify(out) });
   });
 }
@@ -171,10 +179,27 @@ const seeded = seedHistory();
   check('「＋ 種目を追加」でメニューに種目を追加', (await page.locator('#wcPlanCard .wc-ex').count()) === nBefore + 1 && (await page.locator('#wcPlanCard .wc-ex').last().textContent()).includes(addName), addName);
   await page.locator('#wcPlanCard .wc-ex').last().locator('[data-act="remove"]').click();
   await pick(page, 'store', 'shioda');
+  // 3c. v22.2：背中の追加候補・前のコーチのメニュー貼り付け
+  await pick(page, 'store', 'honten'); await pick(page, 'part', 'back');
+  const backOpts = await page.locator('#wcAddSelect optgroup[label="背中"] option').count();
+  check('背中メニューでも「＋ 種目を追加」に背中の種目が残っている', backOpts >= 7, `${backOpts}種目`);
+  check('一覧にない種目名の入力欄を常に表示', await page.locator('#wcAddOther').isVisible());
+  const pasted = '前のコーチ：次回はこのメニューで。\n【塩田店】背中\n- ラットプルダウン 47.5kg 10〜12回 3セット\n- Tバーロー 30キロ 10回×3\n- アシスト懸垂 補助20kg 8回 3セット\n- シーテッドロー 42.5kg×10×3\nショルダープレスは避けること';
+  if (!(await page.locator('#wcImportText').isVisible())) await page.locator('#wcImport > summary').click();
+  await page.fill('#wcImportText', pasted);
+  await page.click('[data-act="import"]');
+  await page.locator('.wc-badge', { hasText: '貼り付けたメニュー' }).waitFor({ timeout: 8000 });
+  const imported = (await page.locator('#wcPlanCard .wc-ex').allTextContents()).join(' ');
+  check('貼り付けたメニューを店舗・部位ごとに取り込み、重量つきで表示', /塩田店・背中/.test(await page.locator('.wc-summary').textContent()) && /ラットプルダウン[\s\S]*47\.5kg × 10回 × 3セット/.test(imported) && /アシストチンニング[\s\S]*20kg/.test(imported), imported.replace(/\s+/g, ' ').slice(0, 90));
+  const coachAfter = (await lsJson(page, settingsKey)).workoutCoach;
+  check('貼り付けた方針を恒久設定と今後のAI用メモに保存', coachAfter.brief.includes('ショルダープレスは避けること') && coachAfter.prefs.notes.includes('ショルダープレスは避ける'));
+  await page.screenshot({ path: join(OUT, '08-imported.png') });
   // 4. 会話でメニュー変更・恒久設定
+  await pick(page, 'store', 'shioda'); await pick(page, 'part', 'chest');
+  const coachMsgs = await page.locator('#wcChatLog .wc-msg.coach').count();
   await page.fill('#wcChatInput', '塩田店にはペックフライがない');
   await page.click('[data-act="chat"]');
-  await page.waitForFunction(() => document.querySelector('#wcChatLog .wc-msg.coach'), null, { timeout: 8000 });
+  await page.waitForFunction(n => document.querySelectorAll('#wcChatLog .wc-msg.coach').length > n, coachMsgs, { timeout: 8000 });
   const prefs = (await lsJson(page, settingsKey)).workoutCoach.prefs;
   const afterChat = (await page.locator('#wcPlanCard .wc-ex').allTextContents()).join(' ');
   check('会話で恒久設定（塩田店にペックフライなし）を保存', prefs.stores.shioda.missing.includes('ペックフライ'));
@@ -343,6 +368,30 @@ const seeded = seedHistory();
   const storage = await page.evaluate(() => typeof activeStorageId !== 'undefined' ? activeStorageId : null);
   check('オフラインで再起動しても本人データで起動し実施中を復元', live === 1 && storage === USER.id && (await page.locator('.wc-set.done').count()) === 1, `storage=${storage}`);
   await page.screenshot({ path: join(OUT, '06-offline-restart.png') });
+  await context.close();
+}
+
+{
+  // 16. AI不通時に「コーチに伝える」へ貼り付け → 端末内で取り込み → 開始すると重量が入っている
+  ai.mode = 'error';
+  const { context, page } = await newDevice();
+  await openTrain(page);
+  if (await page.locator('[data-act="hidenew"]').count()) await page.click('[data-act="hidenew"]');
+  const paste = 'あなたは私の筋トレコーチです。次回の脚メニューです。\n【本店】脚\n1. レッグプレス：120kg × 10回 × 3セット\n2. レッグカール 40kg 12回 3セット\n3. レッグエクステンション 45kg×12×3';
+  const coachMsgs = await page.locator('#wcChatLog .wc-msg.coach').count();
+  await page.fill('#wcChatInput', paste);
+  await page.click('[data-act="chat"]');
+  await page.waitForFunction(n => document.querySelectorAll('#wcChatLog .wc-msg.coach').length > n, coachMsgs, { timeout: 15000 });
+  const msg = await page.locator('#wcChatLog .wc-msg.coach').last().textContent();
+  check('「コーチに伝える」への貼り付けも取り込み（AI不通時は端末内で読み取り）', /取り込みました（端末内で読み取り）/.test(msg) && /本店・脚 3種目/.test(msg), msg.slice(0, 80));
+  await page.click('[data-act="start"]');
+  await page.locator('.wc-live').waitFor();
+  const w = await page.locator('.wc-live-ex').first().locator('[data-f="weight"]').first().inputValue();
+  const reps = await page.locator('.wc-live-ex').first().locator('[data-f="reps"]').first().inputValue();
+  check('開始すると貼り付けた重量・回数が最初から入っている', w === '120' && reps === '10', `${w}kg×${reps}`);
+  await page.waitForTimeout(400); await page.screenshot({ path: join(OUT, '09-start-with-weights.png') });
+  await page.click('[data-act="finish"]'); await page.click('[data-act="discard"]'); await page.waitForTimeout(1500);
+  ai.mode = 'ok';
   await context.close();
 }
 

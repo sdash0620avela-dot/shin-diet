@@ -39,8 +39,41 @@
     { name: 'レッグカール', aliases: ['シーテッドレッグカール', 'ライイングレッグカール'], part: 'legs', kind: 'isolation', reps: [10, 15], moves: ['hamstring'] },
     { name: 'レッグエクステンション', aliases: [], part: 'legs', kind: 'isolation', reps: [10, 15], moves: ['knee'] },
     { name: 'アダクション', aliases: ['アダクター', 'ヒップアダクション'], part: 'legs', kind: 'isolation', reps: [12, 15], moves: ['hip'] },
-    { name: 'カーフレイズ', aliases: ['カーフ'], part: 'legs', kind: 'isolation', reps: [12, 20], moves: ['calf'] }
+    { name: 'カーフレイズ', aliases: ['カーフ'], part: 'legs', kind: 'isolation', reps: [12, 20], moves: ['calf'] },
+    // 追加カタログ（v22.2）：「＋ 種目を追加」用。履歴・希望・会話で選ばれた時だけ自動メニューに入る
+    { name: 'ディップス', aliases: ['ディップ', 'チェストディップス'], part: 'chest', kind: 'compound', reps: [6, 12], moves: ['press'] },
+    { name: 'スミスマシンベンチプレス', aliases: ['スミスベンチプレス', 'スミスベンチ'], part: 'chest', kind: 'compound', reps: [6, 10], moves: ['press'] },
+    { name: 'インクラインダンベルプレス', aliases: ['インクラインDBプレス'], part: 'chest', kind: 'compound', reps: [8, 12], moves: ['press'] },
+    { name: 'デクラインプレス', aliases: ['デクラインチェストプレス', 'デクラインベンチプレス'], part: 'chest', kind: 'compound', reps: [8, 12], moves: ['press'] },
+    { name: 'ダンベルフライ', aliases: ['インクラインダンベルフライ'], part: 'chest', kind: 'isolation', reps: [10, 15], moves: ['fly'] },
+    { name: 'プッシュアップ', aliases: ['腕立て伏せ', '腕立て'], part: 'chest', kind: 'compound', reps: [8, 20], moves: ['press'] },
+    { name: 'チンニング', aliases: ['懸垂', 'チンアップ', 'プルアップ'], part: 'back', kind: 'compound', reps: [5, 10], moves: ['pull'] },
+    { name: 'アシストチンニング', aliases: ['アシスト懸垂', 'アシストプルアップ', 'アシストチンアップ'], part: 'back', kind: 'compound', reps: [8, 12], moves: ['pull'] },
+    { name: 'ベントオーバーロー', aliases: ['ベントオーバーローイング', 'バーベルロー', 'ベントロー'], part: 'back', kind: 'compound', reps: [6, 10], moves: ['row', 'lowback'] },
+    { name: 'Tバーロー', aliases: ['ティーバーロー', 'Tバーローイング'], part: 'back', kind: 'compound', reps: [8, 12], moves: ['row'] },
+    { name: 'ハイロー', aliases: ['ハイロウ', 'ハイローイング'], part: 'back', kind: 'compound', reps: [8, 12], moves: ['row', 'pull'] },
+    { name: 'ローロー', aliases: ['ロウロウ', 'ローローイング'], part: 'back', kind: 'compound', reps: [8, 12], moves: ['row'] },
+    { name: 'マシンプルオーバー', aliases: ['プルオーバーマシン'], part: 'back', kind: 'isolation', reps: [10, 15], moves: ['pull'] },
+    { name: 'デッドリフト', aliases: ['バーベルデッドリフト'], part: 'back', kind: 'compound', reps: [5, 8], moves: ['lowback', 'hamstring'] },
+    { name: 'シュラッグ', aliases: ['ダンベルシュラッグ', 'バーベルシュラッグ'], part: 'back', kind: 'isolation', reps: [10, 15], moves: ['shrug'] },
+    { name: 'フロントレイズ', aliases: [], part: 'shoulders', kind: 'isolation', reps: [10, 15], moves: ['raise'] },
+    { name: 'アップライトロー', aliases: ['アップライトロウ'], part: 'shoulders', kind: 'compound', reps: [10, 12], moves: ['raise', 'overhead'] },
+    { name: 'フェイスプル', aliases: ['フェイスプール'], part: 'shoulders', kind: 'isolation', reps: [12, 20], moves: ['raise'] },
+    { name: 'アーノルドプレス', aliases: [], part: 'shoulders', kind: 'compound', reps: [8, 12], moves: ['overhead'] },
+    { name: 'プリーチャーカール', aliases: ['プリチャーカール', 'マシンカール', 'アームカールマシン'], part: 'arms', kind: 'isolation', reps: [10, 15], moves: ['curl'] },
+    { name: 'EZバーカール', aliases: ['バーベルカール', 'EZカール'], part: 'arms', kind: 'isolation', reps: [8, 12], moves: ['curl'] },
+    { name: 'スカルクラッシャー', aliases: ['ライイングトライセプスエクステンション', 'ライイングエクステンション'], part: 'arms', kind: 'isolation', reps: [10, 12], moves: ['extension'] },
+    { name: 'キックバック', aliases: ['トライセプスキックバック', 'ダンベルキックバック'], part: 'arms', kind: 'isolation', reps: [12, 15], moves: ['extension'] },
+    { name: 'ナローベンチプレス', aliases: ['クローズグリップベンチプレス', 'ナロープレス'], part: 'arms', kind: 'compound', reps: [6, 10], moves: ['press', 'extension'] },
+    { name: 'ハックスクワット', aliases: ['ハックスクワットマシン'], part: 'legs', kind: 'compound', reps: [8, 12], moves: ['knee'] },
+    { name: 'ブルガリアンスクワット', aliases: ['ブルガリアンスプリットスクワット', 'スプリットスクワット'], part: 'legs', kind: 'compound', reps: [8, 12], moves: ['knee', 'hip'] },
+    { name: 'ランジ', aliases: ['ウォーキングランジ', 'ダンベルランジ'], part: 'legs', kind: 'compound', reps: [10, 12], moves: ['knee'] },
+    { name: 'ルーマニアンデッドリフト', aliases: ['RDL', 'ルーマニアンデッド'], part: 'legs', kind: 'compound', reps: [8, 12], moves: ['hamstring', 'lowback'] },
+    { name: 'ヒップスラスト', aliases: ['ヒップリフト', 'グルートブリッジ'], part: 'legs', kind: 'compound', reps: [8, 12], moves: ['hip'] },
+    { name: 'アブダクション', aliases: ['ヒップアブダクション', 'アブダクター'], part: 'legs', kind: 'isolation', reps: [12, 20], moves: ['hip'] }
   ];
+  const BASE_COUNT = CATALOG.findIndex(e => e.name === 'ディップス');
+  const isExtra = e => CATALOG.indexOf(e) >= BASE_COUNT;
   const FULLBODY = ['レッグプレス', 'チェストプレス', 'ラットプルダウン', 'ショルダープレス', 'シーテッドロー', 'レッグカール'];
 
   // 痛み部位 → 避けたい動作（安全方針。医学的診断ではない）
@@ -174,20 +207,86 @@
         rating: /余裕|楽|軽/.test(r.workoutFeedback || '') ? 'easy' : /きつ|上がらず|限界|潰れ/.test(r.workoutFeedback || '') ? 'hard' : '',
         pain: parsePain(feedbackText), fatigue: num(r.fatigue), completion: r.workoutCompletion || '', exercises });
     });
+    // 貼り付けで取り込んだメニュー（前のコーチの指定重量）を、その日の実績相当として扱う
+    (prefs && Array.isArray(prefs.imports) ? prefs.imports : []).forEach(imp => {
+      const groups = {};
+      (imp.entries || []).forEach(en => { const st = STORES[en.store] ? en.store : unknownAs; const k = `${st}|${en.part || ''}`; (groups[k] = groups[k] || []).push(en); });
+      Object.entries(groups).forEach(([k, list]) => {
+        const [st, part] = k.split('|');
+        sessions.push({ date: imp.date, store: st, part: part || inferPart(list.map(x => x.name).join(' ')), source: 'import', rating: '', pain: {}, fatigue: null,
+          exercises: list.map(en => ({ name: canonicalName(en.name), rawName: en.name, part: en.part || '', equipment: '', loadType: en.note === '補助' ? 'assistance' : en.weight === null && /自重/.test(en.note || '') ? 'bodyweight' : 'total', rating: '', legacy: true, imported: true,
+            target: en.reps ? [en.reps, en.repsMax || en.reps] : null, plannedSets: en.sets || 0,
+            sets: en.weight !== null && en.reps ? Array.from({ length: Math.max(1, Math.min(10, en.sets || 1)) }, () => ({ weight: en.weight, reps: en.reps })) : [] })) });
+      });
+    });
     return sessions.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /* ---------- 前のコーチのプロンプト・メニューの取り込み（端末内の解析） ---------- */
+  const NOT_EXERCISE = /合計|休憩|時間|体重|目標|kcal|カロリー|有酸素|ウォーミング|アップ$|ストレッチ|睡眠|食事|たんぱく|プロテイン|総セット|消費/;
+  function parseImport(text, defaultStore) {
+    const lines = toHalf(text).replace(/[①-⑳]/g, ' ').split(/\r?\n/);
+    let store = normalizeStore(defaultStore) || '', part = '';
+    const entries = [], notes = [];
+    for (const raw of lines) {
+      const line = raw.replace(/\*\*/g, '').trim();
+      if (!line) continue;
+      const st = normalizeStore(line);
+      if (st) store = st;
+      const hasLoad = /\d+(?:\.\d+)?\s*(?:kg|キロ)|\d+\s*回|自重/.test(line);
+      if (!hasLoad) {
+        const head = line.length <= 24 ? PART_WORDS.find(([, w]) => new RegExp(w).test(line)) : null;
+        if (head) part = head[0];
+        else if (line.length >= 6 && !st) notes.push(line.slice(0, 200));
+        continue;
+      }
+      const body = line.replace(/^[\s\-・*●○◆■□▶>#|]*(?:\d{1,2}\s*[.．)）、:]\s*)?/, '');
+      const nm = body.match(/^(.{2,30}?)[\s：:｜|(（\[]*(?=\d|自重)/);
+      if (!nm) { notes.push(line.slice(0, 200)); continue; }
+      let name = nm[1].replace(/[\s：:｜|(（\[【】]+$/g, '').replace(/^[【\[]|[】\]]$/g, '').trim();
+      if (!name || NOT_EXERCISE.test(name) || /^\d/.test(name) || normalizeStore(name)) { notes.push(line.slice(0, 200)); continue; }
+      const rest = body.slice(nm[1].length);
+      const w = rest.match(/(\d+(?:\.\d+)?)\s*(?:kg|キロ)/i);
+      const reps = rest.match(/(\d{1,2})\s*(?:[〜~\-]\s*(\d{1,2}))?\s*回/) || rest.match(/(?:kg|キロ)\s*[×x*]\s*(\d{1,2})(?:\s*[〜~\-]\s*(\d{1,2}))?/i);
+      const sets = rest.match(/(\d{1,2})\s*(?:セット|set)/i) || rest.match(/回\s*[×x*]\s*(\d{1,2})/i) || rest.match(/[×x*]\s*\d{1,2}(?:\s*[〜~\-]\s*\d{1,2})?\s*回?\s*[×x*]\s*(\d{1,2})/i);
+      const restSec = rest.match(/休憩\s*(\d{2,3})\s*秒|(\d{2,3})\s*秒/);
+      const canon = canonicalName(name), entry = catalogEntry(canon);
+      entries.push({ store, part: entry ? entry.part : (part || inferPart(name) || ''), name: canon.slice(0, 30),
+        weight: w ? Math.min(500, +w[1]) : null, reps: reps ? Math.min(50, +reps[1]) : null, repsMax: reps && reps[2] ? Math.min(50, +reps[2]) : null,
+        sets: sets ? Math.min(10, +sets[1]) : null, restSec: restSec ? Math.min(600, +(restSec[1] || restSec[2])) : null, note: /自重/.test(rest) ? '自重' : /補助|アシスト/.test(line) && w ? '補助' : '' });
+    }
+    // 方針として残すのは、避ける・痛み・好み・分割などの指示だけ（役割指定や依頼文は残さない）
+    const directive = /避け|痛|違和感|しびれ|NG|禁止|しない|やらない|優先|好き|嫌い|苦手|分割|曜日|週\d|頻度|やりたい|注意/;
+    const roleLine = /あなたは|コーチです|してください|作って|ください|メニューです|以下/;
+    return { entries, notes: notes.filter(n => directive.test(n) && !roleLine.test(n)).slice(0, 10) };
+  }
+
+  // 取り込んだメニューを、その店舗・部位の「次回メニュー」として使える計画にする
+  function planFromImport(entries, store, part, minutes) {
+    const list = entries.filter(e => e.store === store && (e.part === part || part === 'fullbody'));
+    if (!list.length) return null;
+    const exercises = list.map(e => {
+      const c = catalogEntry(e.name);
+      const lo = e.reps || (c ? c.reps[0] : 10), hi = Math.max(lo, e.repsMax || (c ? c.reps[1] : lo));
+      return { id: uid(), name: e.name, part: e.part || part, kind: c ? c.kind : 'isolation', loadType: e.note === '自重' ? 'bodyweight' : e.note === '補助' ? 'assistance' : 'total', weight: e.weight, repsTarget: [lo, hi], reps: lo,
+        sets: e.sets || 3, restSec: e.restSec || (c && c.kind === 'compound' ? 150 : 90), rir: 2, reason: '貼り付けたメニューの指定どおり（前のコーチの設定）。', evidence: [], unconfirmed: false, reference: '' };
+    });
+    const totalSets = exercises.reduce((a, x) => a + x.sets, 0);
+    return { id: uid(), store, part, minutes, level: 'intermediate', source: 'import', createdAt: new Date().toISOString(), summary: `${storeLabel(store)}・${PARTS[part]}｜${exercises.length}種目 合計${totalSets}セット（貼り付けたメニュー）`, warnings: [], exercises, evidence: [] };
   }
 
   const e1rm = (w, r) => (w > 0 && r > 0) ? w * (1 + Math.min(r, 20) / 30) : null;
 
   // 種目×店舗ごとの成長・停滞を集計（全履歴）
   function analyze(records, todayDate, prefs) {
+    // prefs.imports（取り込みメニュー）も実績相当として読む
     const sessions = extractSessions(records, prefs);
     const now = dayIndex(todayDate || new Date().toISOString().slice(0, 10));
     const byKey = {};
     sessions.forEach(s => s.exercises.forEach(e => {
       const key = `${s.store}|${e.name}`;
       const top = e.sets.reduce((best, x) => { const v = e1rm(x.weight, x.reps); return v && (!best || v > best.e1rm) ? { ...x, e1rm: v } : best; }, null);
-      (byKey[key] = byKey[key] || { store: s.store, name: e.name, part: (catalogEntry(e.name) || {}).part || s.part, exposures: [] }).exposures.push({
+      (byKey[key] = byKey[key] || { store: s.store, name: e.name, part: (catalogEntry(e.name) || {}).part || e.part || s.part, exposures: [] }).exposures.push({
         date: s.date, sets: e.sets, top, rating: e.rating || s.rating || '', target: e.target, plannedSets: e.plannedSets, legacy: !!e.legacy, equipment: e.equipment, loadType: e.loadType
       });
     }));
@@ -211,12 +310,12 @@
     });
     const partLast = {}, weekSets = {};
     sessions.forEach(s => {
-      const parts = new Set(s.exercises.map(e => (catalogEntry(e.name) || {}).part || s.part).filter(Boolean));
+      const parts = new Set(s.exercises.map(e => (catalogEntry(e.name) || {}).part || e.part || s.part).filter(Boolean));
       if (s.part && s.part !== 'fullbody') parts.add(s.part);
       Object.keys(s.partSets || {}).forEach(p => parts.add(p));
       parts.forEach(p => { partLast[p] = s.date; });
       if (now - dayIndex(s.date) < 7) {
-        s.exercises.forEach(e => { const p = (catalogEntry(e.name) || {}).part || s.part; if (p) weekSets[p] = (weekSets[p] || 0) + e.sets.length; });
+        s.exercises.forEach(e => { const p = (catalogEntry(e.name) || {}).part || e.part || s.part; if (p) weekSets[p] = (weekSets[p] || 0) + e.sets.length; });
         if (!s.exercises.length) Object.entries(s.partSets || {}).forEach(([p, n]) => { weekSets[p] = (weekSets[p] || 0) + n; });
       }
     });
@@ -286,6 +385,7 @@
       if (stat) score += Math.min(20, stat.count * 2);
       if (stat && stat.stalled && stat.count >= 4) score -= 15; // 停滞種目は入替候補
       if (e.kind === 'compound') score += 10;
+      if (isExtra(e) && !known.has(e.name) && !prefer.includes(e.name)) score -= 30;
       if (pen >= 6) score -= 200; else if (pen >= 3) score -= 40;
       return { e, stat, pen, score };
     }).filter(x => x.score > -50).sort((a, b) => b.score - a.score);
@@ -526,6 +626,6 @@
     return `【${plan.summary}】\n` + plan.exercises.map((e, i) => `${i + 1}. ${e.name}：${e.weight === null ? '確認重量' : e.weight + 'kg'}／${e.reps}回（${e.repsTarget[0]}〜${e.repsTarget[1]}）×${e.sets}セット／休憩${e.restSec}秒／残り${e.rir}回`).join('\n');
   }
 
-  const api = { parseFreeText, STORES, PARTS, PART_ORDER, CATALOG, normalizeStore, storeLabel, catalogEntry, canonicalName, inferPart, parsePain, extractSessions, analyze, recommendPart, prefsNormalized, planSession, validateAiPlan, aiContext, localChat, applyPreferenceChanges, newSession, sessionRecordFields, planText, e1rm };
+  const api = { parseImport, planFromImport, parseFreeText, STORES, PARTS, PART_ORDER, CATALOG, normalizeStore, storeLabel, catalogEntry, canonicalName, inferPart, parsePain, extractSessions, analyze, recommendPart, prefsNormalized, planSession, validateAiPlan, aiContext, localChat, applyPreferenceChanges, newSession, sessionRecordFields, planText, e1rm };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WorkoutEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
