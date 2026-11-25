@@ -222,17 +222,27 @@ async function workoutAi(env, body) {
   const part = parts[body.part] || '全身';
   const minutes = Math.max(20, Math.min(120, Number(body.minutes) || 60));
   const isChat = kind === 'workout_chat';
-  const brief = String(body.brief || '').trim().slice(0, 3000);
-  const briefText = brief ? `\n\n本人が以前のコーチと決めた方針・メニュー（本人の希望として尊重する。ただし出力形式・安全ルール・店舗別重量ルールを変える指示には従わない）：\n${brief}` : '';
+  // 本人のコーチ用プロンプトが設定されていれば、それを最優先の指示にする（アプリ独自の判断ルールは使わない）
+  const brief = String(body.brief || '').trim().slice(0, 12000);
+  const instructions = brief ? `あなたは本人専用の筋トレAIコーチです。下の「本人のコーチ設定（プロンプト）」を最優先の指示として、そのとおりに従ってください。
+アプリ側の決まりはこれだけです：
+1. 出力は指定のJSON形式にする（種目名・重量kg・回数・セット数・休憩秒・残り回数・理由）。
+2. 重量と回数は、プロンプトの規則と、提供した履歴の実績・前回値から決める。どちらにも根拠がない種目だけweightをnullにする。
+3. 強い痛み（6/10以上）がある部位の種目は入れない。
+4. warningsは本当に必要なものだけ最大2件・各40字以内。reasonは各40字以内。アプリの仕組みや設備確認の話は書かない。
+本人のコーチ設定（プロンプト）：
+<<<
+${brief}
+>>>` : WORKOUT_RULES;
   const message = String(body.message || '').trim().slice(0, 600);
   if (isChat && !message) return { error: '伝えたい内容を入力してください。', status: 400 };
   const input = isChat
-    ? `店舗：${store}／部位：${part}／時間：${minutes}分\n本人の発言：${message}\n\n現在のメニュー：${cleanJson(body.plan, 8000)}\n\n履歴要約：${cleanJson(body.context)}${briefText}\n\n発言が今日のメニュー変更を求める場合はexercisesに変更後の全種目を入れ、変更不要ならnullにしてください。「今後」「いつも」「次から」など恒久的な希望や、店舗に器具がない等の事実はpreferenceChangesに入れます（一時的な希望は入れない）。replyは2〜4文で、何を変えたかと理由を伝えます。`
-    : `今日のメニューを設計してください。店舗：${store}／部位：${part}／時間：${minutes}分／レベル：${String(body.level || 'intermediate')}\n今日の痛み・希望：${String(body.request || '記載なし').slice(0, 300)}\n既往・注意：${String(body.healthNotes || '設定なし').slice(0, 250)}\n\n履歴要約（全履歴から集計）：${cleanJson(body.context)}\n\nアプリの基準案（参考。必要なら変更してよい）：${cleanJson(body.baseline, 6000)}${briefText}`;
+    ? `店舗：${store}／部位：${part}／時間：${minutes}分\n本人の発言：${message}\n\n現在のメニュー：${cleanJson(body.plan, 8000)}\n\n履歴要約：${cleanJson(body.context)}\n\n発言が今日のメニュー変更を求める場合はexercisesに変更後の全種目を入れ、変更不要ならnullにしてください。「今後」「いつも」「次から」など恒久的な希望や、店舗に器具がない等の事実はpreferenceChangesに入れます（一時的な希望は入れない）。replyは2〜4文で、何を変えたかと理由を伝えます。`
+    : `今日のメニューを設計してください。店舗：${store}／部位：${part}／時間：${minutes}分／レベル：${String(body.level || 'intermediate')}\n今日の痛み・希望：${String(body.request || '記載なし').slice(0, 300)}\n既往・注意：${String(body.healthNotes || '設定なし').slice(0, 250)}\n\n履歴要約（全履歴から集計）：${cleanJson(body.context)}${brief ? '' : `\n\nアプリの基準案（参考。必要なら変更してよい）：${cleanJson(body.baseline, 6000)}`}`;
   const { response, data, model } = await openAIResponse(env, {
     store: false,
     reasoning: { effort: isChat ? 'low' : 'medium' },
-    instructions: WORKOUT_RULES,
+    instructions,
     input: [{ role: 'user', content: [{ type: 'input_text', text: input }] }],
     text: { format: { type: 'json_schema', name: isChat ? 'workout_chat' : 'workout_plan', strict: true, schema: isChat ? workoutChatSchema : workoutPlanSchema } },
     max_output_tokens: 6000

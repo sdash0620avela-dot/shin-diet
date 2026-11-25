@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v22.2 筋トレAIコーチ版</title>
+<title>AI Diet v22.3 筋トレAIコーチ版</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -292,6 +292,7 @@ body[data-record-focus="daily"] #workoutCard,body[data-record-focus="meal"] #bod
 body[data-page="train"] .wc-seg{min-height:46px}body[data-page="train"] .wc-title{margin:10px 0 6px}
 .wc-picker>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}.wc-picker>summary::-webkit-details-marker{display:none}.wc-pick-now{font-size:19px;font-weight:800}.wc-pick-hint{font-size:13px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:8px 12px;white-space:nowrap}.wc-picker[open]>summary{margin-bottom:6px}
 .wc-import>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}.wc-import textarea{min-height:120px;font-size:15px}.wc-import-done{margin-top:10px;padding:10px;border-radius:12px;background:#EAF8EE;color:#1E6B34;font-size:13px;font-weight:700;line-height:1.6}.wc-import-done .wc-link{display:block;margin-top:4px;font-size:13px}
+.wc-more>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}.wc-more .card{box-shadow:none;margin:12px 0 0;padding:12px;animation:none}.wc-warn-d{margin:6px 0;color:#8B6914}.wc-warn-d summary{cursor:pointer;font-weight:700}
 .wc-new{border-color:rgba(0,122,255,.35);background:#F4F8FF}.wc-new ol{padding-left:20px;line-height:1.8;margin:8px 0}.wc-new button{margin-top:4px}
 .wc-last{color:var(--ink);font-weight:700;margin-top:2px}.wc-last.none{color:var(--muted);font-weight:500}.wc-why{margin-top:6px}.wc-why summary{cursor:pointer;color:var(--accent);font-weight:700}
 .wc-add{margin-top:14px;border-top:1px solid var(--line);padding-top:4px}.wc-add-row{display:grid;grid-template-columns:1fr 88px;gap:8px}.wc-add-row button{margin:0;padding:12px 8px}
@@ -309,7 +310,7 @@ body[data-page="train"] .wc-seg{min-height:46px}body[data-page="train"] .wc-titl
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v22.2 筋トレAIコーチ版</div>
+  <div class="version-pill">v22.3 筋トレAIコーチ版</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -766,7 +767,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='22.2';
+const APP_VERSION='22.3';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const AI_CONSENT_VERSION='1';
 async function fetchWithTimeout(url,options={},timeoutMs=60000){

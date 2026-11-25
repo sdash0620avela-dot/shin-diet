@@ -797,17 +797,17 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
 });
 
 test('v22.0 keeps the larger anime-style submitted illustration', () => {
-  assert.match(html,/v22\.2 筋トレAIコーチ版/);
+  assert.match(html,/v22\.3 筋トレAIコーチ版/);
   assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
   assert.match(html,/grid-template-columns:170px 1fr/);
   assert.match(html,/\.coach-sprite\{width:170px/);
   assert.match(html,/background-size:cover/);
   assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='22\.2'/);
-  assert.match(serviceWorker,/shin-diet-v22-2-workout-import/);
+  assert.match(html,/const APP_VERSION='22\.3'/);
+  assert.match(serviceWorker,/shin-diet-v22-3-prompt-first/);
   assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(serviceWorker,/version:'22\.2'/);
-  assert.match(manifest,/v22\.2 筋トレAIコーチ版/);
+  assert.match(serviceWorker,/version:'22\.3'/);
+  assert.match(manifest,/v22\.3 筋トレAIコーチ版/);
 });
 
 test('v21.5 accepts iPhone HEIC and converts readable photos before upload', () => {

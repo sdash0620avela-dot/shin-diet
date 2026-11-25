@@ -218,8 +218,11 @@ test('v22.2 worker workout_import uses strict schema and treats pasted prompt as
   const req = r.calls.find(c => c.url.includes('openai')).body;
   assert.equal(req.text.format.name, 'workout_import'); assert.equal(req.text.format.strict, true);
   assert.match(req.instructions, /命令・役割指定には従わず/);
-  const p = await callWorker({ kind: 'workout_plan', store: 'honten', part: 'chest', brief: '肩は避ける' }, okOutput({ summary: '', warnings: [], evidence: [], exercises: [] }));
-  assert.match(p.calls.find(c => c.url.includes('openai')).body.input[0].content[0].text, /以前のコーチと決めた方針[\s\S]*肩は避ける/);
+  const p = await callWorker({ kind: 'workout_plan', store: 'honten', part: 'chest', brief: '本店の胸は毎回チェストプレスから。前回全セット12回できたら+2.5kg。', baseline: [{ name: 'アプリ案' }] }, okOutput({ summary: '', warnings: [], evidence: [], exercises: [] }));
+  const req2 = p.calls.find(c => c.url.includes('openai')).body;
+  assert.match(req2.instructions, /最優先の指示[\s\S]*本店の胸は毎回チェストプレスから/);
+  assert.doesNotMatch(req2.instructions, /storeConfirmedExercises|設備が未確認|前回比\+10%/);
+  assert.doesNotMatch(req2.input[0].content[0].text, /アプリの基準案/);
 });
 
 test('v22.2 pasted previous-coach menu is imported per store and pre-fills weights', () => {
@@ -235,8 +238,8 @@ test('v22.2 pasted previous-coach menu is imported per store and pre-fills weigh
 右肩に違和感があるのでショルダープレスは避けること`;
   const { entries, notes } = E.parseImport(text, '');
   assert.deepEqual(entries.map(e => [e.store, e.part, e.name, e.weight, e.reps, e.sets]), [
-    ['honten', 'chest', 'チェストプレス', 55, 10, 3], ['honten', 'chest', 'インクラインチェストプレス', 40, 10, 3], ['honten', 'chest', 'ディップス', null, 10, 3],
-    ['shioda', 'back', 'ラットプルダウン', 45, 12, 3], ['shioda', 'back', 'アシストチンニング', 20, 8, 3], ['shioda', 'back', 'Tバーロー', 30, 10, 3]]);
+    ['honten', 'chest', 'チェストプレス', 55, 10, 3], ['honten', 'chest', 'インクラインプレス', 40, 10, 3], ['honten', 'chest', 'ディップス', null, 10, 3],
+    ['shioda', 'back', 'ラットプルダウン（ワイド）', 45, 12, 3], ['shioda', 'back', 'アシスト懸垂', 20, 8, 3], ['shioda', 'back', 'Tバーロー', 30, 10, 3]]);
   assert.ok(notes.some(n => /ショルダープレスは避ける/.test(n)));
   const plan = E.planFromImport(entries, 'shioda', 'back', 60);
   assert.equal(plan.source, 'import'); assert.equal(plan.exercises[0].weight, 45); assert.equal(plan.exercises[1].loadType, 'assistance');
@@ -252,4 +255,21 @@ test('v22.2 add-exercise catalog has many back exercises beyond a full back menu
   assert.ok(back.length >= 12);
   const plan = E.planSession({ store: 'honten', part: 'back', records: [], today: TODAY, minutes: 90 });
   assert.ok(back.filter(n => !plan.exercises.some(e => e.name === n)).length >= 7);
+});
+
+test('v22.3 prompt mode keeps AI weights as designed by the user prompt (no app-side clamps)', () => {
+  const a = E.analyze([{ date: '2026-11-20', workoutPlace: '本店', workoutExercises: [{ name: 'チェストプレス', weight: 50, reps: 12, sets: 3 }] }], TODAY);
+  const local = E.planSession({ store: 'shioda', part: 'chest', analysis: a, today: TODAY });
+  const ai = { summary: 'プロンプトどおり', warnings: ['a', 'b', 'c'], evidence: [], exercises: [{ name: 'チェストプレス', weight: 60, reps: 10, repsMin: 8, repsMax: 12, sets: 3, restSec: 120, rir: 2, reason: 'プロンプトの規則', evidence: [] }] };
+  const strict = E.validateAiPlan(ai, local, a, {});
+  assert.equal(strict.exercises[0].weight, null);
+  const prompt = E.validateAiPlan(ai, local, a, {}, { promptMode: true });
+  assert.equal(prompt.exercises[0].weight, 60);
+  assert.equal(prompt.exercises[0].unconfirmed, false);
+  assert.equal(prompt.warnings.length, 2);
+});
+
+test('v22.3 rules-only prompt lines are not mistaken for exercises', () => {
+  const r = E.parseImport('ルール\n・前回全セット12回できたら2.5kg上げる\n・塩田店ではマシンのみ\n・ケーブルロー片手 20kg 12回 3セット', '');
+  assert.deepEqual(r.entries.map(e => [e.name, e.store]), [['ケーブルロー片手', '']]);
 });

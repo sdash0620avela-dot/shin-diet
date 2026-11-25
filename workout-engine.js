@@ -232,7 +232,10 @@
       const line = raw.replace(/\*\*/g, '').trim();
       if (!line) continue;
       const st = normalizeStore(line);
-      if (st) store = st;
+      // 店舗の切り替えは見出し行（「【塩田店】」「塩田店：背中」など短い行）か、種目行の中の店舗名だけ
+      const hasLoadLine = /\d+(?:\.\d+)?\s*(?:kg|キロ)|\d+\s*回|自重/.test(line);
+      const stripped = line.replace(/[【】\[\]（）()\s:：・\-|#*]/g, '').replace(/胸|背中|肩|腕|脚|足|全身|下半身|の日|メニュー|編|トレ/g, '');
+      if (st && (/^(?:本店|塩田店?)$/.test(stripped) || hasLoadLine)) store = st;
       const hasLoad = /\d+(?:\.\d+)?\s*(?:kg|キロ)|\d+\s*回|自重/.test(line);
       if (!hasLoad) {
         const head = line.length <= 24 ? PART_WORDS.find(([, w]) => new RegExp(w).test(line)) : null;
@@ -243,14 +246,19 @@
       const body = line.replace(/^[\s\-・*●○◆■□▶>#|]*(?:\d{1,2}\s*[.．)）、:]\s*)?/, '');
       const nm = body.match(/^(.{2,30}?)[\s：:｜|(（\[]*(?=\d|自重)/);
       if (!nm) { notes.push(line.slice(0, 200)); continue; }
-      let name = nm[1].replace(/[\s：:｜|(（\[【】]+$/g, '').replace(/^[【\[]|[】\]]$/g, '').trim();
+      let name = nm[1].replace(/[\s：:｜|(（\[【】]+$/g, '').replace(/^[【\[]|[】\]]$/g, '').replace(/[\s　]*(?:補助|自重|片側|重量|約)$/, '').trim();
       if (!name || NOT_EXERCISE.test(name) || /^\d/.test(name) || normalizeStore(name)) { notes.push(line.slice(0, 200)); continue; }
+      // 一覧にない名前は、カタカナ・英字中心の種目名らしいものだけを種目として扱う（「前回全セット」等のルール文を除外）
+      if (!catalogEntry(name) && (!/^[ァ-ヶーA-Za-z0-9・\s（）()]+$/.test(name) || /セット|回/.test(name))) { notes.push(line.slice(0, 200)); continue; }
+      if (catalogEntry(name) && !/^[ァ-ヶーA-Za-z0-9・\s（）()一-龥]+$/.test(name)) { notes.push(line.slice(0, 200)); continue; }
       const rest = body.slice(nm[1].length);
       const w = rest.match(/(\d+(?:\.\d+)?)\s*(?:kg|キロ)/i);
       const reps = rest.match(/(\d{1,2})\s*(?:[〜~\-]\s*(\d{1,2}))?\s*回/) || rest.match(/(?:kg|キロ)\s*[×x*]\s*(\d{1,2})(?:\s*[〜~\-]\s*(\d{1,2}))?/i);
       const sets = rest.match(/(\d{1,2})\s*(?:セット|set)/i) || rest.match(/回\s*[×x*]\s*(\d{1,2})/i) || rest.match(/[×x*]\s*\d{1,2}(?:\s*[〜~\-]\s*\d{1,2})?\s*回?\s*[×x*]\s*(\d{1,2})/i);
       const restSec = rest.match(/休憩\s*(\d{2,3})\s*秒|(\d{2,3})\s*秒/);
-      const canon = canonicalName(name), entry = catalogEntry(canon);
+      // 取り込みでは本人の書いた種目名を残す（一覧の正式名・別名と完全一致する時だけ正式名にそろえる）
+      const key = clean(name), exact = CATALOG.find(e => clean(e.name) === key || e.aliases.some(a => clean(a) === key));
+      const canon = name, entry = exact || catalogEntry(name) || null; // 表示は本人の書いた名前のまま
       entries.push({ store, part: entry ? entry.part : (part || inferPart(name) || ''), name: canon.slice(0, 30),
         weight: w ? Math.min(500, +w[1]) : null, reps: reps ? Math.min(50, +reps[1]) : null, repsMax: reps && reps[2] ? Math.min(50, +reps[2]) : null,
         sets: sets ? Math.min(10, +sets[1]) : null, restSec: restSec ? Math.min(600, +(restSec[1] || restSec[2])) : null, note: /自重/.test(rest) ? '自重' : /補助|アシスト/.test(line) && w ? '補助' : '' });
@@ -472,7 +480,9 @@
 
   /* ---------- AI応答の検証 ---------- */
   // AIの計画を、同店舗の実績に照らして安全範囲へ補正する。根拠のない重量は消す。
-  function validateAiPlan(aiPlan, localPlan, analysis, prefs) {
+  // promptMode：本人のプロンプトに従って作られた計画。アプリ独自の補正（他店重量の削除・+10%上限）はしない。
+  function validateAiPlan(aiPlan, localPlan, analysis, prefs, opts) {
+    const promptMode = !!(opts && opts.promptMode);
     if (!aiPlan || !Array.isArray(aiPlan.exercises) || !aiPlan.exercises.length) return null;
     const p = prefsNormalized(prefs), store = localPlan.store;
     const missing = new Set(p.stores[store].missing), avoid = new Set(p.avoid);
@@ -485,7 +495,8 @@
       const hi = Math.max(lo, Math.min(30, firstInt(raw.repsMax) || (entry ? entry.reps[1] : lo + 4)));
       let weight = num(raw.weight);
       const lastW = stat && stat.last.top ? stat.last.top.weight : null;
-      if (weight !== null) {
+      if (weight !== null && (weight < 0 || weight > 500)) weight = null;
+      if (weight !== null && !promptMode) {
         if (lastW === null) { weight = null; notes.push(`${name}：${storeLabel(store)}の重量実績がないため、AIの重量は採用せず確認重量にしました。`); }
         else if (weight > lastW * 1.1 + 0.01) { weight = Math.round(lastW * 1.1 * 2) / 2; notes.push(`${name}：前回比+10%を超える増量は安全のため${weight}kgへ補正しました。`); }
         else if (weight < lastW * 0.5) { weight = lastW; }
@@ -496,7 +507,7 @@
         weight, repsTarget: [lo, hi], reps: Math.max(lo, Math.min(hi, firstInt(raw.reps) || lo)),
         sets: Math.max(1, Math.min(6, firstInt(raw.sets) || 3)), restSec: Math.max(30, Math.min(300, firstInt(raw.restSec) || 90)),
         rir: Math.max(0, Math.min(4, num(raw.rir) ?? 2)), reason: String(raw.reason || '').slice(0, 300),
-        evidence: Array.isArray(raw.evidence) ? raw.evidence.map(String).slice(0, 4) : [], unconfirmed: !(analysis.storeExercises[store] || []).includes(name) && !p.stores[store].available.includes(name),
+        evidence: Array.isArray(raw.evidence) ? raw.evidence.map(String).slice(0, 4) : [], unconfirmed: !promptMode && !(analysis.storeExercises[store] || []).includes(name) && !p.stores[store].available.includes(name),
         reference: weight === null ? ((localPlan.exercises || []).find(x => x.name === name) || {}).reference || '' : ''
       };
     }).filter(Boolean);
@@ -505,7 +516,7 @@
     return {
       ...localPlan, id: uid(), source: 'ai', createdAt: new Date().toISOString(),
       summary: String(aiPlan.summary || '').slice(0, 300) || `${storeLabel(store)}・${PARTS[localPlan.part]}｜${exercises.length}種目 合計${totalSets}セット`,
-      warnings: [...(Array.isArray(aiPlan.warnings) ? aiPlan.warnings.map(String).slice(0, 5) : []), ...notes],
+      warnings: promptMode ? (Array.isArray(aiPlan.warnings) ? aiPlan.warnings.map(String).slice(0, 2) : []) : [...(Array.isArray(aiPlan.warnings) ? aiPlan.warnings.map(String).slice(0, 5) : []), ...notes],
       exercises, evidence: Array.isArray(aiPlan.evidence) ? aiPlan.evidence.map(String).slice(0, 8) : localPlan.evidence
     };
   }
