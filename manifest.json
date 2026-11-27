@@ -1,7 +1,7 @@
 {
-  "name": "AI Diet v22.4 筋トレAIコーチ版",
-  "short_name": "AI Diet",
-  "description": "食事・運動・睡眠・体組成を記録し、週・月の傾向と改善点を確認できるAI減量アプリ",
+  "name": "AI Life Navi",
+  "short_name": "AI Life Navi",
+  "description": "本店・塩田店の実績から毎回のメニューを作り、セット単位で記録する筋トレ専用AIパーソナルトレーナー",
   "id": "./",
   "start_url": "./index.html",
   "display": "standalone",

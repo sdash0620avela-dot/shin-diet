@@ -796,18 +796,14 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
   assert.match(html,/if\(!skipConfirm&&!confirmRecordSave/);
 });
 
-test('v22.0 keeps the larger anime-style submitted illustration', () => {
-  assert.match(html,/v22\.4 筋トレAIコーチ版/);
-  assert.match(html,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(html,/grid-template-columns:170px 1fr/);
-  assert.match(html,/\.coach-sprite\{width:170px/);
-  assert.match(html,/background-size:cover/);
-  assert.doesNotMatch(html,/background-size:200% 200%/);
-  assert.match(html,/const APP_VERSION='22\.4'/);
-  assert.match(serviceWorker,/shin-diet-v22-4-time-weights/);
-  assert.match(serviceWorker,/assets\/ai-coach-niece-anime-v2\.png/);
-  assert.match(serviceWorker,/version:'22\.4'/);
-  assert.match(manifest,/v22\.4 筋トレAIコーチ版/);
+test('v23.0 is the workout-only AI Life Navi app', () => {
+  assert.match(html,/<title>AI Life Navi v23\.0 筋トレ専用AIコーチ<\/title>/);
+  assert.match(html,/const APP_VERSION='23\.0'/);
+  assert.match(serviceWorker,/ai-life-navi-v23-0/);
+  assert.match(serviceWorker,/version:'23\.0'/);
+  assert.match(serviceWorker,/\.\/history-seed\.js/);
+  assert.match(manifest,/"name": "AI Life Navi"/);
+  assert.match(html,/\$\('appTitle'\)\.textContent='AI Life Navi'/);
 });
 
 test('v21.5 accepts iPhone HEIC and converts readable photos before upload', () => {
@@ -875,13 +871,15 @@ test('v21.1 recalculates nutrition from corrected meal text', () => {
   assert.match(worker,/低めにも高めにも寄せない現実的な平均/);
 });
 
-test('v22.0 separates daily recording and the dedicated workout coach in the bottom navigation', () => {
-  assert.match(html,/openRecordMode\('daily',this\)/);
-  assert.match(html,/show\('train',this\)/);
-  assert.match(html,/<section id="train" class="page">/);
-  assert.match(html,/>食事など</);
-  assert.match(html,/>筋トレ</);
-  assert.match(html,/data-record-focus="workout"/);
+test('v23.0 bottom navigation is ホーム・筋トレ・履歴・AIコーチ・設定 and diet screens are hidden (data kept)', () => {
+  const nav = html.slice(html.indexOf('<nav class="tabs">'), html.indexOf('</nav>'));
+  assert.deepEqual([...nav.matchAll(/show\('(\w+)',this\)/g)].map(m => m[1]), ['home', 'train', 'history', 'aicoach', 'settings']);
+  assert.match(html,/body\.lv #home > :not\(#trainHomeCard\):not\(#offlineNotice\)\{display:none!important\}/);
+  assert.match(html,/<section id="record" class="page">/); // 体重・体組成の記録画面は残す（データ保護）
+  assert.match(html,/<section id="history" class="page">/);
+  assert.match(html,/<section id="aicoach" class="page">/);
+  assert.equal((html.match(/id="aicoach"/g) || []).length, 1); // IDの重複なし
+  assert.match(html,/@media \(prefers-color-scheme: dark\)/);
 });
 
 test('v21.1 stores structured workout sets for later coaching', () => {

@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Diet v22.4 筋トレAIコーチ版</title>
+<title>AI Life Navi v23.0 筋トレ専用AIコーチ</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="AI Diet">
+<meta name="apple-mobile-web-app-title" content="AI Life Navi">
 <style>
 :root{
   --accent:#007AFF;--accent2:#5856D6;--accent-soft:rgba(0,122,255,.12);
@@ -303,14 +303,75 @@ body[data-page="train"] .wc-seg{min-height:46px}body[data-page="train"] .wc-titl
 .wc-check{margin:0;width:50px;height:50px;padding:0;border-radius:14px;font-size:24px;background:#fff;color:var(--good);border:2px solid var(--line);box-shadow:none}.wc-set.done .wc-check{background:var(--good);color:#fff;border-color:var(--good)}
 .wc-result{border-color:rgba(52,199,89,.35);background:#F1FFF5}.wc-toast{position:fixed;left:16px;right:16px;bottom:calc(var(--tab-h) + var(--safe-b) + 84px);z-index:95;background:#1C1C1E;color:#fff;border-radius:14px;padding:12px 14px;font-size:14px;font-weight:700;display:none}.wc-toast.show{display:block}
 
+/* ===== AI Life Navi v23：筋トレ専用UI ===== */
+body.lv #home > :not(#trainHomeCard):not(#offlineNotice){display:none!important}
+body.lv .diet-only{display:none}
+body.lv .app-header{padding:calc(12px + var(--safe-t)) 20px 16px;border-radius:0 0 22px 22px}
+body.lv .app-header h1{font-size:22px;margin:0}body.lv .app-header .subhead,body.lv .version-pill{display:none}
+.tabs{grid-template-columns:repeat(5,1fr)!important}.tab-svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lv-card,#trainHomeCard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0;box-shadow:none;animation:none}
+.lv-card h3{margin:0 0 10px;font-size:17px}.lv-card-inner{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.lv-eyebrow{font-size:13px;font-weight:700;color:var(--muted)}.lv-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:2px 0}
+.lv-muted{color:var(--muted);font-size:14px;line-height:1.5}.small{font-size:12.5px}.lv-row-label{font-size:13px;font-weight:700;color:var(--muted);margin:12px 0 6px}
+.lv-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.lv-seg button,.lv-chips button{margin:0;min-height:46px;padding:8px 4px;font-size:16px;background:var(--fill);color:var(--ink);border:1px solid var(--line);box-shadow:none;border-radius:12px}
+.lv-seg button.on,.lv-chips button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.lv-chips{display:grid;gap:6px}.lv-chips.five{grid-template-columns:repeat(5,1fr)}.lv-chips.four{grid-template-columns:repeat(4,1fr)}.lv-chips button{display:flex;flex-direction:column;align-items:center;line-height:1.1}.lv-chips small{font-size:9.5px;margin-top:2px;opacity:.85}
+.lv-primary{margin-top:14px;min-height:54px;font-size:18px;border-radius:14px;background:var(--accent);color:#fff;box-shadow:none}.lv-primary.sub{background:var(--fill);color:var(--ink)}
+.lv-danger{margin-top:8px;background:transparent;color:var(--bad);box-shadow:none;border:1px solid var(--line)}
+.lv-link{width:auto;display:inline;margin:0;padding:0;background:none;color:var(--accent);box-shadow:none;font-size:inherit;font-weight:700}
+.lv-badge{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:3px 9px;background:var(--fill);color:var(--ink2);margin-right:6px}.lv-badge.ai{background:var(--accent-soft);color:var(--accent)}
+.lv-tag{font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-left:6px}
+.lv-plan-head{display:flex;flex-wrap:wrap;align-items:center;gap:4px}.lv-status{min-height:18px;font-size:13px;color:var(--muted);margin:6px 0}
+.lv-note{font-size:13px;line-height:1.55;color:var(--ink2);background:var(--fill);border-radius:12px;padding:10px;margin:8px 0}
+.lv-preview{margin:8px 0 0;padding-left:20px;display:grid;gap:8px}.lv-pv-name{font-weight:800}.lv-pv-sets{font-size:15px;font-variant-numeric:tabular-nums}
+.lv-mini-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.lv-mini-actions button,.lv-mini{width:auto;margin:0;padding:8px 12px;min-height:38px;font-size:13px;background:var(--fill);color:var(--ink);border:1px solid var(--line);box-shadow:none;border-radius:10px}
+.lv-add-row{display:grid;grid-template-columns:1fr 86px;gap:8px}.lv-add-row button{margin:0}.lv-add input{margin-top:8px}
+.lv-live-head{position:sticky;top:0;z-index:20;background:var(--bg);padding:10px 0 8px;border-bottom:1px solid var(--line)}
+.lv-live-top{display:flex;justify-content:space-between;align-items:baseline;font-size:18px}.lv-live-top span{font-size:22px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.lv-progress{height:6px;background:var(--fill);border-radius:99px;overflow:hidden;margin-top:6px}.lv-progress div{height:100%;background:var(--accent);transition:width .3s}
+.lv-ex{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin:12px 0}.lv-ex.done{opacity:.8}
+.lv-ex-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.lv-ex-title{width:auto;margin:0;padding:0;background:none;box-shadow:none;color:var(--ink);font-size:18px;font-weight:800;text-align:left}
+.lv-last{font-size:14px;font-weight:700;margin:6px 0 2px;color:var(--ink2)}
+.lv-sets{width:100%;border-collapse:separate;border-spacing:0 6px;margin-top:6px}.lv-sets th{font-size:12px;color:var(--muted);font-weight:700;text-align:left;padding:0 4px}
+.lv-sets td{padding:0 3px}.lv-sets td:nth-child(1){width:64px}.lv-sets td:nth-child(4){width:56px}
+.lv-sets input{padding:11px 4px;font-size:19px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;border-radius:12px}
+.lv-type{margin:0;padding:10px 2px;min-height:46px;font-size:13px;background:var(--fill);color:var(--ink);box-shadow:none;border-radius:10px}.lv-type.warmup{color:var(--muted)}
+.lv-check{margin:0;width:52px;height:48px;padding:0;font-size:24px;background:var(--card);color:var(--good);border:2px solid var(--line);box-shadow:none;border-radius:14px}
+tr.done .lv-check{background:var(--good);color:#fff;border-color:var(--good)}tr.done input{color:var(--muted)}
+.lv-detail input{font-size:14px;padding:8px}
+.lv-bar{position:fixed;left:0;right:0;bottom:calc(var(--tab-h) + var(--safe-b));z-index:90;padding:8px 16px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+.lv-bar .lv-primary{margin:0}#trainRoot{padding-bottom:140px}
+.lv-rest{display:none;align-items:center;gap:6px;margin-bottom:8px}.lv-rest.on{display:flex}.lv-rest-time{font-size:20px;font-weight:800;color:var(--accent);margin-right:auto;font-variant-numeric:tabular-nums}
+.lv-rest button{width:auto;margin:0;padding:8px 12px;font-size:13px;background:var(--fill);color:var(--ink);box-shadow:none;border-radius:10px}
+.lv-stats{list-style:none;padding:0;margin:8px 0;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:14px}
+.lv-table{width:100%;border-collapse:collapse;font-size:14px}.lv-table th,.lv-table td{border-bottom:1px solid var(--line);padding:7px 4px;text-align:left}.r-更新{color:var(--good);font-weight:800}.r-低下{color:var(--bad);font-weight:800}.r-維持{font-weight:700}
+.lv-pre{white-space:pre-wrap;line-height:1.65;margin:0}
+.lv-filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}.lv-filters input{grid-column:1/-1}.lv-filters select,.lv-filters input{padding:10px;font-size:15px}
+.lv-hist{border-top:1px solid var(--line)}.lv-hist-head{width:100%;margin:0;padding:12px 2px;background:none;box-shadow:none;color:var(--ink);text-align:left;font-size:15px;font-weight:600;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}.lv-hist-body{padding:0 0 12px;display:grid;gap:8px}
+.lv-chart{width:100%;height:auto;color:var(--accent);margin:6px 0}.lv-axis{font-size:10px;fill:var(--muted)}
+.lv-quick{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.lv-quick button{width:auto;margin:0;padding:8px 12px;font-size:13px;background:var(--fill);color:var(--ink);box-shadow:none;border:1px solid var(--line);border-radius:999px}
+.lv-chat{display:grid;gap:8px;margin:10px 0}.lv-msg{white-space:pre-wrap;padding:10px 12px;border-radius:14px;font-size:14.5px;line-height:1.55;max-width:92%}.lv-msg.me{background:var(--accent);color:#fff;justify-self:end}.lv-msg.coach{background:var(--fill)}
+.lv-proposal{border:1px solid var(--accent);border-radius:14px;padding:12px;margin:10px 0}
+.lv-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.lv-card label{display:block;font-size:13px;color:var(--muted);font-weight:700;margin-top:8px}.lv-card label input,.lv-card label textarea{margin-top:4px;color:var(--ink)}
+.lv-check-row{display:flex!important;align-items:center;gap:8px}.lv-check-row input{width:22px;height:22px;-webkit-appearance:checkbox;appearance:checkbox}
+.lv-rating{display:flex;justify-content:space-between;gap:8px;align-items:center;border-top:1px solid var(--line);padding:8px 0}
+.lv-toast{position:fixed;left:16px;right:16px;bottom:calc(var(--tab-h) + var(--safe-b) + 90px);z-index:95;background:#1C1C1E;color:#fff;border-radius:14px;padding:12px 14px;font-size:14px;font-weight:700;display:none}.lv-toast.show{display:block}
+:root{--fill:#F2F2F7}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#000;--card:#1C1C1E;--ink:#F2F2F7;--ink2:#D1D1D6;--muted:#98989F;--line:rgba(255,255,255,.14);--fill:#2C2C2E;--accent:#0A84FF;--accent-soft:rgba(10,132,255,.2)}
+  body{background:var(--bg);color:var(--ink)}input,textarea,select{background:#2C2C2E;color:var(--ink);border-color:var(--line)}
+  .tabs{background:rgba(28,28,30,.92)}.card{background:var(--card);border-color:var(--line)}
+  .app-header{background:linear-gradient(165deg,#0A3D91 0%,#2E2A7A 100%)}
+}
+
 .updateNotice{display:none;position:fixed;left:16px;right:16px;top:max(12px,env(safe-area-inset-top));z-index:9999;background:#1C1C1E;color:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 8px 28px #0004;align-items:center;gap:12px;font-size:14px;font-weight:700}.updateNotice.show{display:flex}.updateNotice button{margin-left:auto;width:auto;white-space:nowrap;padding:9px 14px;background:#fff;color:#007AFF;border-radius:10px}
 </style>
 </head>
-<body data-record-focus="daily">
+<body class="lv" data-record-focus="daily">
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v22.4 筋トレAIコーチ版</div>
+  <div class="version-pill">v23.0 筋トレ専用AIコーチ</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -575,7 +636,10 @@ body[data-page="train"] .wc-seg{min-height:46px}body[data-page="train"] .wc-titl
   </div>
 </section>
 
-<section id="train" class="page"><div id="trainRoot"></div><div id="wcToast" class="wc-toast" role="status" aria-live="polite"></div></section>
+<section id="train" class="page"><div id="trainRoot"></div></section>
+<section id="history" class="page"><div id="historyRoot"></div></section>
+<section id="aicoach" class="page"><div id="coachRoot"></div></section>
+<div id="lvToast" class="lv-toast" role="status" aria-live="polite"></div>
 
 <section id="graph" class="page">
   <div class="card"><h3 id="chartTitle">体重推移</h3><div class="summary-switch" style="grid-template-columns:repeat(3,1fr)"><button id="graphWeightBtn" type="button" onclick="selectGraphMode('weight')">体重</button><button id="graphFatBtn" type="button" class="off" onclick="selectGraphMode('fat')">体脂肪</button><button id="graphMuscleBtn" type="button" class="off" onclick="selectGraphMode('muscle')">骨格筋</button></div><canvas id="chart" class="chart-canvas" width="380" height="260"></canvas><div id="chartNote" class="small">実線：実測値｜点線：7日平均</div></div>
@@ -601,7 +665,8 @@ body[data-page="train"] .wc-seg{min-height:46px}body[data-page="train"] .wc-titl
 </section>
 
 <section id="settings" class="page">
-  <div class="card"><h3>初めて使う人へ</h3>
+  <div id="trainSettingsRoot"></div>
+  <div class="card diet-only"><h3>初めて使う人へ</h3>
     <ol class="small" style="line-height:1.9;padding-left:22px;margin-bottom:0">
       <li>下の「個人設定」を入力して「設定を保存」</li>
       <li>同じ設定画面でメールの数字コードを使ってログイン</li>
@@ -629,7 +694,7 @@ body[data-page="train"] .wc-seg{min-height:46px}body[data-page="train"] .wc-titl
     <button type="button" class="sub" style="margin-top:14px" onclick="shareApp()">このアプリを友達に送る</button>
     <div id="shareAppStatus" class="small" role="status" aria-live="polite"></div>
   </div>
-  <div class="card"><h3>個人設定</h3>
+  <div class="card diet-only"><h3>個人設定</h3>
     <div class="label">使い方</div>
     <select id="usageMode" onchange="applyUsageMode(this.value)"><option value="simple">かんたんモード（写真・AIコーチ中心）</option><option value="pro">しっかり記録モード（すべての項目）</option></select>
     <p class="small">後からいつでも切り替えられます。保存済み記録は共通で、消えません。</p>
@@ -744,12 +809,11 @@ body[data-page="train"] .wc-seg{min-height:46px}body[data-page="train"] .wc-titl
 </main>
 
 <nav class="tabs">
-  <div class="tab on" onclick="show('home',this)"><span class="tab-icon">🏠</span>ホーム</div>
-  <div class="tab" onclick="openRecordMode('daily',this)"><span class="tab-icon">🍽</span>食事など</div>
-  <div class="tab" onclick="show('train',this)"><span class="tab-icon">🏋️</span>筋トレ</div>
-  <div class="tab pro-tab" onclick="show('graph',this)"><span class="tab-icon">📈</span>グラフ</div>
-  <div class="tab" onclick="show('chat',this)"><span class="tab-icon">💬</span>相談</div>
-  <div class="tab" onclick="show('settings',this)"><span class="tab-icon">⚙️</span>設定</div>
+  <div class="tab on" onclick="show('home',this)"><svg class="tab-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>ホーム</div>
+  <div class="tab" onclick="show('train',this)"><svg class="tab-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 10h3v4H2zM19 10h3v4h-3zM5 8h2v8H5zM17 8h2v8h-2zM7 11h10v2H7z"/></svg>筋トレ</div>
+  <div class="tab" onclick="show('history',this)"><svg class="tab-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 16V10M11 16V5M16 16v-8"/></svg>履歴</div>
+  <div class="tab" onclick="show('aicoach',this)"><svg class="tab-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>AIコーチ</div>
+  <div class="tab" onclick="show('settings',this)"><svg class="tab-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>設定</div>
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -767,7 +831,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='22.4';
+const APP_VERSION='23.0';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const AI_CONSENT_VERSION='1';
 async function fetchWithTimeout(url,options={},timeoutMs=60000){
@@ -1697,7 +1761,7 @@ function saveSettings(){
  writeSettings(s);update();alert('個人設定を保存しました')
 }
 function openSettings(){const tab=[...document.querySelectorAll('.tab')].find(x=>x.textContent.includes('設定'));if(tab)show('settings',tab)}
-function show(id,el){document.body.dataset.page=id;document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings'){renderAppDiagnostics();renderAiConsentState()}if(id==='train'&&window.WorkoutUI)WorkoutUI.render()}
+function show(id,el){document.body.dataset.page=id;document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(id==='record')loadRecordForDate();if(id==='graph')drawChart();if(id==='home'){drawForecastChart();renderRecordReminder()}if(id==='settings'){renderAppDiagnostics();renderAiConsentState()}if(window.WorkoutUI)WorkoutUI.onShow(id)}
 
 function update(){
  const s=sets();$('displayName').value=s.displayName||'';$('startDate').value=s.startDate||'';$('age').value=s.age||'';$('sex').value=s.sex||'';$('heightCm').value=s.heightCm||'';$('startWeight').value=s.startWeight||'';$('activityLevel').value=s.activityLevel||'';$('weightLossPace').value=s.weightLossPace||500;$('healthNotes').value=s.healthNotes||'';$('baseBurn').value=s.baseBurn||'';$('autoBurn').checked=s.autoBurn!==false;$('goalWeight').value=s.goalWeight||'';$('proteinGoal').value=s.proteinGoal||120;$('calorieGoal').value=s.calorieGoal||2000;$('fatGoal').value=s.fatGoal||'';$('carbsGoal').value=s.carbsGoal||'';$('cardioGoal').value=s.cardioGoal||35;$('displayMode').value=displayModeKey(s.displayMode);$('usageMode').value=usageModeKey(s.usageMode);$('adviceFood').checked=!!s.adviceFood;$('adviceSleep').checked=!!s.adviceSleep;$('adviceSupplement').checked=!!s.adviceSupplement;$('adviceExercise').checked=!!s.adviceExercise;$('coachStyle').value=coachStyleKey(s);$('reminderEnabled').checked=!!s.reminderEnabled;$('reminderTime').value=s.reminderTime||'21:00';renderCoachStyleDescription();applyDisplayMode(s.displayMode);applyUsageMode(s.usageMode);
@@ -1705,7 +1769,7 @@ function update(){
  renderFirstUseProgress(s);
   $('onboardingNotice').style.display=bootStorageReady&&!profileComplete(s)&&!recs().length?'block':'none';
  const beginner=displayModeKey(s.displayMode)==='beginner';
- $('appTitle').textContent=s.displayName?`${s.displayName}のAI Diet`:'AI Diet';$('appSubhead').textContent=s.startDate?`${s.startDate.replaceAll('-','/')}開始｜目標${beginner?'たんぱく質':'P'} ${s.proteinGoal||120}g｜有酸素 ${s.cardioGoal||35}分`:'個人設定を入力してください';
+ $('appTitle').textContent='AI Life Navi';$('appSubhead').textContent=s.startDate?`${s.startDate.replaceAll('-','/')}開始｜目標${beginner?'たんぱく質':'P'} ${s.proteinGoal||120}g｜有酸素 ${s.cardioGoal||35}分`:'個人設定を入力してください';
  $('calorieGoalChip').textContent=`${s.calorieGoal||2000}kcal`;$('proteinGoalChip').textContent=beginner?`たんぱく質 ${s.proteinGoal||120}g`:`${s.proteinGoal||120}g P`;$('cardioGoalChip').textContent=`有酸素${s.cardioGoal||35}分`;$('cardioGoalLabel').textContent=`有酸素（${s.cardioGoal||35}分）`;
  const a=recs(),last=a.filter(r=>r.weight).slice(-1)[0];
  if(last){const fm=fatMeta(last),mm=muscleMeta(last);$('cw').textContent=(+last.weight).toFixed(1);$('cf').textContent=last.fat??'--';$('cfLabel').textContent=fm.label;$('cfUnit').textContent=' '+fm.unit;$('cm').textContent=last.muscle??'--';$('cmLabel').textContent=mm.label;$('cmUnit').textContent=' '+mm.unit;$('loss').textContent='開始から '+(last.weight-s.startWeight).toFixed(1)+' kg';$('loss').className=(last.weight-s.startWeight)<0?'good':'warn'}
@@ -2280,6 +2344,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 setInterval(renderRecordReminder,60000);
 update();loadRecordForDate();initCloud();
 </script>
+<script src="./history-seed.js"></script>
 <script src="./workout-ui.js"></script>
 </body>
 </html>
