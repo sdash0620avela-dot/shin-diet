@@ -97,7 +97,11 @@ const seeded = seedCloud();
 {
   const { context, page } = await newDevice();
   const t0 = Date.now(); await page.goto(BASE); await ready(page);
-  await page.locator('#trainRoot .lv-ex').first().waitFor(); timings.homeMenuMs = Date.now() - t0;
+  const homeFirst = await page.locator('#home').innerText();
+  check('起動直後は今日の日付と「今日の部位を選択」（次の予定は出さない）', /今日の部位を選択/.test(homeFirst) && /\d+月\d+日（.）/.test(homeFirst) && !/次の予定/.test(homeFirst) && (await page.locator('#trainRoot [data-act="start"]').count()) === 0);
+  const tp = Date.now(); await page.click('#trainRoot [data-act="part"][data-v="chest"]');
+  await page.locator('#trainRoot .lv-ex').first().waitFor(); timings.partToMenuMs = Date.now() - tp; timings.homeMenuMs = Date.now() - t0;
+  check('部位を押すと「今日は胸トレ」とメニューを表示し、選択を日付つきで保存', /今日は胸トレ/.test(await page.locator('#trainHomeCard').innerText()) && (await ls(page, K.settings)).workoutCoach.today.part === 'chest' && (await ls(page, K.settings)).workoutCoach.today.date === TODAY);
   // フェーズ1：筋トレ専用の画面構成
   const tabs = await page.locator('.tabs .tab').allInnerTexts();
   check('下部ナビは ホーム・筋トレ・履歴・AIコーチ・設定 の5項目', JSON.stringify(tabs.map(t => t.trim())) === JSON.stringify(['ホーム', '筋トレ', '履歴', 'AIコーチ', '設定']), tabs.join('/'));
@@ -105,12 +109,15 @@ const seeded = seedCloud();
   check('ホームに今日の部位・店舗・時間・疲労度・痛み・開始ボタン', await page.locator('#trainRoot [data-act="start"]').isVisible() && (await page.locator('#trainRoot [data-act="fatigue"]').count()) === 5 && await page.locator('#lvPainInput').isVisible());
   check('メニューは横並びでなく、セットごとの行（区分・重量・回数・完了）で表示', (await page.locator('#trainRoot .lv-ex').first().locator('tr[data-si]').count()) >= 2 && (await page.locator('#trainRoot .lv-preview').count()) === 0);
   check('開始前は完了チェックが無効、並べ替え・削除は編集モードのみ', await page.locator('#trainRoot .lv-check').first().isDisabled() && (await page.locator('#trainRoot [data-act="delex"]').count()) === 0);
-  check('既存の体重・食事データはクラウドから同期され保持', (await ls(page, K.records)).length === seeded);
+  const seededDates = [...cloud.diet_records.values()].filter(r => r.user_id === USER.id).map(r => r.record);
+  const localNow = await ls(page, K.records);
+  check('既存の体重・食事データはクラウドから同期され保持（自動登録で上書きしない）', seededDates.every(c => localNow.some(r => r.date === c.date && r.weight === c.weight && r.intake === c.intake)), `${localNow.length}件`);
   // 確定実績の登録（重複防止）
-  await tab(page, '履歴'); await page.click('[data-act="seed"]'); await page.waitForTimeout(300);
+  await page.waitForFunction(k => (JSON.parse(localStorage.getItem(k) || '[]')).some(r => (r.workoutSessions || []).some(s => s.id === 'confirmed-2026-11-17-shioda-legs')), K.records, { timeout: 8000 }).catch(() => {});
+  await tab(page, '履歴');
   let recs = await ls(page, K.records);
   const ids = recs.flatMap(r => (r.workoutSessions || []).map(s => s.id));
-  check('確定実績4件を登録（11/17脚を含む）', ['confirmed-2026-11-17-shioda-legs', 'confirmed-2026-11-24-honten-chest', 'confirmed-2026-11-25-shioda-back', 'confirmed-2026-11-26-shioda-shoulders'].every(id => ids.includes(id)));
+  check('確定実績4件を同期後に自動登録（11/17脚を含む・ボタン操作不要）', ['confirmed-2026-11-17-shioda-legs', 'confirmed-2026-11-24-honten-chest', 'confirmed-2026-11-25-shioda-back', 'confirmed-2026-11-26-shioda-shoulders'].every(id => ids.includes(id)));
   const sums = recs.flatMap(r => (r.workoutSessions || []).filter(s => s.id.startsWith('confirmed')).map(s => [s.summary.totalSets, s.summary.warmupSets, s.summary.mainSets, s.summary.totalReps, s.summary.minutes].join('/')));
   check('登録後の集計が確定値と一致（11/17：12/0/12/177・11/24：24/7/17/324/65・11/25：24/7/17/262/62・11/26：24/4/20/326/53）', JSON.stringify(sums) === JSON.stringify(['12/0/12/177/', '24/7/17/324/65', '24/7/17/262/62', '24/4/20/326/53']), sums.join(' '));
   await page.evaluate(() => { const r = JSON.parse(localStorage.getItem('shinDiet:e2e-owner:records')); window.__seedAgain = true; });
@@ -120,8 +127,13 @@ const seeded = seedCloud();
   check('履歴に全セット（準備／本）を表示', /準備 20×12/.test(histText) && /本 50×9/.test(histText), histText.slice(0, 80).replace(/\s+/g, ' '));
   check('種目別の推移グラフを表示', (await page.locator('#historyRoot svg.lv-chart').count()) >= 1);
   await page.screenshot({ path: join(OUT, 'v23-history.png') });
-  // メニュー生成 10パターン
   await tab(page, 'ホーム');
+  await page.click('#trainRoot [data-act="store"][data-v="shioda"]'); await page.click('#trainRoot [data-act="part"][data-v="legs"]');
+  const byTime = [];
+  for (const m of [45, 60, 75, 90]) { await page.click(`#trainRoot [data-act="minutes"][data-v="${m}"]`); const pl = await page.evaluate(() => WorkoutUI._ui.plan); byTime.push([pl.exercises.length, Math.max(...pl.exercises.map(e => e.sets.filter(s => s.type === 'main').length)), pl.estMinutes]); }
+  check('予定時間を延ばすと種目が増え、1種目のセット数は増えない（45/60/75/90分）', byTime.every((x, i) => i === 0 || (x[0] >= byTime[i - 1][0] && x[1] <= Math.max(3, byTime[0][1]))) && byTime[3][0] > byTime[0][0], byTime.map(x => `${x[0]}種目・最大${x[1]}セット・約${x[2]}分`).join(' / '));
+  await page.click('#trainRoot [data-act="minutes"][data-v="60"]');
+  // メニュー生成 10パターン
   for (const store of ['honten', 'shioda']) for (const part of ['chest', 'back', 'shoulders', 'legs', 'arms']) {
     const t = Date.now();
     await page.click(`#trainRoot [data-act="store"][data-v="${store}"]`); await page.click(`#trainRoot [data-act="part"][data-v="${part}"]`);
@@ -240,8 +252,9 @@ const seeded = seedCloud();
   check('履歴に今日の記録が保存・表示される', histNow.replace(/\s+/g, ' ').includes(`${+TODAY.slice(5, 7)}月${+TODAY.slice(8)}日 塩田店・肩`), histNow.replace(/\s+/g, ' ').slice(0, 160));
   await tab(p2, 'ホーム');
   await p2.click('[data-act="tohome"]').catch(() => {});
-  const t3 = Date.now(); await p2.reload(); await ready(p2); await p2.locator('#trainRoot .lv-ex').first().waitFor(); timings.preparedMenuMs = Date.now() - t3;
-  check('次回起動時に保存済みの次回メニュー（脚）を即時表示', /脚トレ/.test(await p2.locator('#trainHomeCard').innerText()), `${timings.preparedMenuMs}ms`);
+  const t3 = Date.now(); await p2.reload(); await ready(p2); await p2.locator('#trainRoot .lv-ex, #trainRoot [data-act="part"]').first().waitFor(); timings.preparedMenuMs = Date.now() - t3;
+  await p2.click('#trainRoot [data-act="part"][data-v="legs"]');
+  check('次回起動後、脚を選ぶと事前生成した保存済みメニューを即時表示', /今日は脚トレ/.test(await p2.locator('#trainHomeCard').innerText()) && (await p2.evaluate(() => WorkoutUI._ui.plan.engineVersion === WorkoutEngine.ENGINE_VERSION)), `${timings.preparedMenuMs}ms`);
   await context.close();
 }
 {
@@ -273,6 +286,7 @@ const seeded = seedCloud();
   const user = { id: 'e2e-new', email: 'n@example.test' };
   const { context, page } = await newDevice({ user });
   await page.goto(BASE); await ready(page, user.id);
+  await page.click('#trainRoot [data-act="part"][data-v="back"]');
   const st = Date.now(); await page.click('#trainRoot [data-act="start"]'); await page.locator('.lv-live-head').waitFor({ timeout: 3000 });
   check('AI応答が遅くても待たずに開始（履歴なし）', Date.now() - st < 3000);
   check('履歴不足でも準備/本セットのメニュー', (await page.locator('.lv-ex').count()) >= 3);
@@ -299,6 +313,7 @@ const seeded = seedCloud();
   const { context, page } = await newDevice({ sw: true });
   await page.goto(BASE); await page.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller, null, { timeout: 15000 }).catch(() => {});
   await page.reload(); await ready(page);
+  await page.click('#trainRoot [data-act="part"][data-v="back"]');
   await page.click('#trainRoot [data-act="start"]'); await page.locator('.lv-live-head').waitFor();
   await page.locator('.lv-ex').first().locator('tr[data-si]').first().locator('[data-act="done"]').click();
   await context.setOffline(true);

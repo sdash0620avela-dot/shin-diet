@@ -174,6 +174,7 @@ test('worker workout_plan: set-level strict schema, judgement order, user prompt
   assert.deepEqual(req.text.format.schema.properties.exercises.items.properties.sets.items.properties.type.enum, ['warmup', 'main']);
   assert.match(req.instructions, /1\.本人の最新指示 2\.身体の安全性と痛み/);
   assert.match(req.instructions, /ダンベルは片手で店舗共通/);
+  assert.match(req.instructions, /時間が長い時は同じ種目のセットを増やさず、別の刺激/);
   assert.match(req.instructions, /本人ルール：脚はレッグプレスから/);
 });
 
@@ -228,8 +229,8 @@ test('v23.1 confirmed 11/17: per-set progression and designed warm-ups (warm-ups
   for (const n of ['レッグプレス', 'レッグカール', 'レッグエクステンション', 'アブダクション']) assert.equal(get(n).isNew, false, n);
   const base = ['レッグプレス', 'レッグカール', 'レッグエクステンション', 'アブダクション'];
   assert.deepEqual(p.exercises.map(e => e.name).filter(n => base.includes(n)), base); // 11/17の種目構成を土台にする
-  p.exercises.filter(e => !base.includes(e.name)).forEach(e => assert.match(e.reason, /予定時間に余裕があるため追加/, e.name)); // 追加は時間の余裕がある時だけ・理由つき
-  assert.ok(p.estMinutes <= 75);
+  p.exercises.filter(e => !base.includes(e.name)).forEach(e => assert.match(e.reason, /余裕があるため、別の刺激の種目として追加/, e.name)); // 追加は時間の余裕がある時だけ・理由つき
+  assert.ok(p.estMinutes <= 78);
   assert.equal(E.canonicalName('カーフ'), 'カーフプレス');
   const s = E.newSession(p, TODAY, '2026-11-27T10:00:00Z'); s.exercises.forEach(e => e.sets.forEach(x => { x.done = true; }));
   const sum = E.summarizeSession(s, 118);
@@ -248,4 +249,22 @@ test('v23.1 AI weight not explained by the latest record (e.g. 190kg) is replace
   assert.ok(lc.sets.filter(x => x.type === 'main').every(x => x.weight >= 70));
   assert.equal(lp.isNew, false); assert.equal(lc.isNew, false);
   assert.equal(v.fixes.length, 2);
+});
+
+test('v23.3 longer time adds different exercises, never just more sets of the same exercise', () => {
+  const rec = toRecord(CONFIRMED_SESSIONS[0]);
+  const plans = [45, 60, 75, 90].map(m => E.planSession({ store: 'shioda', part: 'legs', records: [rec], today: '2026-11-28', minutes: m, profile: E.DEFAULT_PROFILE }));
+  const counts = plans.map(p => p.exercises.length);
+  for (let i = 1; i < counts.length; i++) assert.ok(counts[i] >= counts[i - 1], counts.join());
+  assert.ok(counts[3] > counts[0], counts.join());
+  const mainsPerEx = plans.map(p => Math.max(...p.exercises.map(e => e.sets.filter(x => x.type === 'main').length)));
+  assert.ok(mainsPerEx.every(n => n <= 3), '時間を延ばしても1種目のセット数は増やさない: ' + mainsPerEx.join());
+  // 腰痛の既往がある本人には、腰に負担のある種目（スクワット）を自動では足さない
+  assert.ok(!plans[3].exercises.some(e => e.name === 'スクワット'));
+  // 保存済み（AI）メニューを延ばす場合も、セットではなく種目を足す
+  const a = E.analyze([rec], '2026-11-28');
+  const ai = { store: 'shioda', part: 'legs', minutes: 60, exercises: plans[0].exercises };
+  const longer = E.fitPlanToTime(ai, 90, a, { profile: E.DEFAULT_PROFILE });
+  assert.ok(longer.exercises.length > ai.exercises.length);
+  ai.exercises.forEach(e => assert.equal(longer.exercises.find(x => x.name === e.name).sets.length, e.sets.length));
 });

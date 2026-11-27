@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Life Navi v23.2 筋トレ専用AIコーチ</title>
+<title>AI Life Navi v23.3 筋トレ専用AIコーチ</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -373,7 +373,7 @@ tr.done .lv-check{background:var(--good);color:#fff;border-color:var(--good)}tr.
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v23.2 筋トレ専用AIコーチ</div>
+  <div class="version-pill">v23.3 筋トレ専用AIコーチ</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -833,7 +833,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='23.2';
+const APP_VERSION='23.3';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const AI_CONSENT_VERSION='1';
 async function fetchWithTimeout(url,options={},timeoutMs=60000){
@@ -1023,7 +1023,7 @@ async function syncNow(silent=false,retryCount=0){
   // クラウドと内容が異なる日だけ送信（毎回全履歴を送らない）
   const cloudByDate=new Map(cloudStates.map(r=>[r.date,r])),changedStates=mergedStates.filter(r=>{const c=cloudByDate.get(r.date);return !c||stateTime(c)!==stateTime(r)||!!c._deleted!==!!r._deleted||JSON.stringify(c)!==JSON.stringify(r)});
   if(changedStates.length){const rows=changedStates.map(r=>({user_id:uid,record_date:r.date,record:r,updated_at:r.updatedAt||r.deletedAt||appNowIso()}));const recordsUpsert=await cloudClient.from('diet_records').upsert(rows,{onConflict:'user_id,record_date'});if(recordsUpsert.error)throw recordsUpsert.error}
-  clearTimeout(cloudRetryTimer);cloudRetryAttempt=0;lastSyncEpoch=appNowMs();localStorage.setItem(storageKey('LastSync'),String(lastSyncEpoch));lastSyncAt=new Date(lastSyncEpoch).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});update();loadRecordForDate();renderAuthState();cloudMessage(`クラウド保存済み（${merged.length}日分｜${lastSyncAt}）`)
+  clearTimeout(cloudRetryTimer);cloudRetryAttempt=0;window.__syncedThisSession=true;lastSyncEpoch=appNowMs();localStorage.setItem(storageKey('LastSync'),String(lastSyncEpoch));lastSyncAt=new Date(lastSyncEpoch).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});update();loadRecordForDate();renderAuthState();cloudMessage(`クラウド保存済み（${merged.length}日分｜${lastSyncAt}）`)
  }catch(e){
   const message=String(e&&e.message||'');
   if(/JWT issued at future/i.test(message)&&retryCount<6){

@@ -21,7 +21,7 @@
     const owner = isOwner(s);
     const profile = c.profile ? E.profileNormalized(c.profile) : owner ? E.profileNormalized(null) : { ...E.profileNormalized(null), age: null, heightCm: null, startWeight: +s.startWeight || null, goalWeight: +s.goalWeight || null, injuries: [], excluded: [], cautions: [] };
     return { prefs: E.prefsNormalized(c.prefs), profile, ratings: Array.isArray(c.ratings) ? c.ratings : owner ? E.DEFAULT_RATINGS.slice() : [], plans: c.plans && typeof c.plans === 'object' ? c.plans : {},
-      active: c.active || null, activeClearedAt: c.activeClearedAt || '', lastStore: c.lastStore || '', updatedAt: c.updatedAt || '', imports: Array.isArray(c.imports) ? c.imports : [], brief: String(c.brief || ''), finishedIds: Array.isArray(c.finishedIds) ? c.finishedIds : [] };
+      active: c.active || null, activeClearedAt: c.activeClearedAt || '', lastStore: c.lastStore || '', updatedAt: c.updatedAt || '', imports: Array.isArray(c.imports) ? c.imports : [], brief: String(c.brief || ''), finishedIds: Array.isArray(c.finishedIds) ? c.finishedIds : [], today: c.today || null };
   }
   function writeCoach(mutator) {
     const s = readSettings(), c = coach(s);
@@ -60,29 +60,19 @@
   /* ---------- メニューの準備（保存済み→即時、なければ前回実績から即時作成し、AIは裏で） ---------- */
   function defaults() {
     const c = coach(), a = analysis();
-    const store = E.normalizeStore(ui.store || c.lastStore) || 'honten';
-    const part = E.PARTS[ui.part] ? ui.part : E.recommendPart(a, c.profile, today());
+    const store = E.normalizeStore(ui.store || (c.today && c.today.date === today() && c.today.store) || c.lastStore) || 'honten';
+    // 部位は本人が選ぶ（今日選んだ部位は日付つきで保存し、日付が変わったら未選択に戻す）
+    const t = c.today && c.today.date === today() ? c.today : null;
+    const part = E.PARTS[ui.part] ? ui.part : t && E.PARTS[t.part] ? t.part : '';
     const minutes = ui.minutes || c.prefs.defaultMinutes || 60;
     return { c, a, store, part, minutes };
   }
   function validCached(c, a, store, part) {
     const p = c.plans[planKey(store, part)];
-    if (!p || p.version !== 2 || !Array.isArray(p.exercises) || !p.exercises.length) return null;
+    if (!p || p.version !== 2 || p.engineVersion !== E.ENGINE_VERSION || !Array.isArray(p.exercises) || !p.exercises.length) return null; // 古い版で作ったメニューは使わない
+    if (Date.now() - Date.parse(p.createdAt || 0) > 3 * 86400000) return null; // 3日より前に作ったメニューは作り直す
     // 参照した履歴のバージョンが今と違う（その後に筋トレした）メニューは古いので使わない
     if (p.basedOnSessions !== a.totalSessions || (p.basedOnLastDate || null) !== (a.lastSession ? a.lastSession.date : null)) return null;
-    return p;
-  }
-  function fitToTime(plan, minutes) {
-    const p = JSON.parse(JSON.stringify(plan));
-    p.minutes = minutes;
-    for (let g = 0; g < 40 && E.estimateSeconds(p.exercises) > minutes * 60; g++) {
-      const cand = [...p.exercises].reverse().find(e => e.sets.filter(s => s.type === 'main').length > 2 && E.kindOf(e.name) === 'isolation') || [...p.exercises].reverse().find(e => e.sets.filter(s => s.type === 'main').length > 2);
-      if (!cand) { if (p.exercises.length > 3) { p.exercises.pop(); continue; } break; }
-      cand.sets.splice(cand.sets.map(s => s.type).lastIndexOf('main'), 1);
-    }
-    const total = p.exercises.reduce((a, e) => a + e.sets.length, 0), main = p.exercises.reduce((a, e) => a + e.sets.filter(s => s.type === 'main').length, 0);
-    p.estMinutes = Math.round(E.estimateSeconds(p.exercises) / 60);
-    p.summary = `${E.storeLabel(p.store)}・${E.PARTS[p.part]}｜${p.exercises.length}種目・${total}セット（本${main}）｜約${p.estMinutes}分`;
     return p;
   }
   function localPlan(d) { return E.planSession({ store: d.store, part: d.part, minutes: d.minutes, analysis: d.a, prefs: d.c.prefs, profile: d.c.profile, ratings: d.c.ratings, today: today(), fatigue: ui.fatigue, pain: ui.pain }); }
@@ -91,7 +81,8 @@
     ui.store = d.store; ui.part = d.part; ui.minutes = d.minutes;
     const dayInput = (ui.fatigue && ui.fatigue >= 4) || ui.pain.trim();
     const cached = !dayInput && validCached(d.c, d.a, d.store, d.part);
-    ui.plan = cached ? (cached.minutes !== d.minutes ? fitToTime(cached, d.minutes) : cached) : localPlan(d);
+    if (!d.part) { ui.plan = null; ui.planKey = ''; return null; }
+    ui.plan = cached ? E.fitPlanToTime(cached, d.minutes, d.a, { prefs: d.c.prefs, profile: d.c.profile, ratings: d.c.ratings }) : localPlan(d); // 時間に合わせて種目を増減（セットの水増しはしない）
     const key = planKey(ui.plan.store, ui.plan.part) + ':' + (dayInput ? 'day' : 'base');
     if (ui.queuedKey && ui.queuedKey !== key) { clearTimeout(resolvePlan.t); if (ui.aiState[ui.queuedKey] && ui.aiState[ui.queuedKey].state === 'queued') delete ui.aiState[ui.queuedKey]; ui.queuedKey = ''; }
     if (ui.plan.source === 'local') {
@@ -289,9 +280,8 @@
 
   /* ---------- ホーム（今日の部位と前回情報） ---------- */
   function selectorsHtml() {
-    const a = analysis(), rec = E.recommendPart(a, coach().profile, today());
     return `<div class="lv-card"><div class="lv-seg" role="group" aria-label="店舗">${Object.values(E.STORES).map(s => `<button type="button" class="${s.id === ui.store ? 'on' : ''}" data-act="store" data-v="${s.id}" aria-pressed="${s.id === ui.store}">${s.label}</button>`).join('')}</div>
-      <div class="lv-row-label">部位</div><div class="lv-chips five">${Object.entries(E.PARTS).map(([k, v]) => `<button type="button" class="${k === ui.part ? 'on' : ''}" data-act="part" data-v="${k}">${v}${k === rec ? '<small>次の予定</small>' : ''}</button>`).join('')}</div>
+      <div class="lv-row-label">部位</div><div class="lv-chips five">${Object.entries(E.PARTS).map(([k, v]) => `<button type="button" class="${k === ui.part ? 'on' : ''}" data-act="part" data-v="${k}" aria-pressed="${k === ui.part}">${v}</button>`).join('')}</div>
       <div class="lv-row-label">予定時間</div><div class="lv-chips four">${[45, 60, 75, 90].map(m => `<button type="button" class="${m === ui.minutes ? 'on' : ''}" data-act="minutes" data-v="${m}">${m}分</button>`).join('')}</div>
       <div class="lv-row-label">疲労度</div><div class="lv-chips five">${[1, 2, 3, 4, 5].map(n => `<button type="button" class="${n === ui.fatigue ? 'on' : ''}" data-act="fatigue" data-v="${n}">${n}</button>`).join('')}</div>
       <div class="lv-row-label">痛み・体調（任意）</div><input id="lvPainInput" placeholder="例：右肩2/10、寝不足" value="${h(ui.pain)}"></div>`;
@@ -301,8 +291,10 @@
     const active = readActive();
     if (active) { box.innerHTML = `<div class="lv-eyebrow">筋トレ実施中</div><div class="lv-title">${h(E.storeLabel(active.store))}・${h(E.PARTS[active.part] || '')}</div><div class="lv-muted">開始 ${fmtTime(active.startedAt)}｜下の表で完了チェックしてください</div>`; return; }
     if (!ui.plan) resolvePlan();
+    const now = new Date(), dateText = `${now.getMonth() + 1}月${now.getDate()}日（${'日月火水木金土'[now.getDay()]}）`;
+    if (!ui.part) { box.innerHTML = `<div class="lv-eyebrow">${dateText}</div><div class="lv-title">今日の部位を選択</div><div class="lv-muted">下の「部位」から今日の部位を押すと、その部位のメニューが出ます。</div>`; return; }
     const a = analysis(), lastPart = [...a.sessions].reverse().find(s => s.part === ui.part);
-    box.innerHTML = `<div class="lv-eyebrow">今日のトレーニング</div><div class="lv-title">${h(E.PARTS[ui.part])}トレ</div>
+    box.innerHTML = `<div class="lv-eyebrow">${dateText}</div><div class="lv-title">今日は${h(E.PARTS[ui.part])}トレ</div>
       <div class="lv-muted">${lastPart ? `前回：${md(lastPart.date)}｜${h(lastPart.store ? E.storeLabel(lastPart.store) : '店舗未記録')}${lastPart.minutes ? `｜${lastPart.minutes}分` : ''}` : 'この部位の記録はまだありません'}</div>`;
   }
 
@@ -334,6 +326,7 @@
     clearInterval(tick);
     if (!active && ui.result) { root.innerHTML = resultHtml(ui.result); return; }
     if (!active && !ui.plan) resolvePlan();
+    if (!active && !ui.plan) { root.innerHTML = `${selectorsHtml()}<div class="lv-card"><p class="lv-muted">今日の部位を選んでください。</p></div>`; return; }
     const p = active || ui.plan;
     const done = active ? active.exercises.reduce((a, e) => a + e.sets.filter(x => x.done).length, 0) : 0, total = p.exercises.reduce((a, e) => a + e.sets.length, 0);
     const warmN = p.exercises.reduce((a, e) => a + e.sets.filter(x => x.type === 'warmup').length, 0);
@@ -452,7 +445,15 @@
       <div class="lv-muted small">体脂肪</div>${lineSvg(list.filter(r => r.fat).map(r => ({ x: md(r.date), y: +r.fat })), { label: '体脂肪' })}
       <div class="lv-muted small">筋肉量・骨格筋量</div>${lineSvg(list.filter(r => r.muscle).map(r => ({ x: md(r.date), y: +r.muscle })), { unit: 'kg', label: '筋肉量' })}`;
   }
-  function registerConfirmed() {
+  function autoRegister() {
+    if (ui.autoRegistering || !isOwner() || !bootStorageReadySafe()) return;
+    if (cloudUser && !window.__syncedThisSession) return; // クラウドの最新を取り込んでから登録（既存の記録を上書きしない）
+    const missing = Seed.CONFIRMED_SESSIONS.filter(c => !recs().some(r => (r.workoutSessions || []).some(x => x.id === c.id)));
+    const declined = coach().seedDeclined; if (!missing.length || declined) return;
+    ui.autoRegistering = true; try { registerConfirmed(true); } finally { ui.autoRegistering = false; }
+  }
+  function bootStorageReadySafe() { try { return bootStorageReady; } catch (e) { return false; } }
+  function registerConfirmed(silent) {
     const before = recs();
     try { localStorage.setItem(storageKey('RecordsBackup') + ':' + Date.now(), JSON.stringify(before)); } catch (e) {} // 登録前のバックアップ
     let added = 0, skipped = 0;
@@ -477,7 +478,7 @@
     // 本人評価（11/24：ベンチインクライン・ケーブルフライの方が効く）を保存
     writeCoach(c => { c.ratings = E.applyRatings(c.ratings, [{ exercise: 'ベンチインクライン・ケーブルフライ', aspect: 'effect', value: 'good', note: '通常のケーブルフライより効く（11/24 本人評価）', date: '2026-11-24' }]); c.plans = {}; });
     ui.plan = null;
-    toast(`確定実績を登録しました（追加${added}件・重複のため省略${skipped}件）`);
+    if (added) toast(`確定実績を登録しました（追加${added}件・重複のため省略${skipped}件）`);
     if (typeof update === 'function') update();
     renderAll();
   }
@@ -618,8 +619,8 @@
     const ei = exEl ? +exEl.dataset.ei : -1, si = setEl ? +setEl.dataset.si : -1;
     const replan = () => { ui.plan = null; ui.result = null; resolvePlan(); renderAll(); };
     switch (act) {
-      case 'store': ui.store = v; replan(); break;
-      case 'part': ui.part = v; replan(); break;
+      case 'store': ui.store = v; if (ui.part) writeCoach(c => { c.today = { date: today(), part: ui.part, store: v }; }); replan(); break;
+      case 'part': ui.part = v; writeCoach(c => { c.today = { date: today(), part: v, store: ui.store || c.lastStore || 'honten' }; }); replan(); break;
       case 'minutes': ui.minutes = +v; replan(); break;
       case 'fatigue': ui.fatigue = ui.fatigue === +v ? null : +v; replan(); break;
       case 'start': ui.pain = ($('lvPainInput') || {}).value ?? ui.pain; startSession(); break;
@@ -628,7 +629,7 @@
       case 'pup': case 'pdown': case 'pdel': {
         const p = JSON.parse(JSON.stringify(ui.plan)), i = +btn.dataset.i;
         if (act === 'pdel') p.exercises.splice(i, 1); else { const j = act === 'pup' ? i - 1 : i + 1; if (j < 0 || j >= p.exercises.length) break; [p.exercises[i], p.exercises[j]] = [p.exercises[j], p.exercises[i]]; }
-        p.source = p.source === 'local' ? 'chat' : p.source; ui.plan = fitToTime(p, p.minutes); const a = analysis(); ui.plan.basedOnSessions = a.totalSessions; ui.plan.basedOnLastDate = a.lastSession ? a.lastSession.date : null;
+        p.source = p.source === 'local' ? 'chat' : p.source; ui.plan = p; const a = analysis(); ui.plan.basedOnSessions = a.totalSessions; ui.plan.basedOnLastDate = a.lastSession ? a.lastSession.date : null;
         writeCoach(c => { c.plans[planKey(ui.plan.store, ui.plan.part)] = ui.plan; }); renderAll(); break;
       }
       case 'addex': addExercise(); break;
@@ -702,6 +703,7 @@
     onShow(id) {
       if (id === 'home' || id === 'train') { const root = $('trainRoot'), target = $(id); if (root && target && root.parentElement !== target) target.appendChild(root); renderHome(); renderTrain(); return; } if (id === 'history') renderHistory(); if (id === 'aicoach') renderCoach(); if (id === 'settings') renderSettings(); },
     onDataChanged() {
+      autoRegister();
       if (!ui.autoOpened && readActive()) { ui.autoOpened = true; renderAll(false); return; }
       const focused = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
       if (focused || ui.renderedFor === signature()) return;

@@ -13,6 +13,7 @@
   const PARTS = { chest: '胸', back: '背中', shoulders: '肩', legs: '脚', arms: '腕' };
   const PART_LABELS = { ...PARTS, fullbody: '全身' };
   const ROTATION = ['chest', 'back', 'shoulders', 'legs', 'arms'];
+  const ENGINE_VERSION = 3; // 保存済みメニューの作成ロジックの版（古い版で作ったメニューは使わない）
 
   // 重量方式（spec 3）：ダンベルは片手・店舗共通、プレート式は片側、バーベルは総重量、マシン/ケーブルは店舗・機器別
   const EQUIP = {
@@ -71,6 +72,10 @@
     C('アブダクション', 'legs', 'machine', 'isolation', [12, 20], { aliases: ['アブダクター', 'ヒップアブダクション'], moves: ['hip'] }),
     C('ハックスクワット', 'legs', 'plate', 'compound', [8, 12], { moves: ['knee', 'lowback'] }),
     C('スクワット', 'legs', 'barbell', 'compound', [6, 10], { aliases: ['バーベルスクワット'], moves: ['knee', 'lowback'] }),
+    C('ヒップスラスト', 'legs', 'machine', 'compound', [10, 15], { aliases: ['ヒップスラストマシン', 'グルートドライブ'], moves: ['hip'] }),
+    C('ブルガリアンスクワット', 'legs', 'dumbbell', 'compound', [8, 12], { aliases: ['ブルガリアンスプリットスクワット'], moves: ['knee', 'hip'] }),
+    C('ランジ', 'legs', 'dumbbell', 'compound', [10, 12], { aliases: ['ウォーキングランジ', 'ダンベルランジ'], moves: ['knee', 'hip'] }),
+    C('シーテッドカーフレイズ', 'legs', 'machine', 'isolation', [12, 20], { moves: ['calf'] }),
     // 腕（二頭・三頭・前腕）
     C('EZバーカール', 'arms', 'ez', 'isolation', [10, 12], { aliases: ['EZカール'], moves: ['curl'], muscle: 'biceps' }),
     C('ライイングEX', 'arms', 'ez', 'isolation', [10, 12], { aliases: ['ライイングエクステンション', 'ライイングトライセプスエクステンション'], moves: ['extension'], muscle: 'triceps' }),
@@ -540,6 +545,50 @@
     return [{ type: 'warmup', weight: rd(top * 0.6), reps: 10 }];
   }
 
+  /* ---------- 予定時間への合わせ込み（spec 2：種目数を固定しない／根拠なくセットを増やさない） ----------
+   * 時間が余る → 同じ刺激のセットを増やさず、別の刺激の種目を足す（本人の実施歴がある種目→動作の違う種目の順）
+   * 時間が足りない → 後半の単関節種目から本セットを減らし、それでも超える時は最後の種目を外す */
+  function fitPlanToTime(plan, minutes, analysis, ctxIn) {
+    const c = ctxIn || {}, store = plan.store, part = plan.part;
+    const prefs = prefsNormalized(c.prefs), profile = profileNormalized(c.profile), ratings = ratingsNormalized(c.ratings), eqp = storeEquipment(store, c.prefs);
+    const ctx = { excluded: new Set([...(profile.excluded || []), ...prefs.avoid].map(canonicalName)), missing: new Set(eqp.missing.map(canonicalName)), ratings };
+    const exercises = (plan.exercises || []).map(e => ({ ...e, sets: e.sets.map(x => ({ ...x })) }));
+    const budget = minutes * 60;
+    let secs = estimateSeconds(exercises);
+    for (let g = 0; g < 60 && secs > budget + 60; g++) {
+      const cand = [...exercises].reverse().find(e => e.sets.filter(x => x.type === 'main').length > 2 && kindOf(e.name) === 'isolation') || [...exercises].reverse().find(e => e.sets.filter(x => x.type === 'main').length > 2);
+      if (!cand) { if (exercises.length > 3) { exercises.pop(); secs = estimateSeconds(exercises); continue; } break; }
+      cand.sets.splice(cand.sets.map(x => x.type).lastIndexOf('main'), 1); secs = estimateSeconds(exercises);
+    }
+    if (budget - secs > 8 * 60) {
+      const inPlan = new Set(exercises.map(e => canonicalName(e.name)));
+      const movesIn = new Set(exercises.flatMap(e => ((exactEntry(e.name) || guessEntry(e.name) || {}).moves || [])));
+      const past = [...analysis.sessions].reverse().filter(x => x.part === part).flatMap(x => x.exercises.filter(e => e.sets.length).map(e => e.name));
+      const catalog = CATALOG.filter(e => e.part === part).sort((a, b) => a.moves.filter(m => movesIn.has(m)).length - b.moves.filter(m => movesIn.has(m)).length).map(e => e.name);
+      // 既往（現在の痛みではない）：直接負担がかかる動作だけを自動追加から外す
+      const INJURY_MOVES = { '腰': ['lowback'], '首': ['overhead'], '頸': ['overhead'], '肩': ['overhead'], '肘': ['extension'], '足底': ['calf'] };
+      const avoidMoves = new Set(Object.entries(INJURY_MOVES).filter(([site]) => (profile.injuries || []).some(t => String(t).includes(site))).flatMap(([, m]) => m));
+      const pastSet = new Set(past.map(canonicalName));
+      const cands = [...new Set([...past, ...DEFAULT_TEMPLATES[part], ...catalog].map(canonicalName))]
+        .filter(n => pastSet.has(n) || !((exactEntry(n) || guessEntry(n) || {}).moves || []).some(m => avoidMoves.has(m)))
+        .filter(n => !inPlan.has(n) && !exerciseExcluded(n, ctx) && painHit(n, c.pain || {}) < 6 && !(ratingFor(n, ratings, 'priority') || {}).value?.match(/low|exclude/) && (ratingFor(n, ratings, 'effect') || {}).value !== 'low');
+      for (const n of cands) {
+        if (budget - secs <= 8 * 60) break;
+        const ref = latestFor(analysis, store, n), lx = ref.exposure, entry = exactEntry(n) || guessEntry(n);
+        const mains = lx ? progressMain(lx.main, n, ref.stat, { hold: (c.fatigue || 0) >= 4 }).sets : Array.from({ length: 3 }, () => ({ type: 'main', weight: null, reps: entry ? entry.reps[0] : 12 }));
+        const ex = { id: uid(), name: n, part: (entry || {}).part || part, equip: equipOf(n), restSec: restFor(store, n), isNew: !hasHistory(analysis, n), atStore: (analysis.storeExercises[store] || []).includes(n) || EQUIP[equipOf(n)].shared,
+          sets: [...designWarmups(n, mains, lx, exercises), ...mains], last: lx ? formatSets(lx.sets) : '', lastDate: lx ? lx.date : '',
+          reason: `予定${minutes}分に余裕があるため、別の刺激の種目として追加。${lx ? `基準：${lx.date.slice(5).replace('-', '/')}の${formatSets(lx.main)}（最新の実績）。` : '実施記録がない種目です。準備セットで重量を確認してください。'}` };
+        if (secs + estimateSeconds([ex]) > budget + 3 * 60) continue;
+        exercises.push(ex); secs = estimateSeconds(exercises); inPlan.add(n);
+      }
+    }
+    const ordered = orderForFlow(exercises, store, c.prefs);
+    const total = ordered.reduce((a, e) => a + e.sets.length, 0), main = ordered.reduce((a, e) => a + e.sets.filter(x => x.type === 'main').length, 0);
+    const est = Math.round(estimateSeconds(ordered) / 60);
+    return { ...plan, minutes, exercises: ordered, estMinutes: est, summary: `${storeLabel(store)}・${PARTS[part]}｜${ordered.length}種目・${total}セット（本${main}）｜約${est}分` };
+  }
+
   function planSession(opts) {
     const o = opts || {};
     const store = normalizeStore(o.store) || 'honten', part = PARTS[o.part] ? o.part : 'chest';
@@ -613,34 +662,13 @@
       if (!cand) { if (exercises.length > 3) { exercises.pop(); secs = estimateSeconds(exercises); continue; } break; }
       const idx = cand.sets.map(s => s.type).lastIndexOf('main'); cand.sets.splice(idx, 1); secs = estimateSeconds(exercises);
     }
-    // 時間が大きく余る時は、その部位で本人が実施したことのある他の種目（新しい順）→標準構成の順に追加する（セットの水増しはしない）
-    if (budget - secs > 15 * 60) {
-      const inPlan = new Set(exercises.map(e => canonicalName(e.name)));
-      const pastNames = [...analysis.sessions].reverse().filter(x => x.part === part).flatMap(x => x.exercises.filter(e => e.sets.length).map(e => e.name));
-      const cands = [...new Set([...pastNames, ...DEFAULT_TEMPLATES[part]].map(canonicalName))].filter(n => !inPlan.has(n) && !exerciseExcluded(n, ctx) && painHit(n, pain) < 6 && (!ctx.missing.has(n)));
-      for (const n of cands) {
-        if (budget - secs <= 15 * 60) break;
-        const ref = latestFor(analysis, store, n), lx = ref.exposure, entry = exactEntry(n) || guessEntry(n);
-        const mains = lx ? progressMain(lx.main, n, ref.stat, { hold: fatigue >= 4 }).sets : Array.from({ length: 3 }, () => ({ type: 'main', weight: null, reps: entry ? entry.reps[0] : 12 }));
-        const ex = { id: uid(), name: n, part: (entry || {}).part || part, equip: equipOf(n), restSec: restFor(store, n), isNew: !hasHistory(analysis, n), atStore: (analysis.storeExercises[store] || []).includes(n) || EQUIP[equipOf(n)].shared,
-          sets: [...designWarmups(n, mains, lx, exercises), ...mains], last: lx ? formatSets(lx.sets) : '', lastDate: lx ? lx.date : '',
-          reason: `予定時間に余裕があるため追加。${lx ? `基準：${lx.date.slice(5).replace('-', '/')}の${formatSets(lx.main)}（最新の実績）。` : '記録がない種目です。準備セットで重量を確認してください。'}` };
-        if (budget - secs - estimateSeconds([ex]) < -5 * 60) continue;
-        exercises.push(ex); secs = estimateSeconds(exercises);
-      }
-    }
-    if (!base && exercises.length && budget - secs > 10 * 60) { // 記録がない標準構成の時だけ時間に合わせて足す（根拠なく増やさない）
-      for (const e of exercises.filter(x => kindOf(x.name) === 'compound' && x.sets.some(s => s.type === 'main'))) {
-        if (budget - secs < 4 * 60) break;
-        const mains = e.sets.filter(s => s.type === 'main'); const lastMain = mains[mains.length - 1];
-        e.sets.push({ type: 'main', weight: lastMain.weight, reps: lastMain.reps }); secs = estimateSeconds(exercises);
-      }
-    }
+    const fitted = fitPlanToTime({ store, part, exercises, minutes }, minutes, analysis, { prefs: o.prefs, profile, ratings, pain, fatigue });
+    exercises.splice(0, exercises.length, ...fitted.exercises);
     const ordered = orderForFlow(exercises, store, o.prefs);
     const totalSets = ordered.reduce((a, e) => a + e.sets.length, 0), mainCount = ordered.reduce((a, e) => a + e.sets.filter(s => s.type === 'main').length, 0);
     const est = Math.round(estimateSeconds(ordered) / 60);
     return {
-      id: uid(), version: 2, store, part, minutes, source: 'local', createdAt: new Date().toISOString(),
+      id: uid(), version: 2, engineVersion: ENGINE_VERSION, store, part, minutes, source: 'local', createdAt: new Date().toISOString(),
       basedOnSessions: analysis.totalSessions, basedOnLastDate: analysis.lastSession ? analysis.lastSession.date : null, basis,
       summary: `${storeLabel(store)}・${PARTS[part]}｜${ordered.length}種目・${totalSets}セット（本${mainCount}）｜約${est}分`,
       estMinutes: est, warnings, notes, exercises: ordered
@@ -878,7 +906,7 @@
     return { id: uid(), version: 2, store, part, minutes, source: 'import', createdAt: new Date().toISOString(), summary: `${storeLabel(store)}・${PARTS[part]}｜${exercises.length}種目・${total}セット（貼り付け）`, warnings: [], notes: [], exercises };
   }
 
-  const api = { normName, hasHistory, latestFor, designWarmups, STORES, PARTS, PART_LABELS, ROTATION, EQUIP, CATALOG, DEFAULT_PROFILE, DEFAULT_RATINGS, STORE_EQUIPMENT, REST, normalizeStore, storeLabel, catalogEntry, exactEntry, guessEntry, canonicalName, equipOf, kindOf, inferPart, weightKey,
+  const api = { ENGINE_VERSION, fitPlanToTime, normName, hasHistory, latestFor, designWarmups, STORES, PARTS, PART_LABELS, ROTATION, EQUIP, CATALOG, DEFAULT_PROFILE, DEFAULT_RATINGS, STORE_EQUIPMENT, REST, normalizeStore, storeLabel, catalogEntry, exactEntry, guessEntry, canonicalName, equipOf, kindOf, inferPart, weightKey,
     parsePain, parseFreeText, parseImport, planFromImport, extractSessions, analyze, recommendPart, prefsNormalized, profileNormalized, ratingsNormalized, storeEquipment, planSession, progressMain, orderForFlow, estimateSeconds,
     validatePlan, aiContext, localChat, applyPreferenceChanges, applyRatings, newSession, sessionExercise, summarizeSession, compareSession, localReview, caloriesFor, sessionRecordFields, planText, formatSets, e1rm };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WorkoutEngine = api;
