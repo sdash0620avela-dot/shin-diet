@@ -423,6 +423,20 @@ const seeded = seedHistory();
   check('プロンプトに従ったAIのメニューを表示（余計な注意書きなし）', /プロンプトどおり/.test(cardText) && !/設備未確認|確認済み/.test(cardText), cardText.replace(/\s+/g, ' ').slice(0, 80));
   check('プロンプト設定後はプロンプト欄を「その他」へ畳む', !(await page.locator('#wcImportText').isVisible()));
   await page.screenshot({ path: join(OUT, '10-prompt-mode.png') });
+  // スクリーンショットの再現：塩田店・脚・75分（塩田店の脚の記録なし、本店の記録あり）
+  await page.evaluate(() => { const r = JSON.parse(localStorage.getItem('shinDiet:e2e-prompt-user:records') || '[]'); r.push({ date: '2026-11-20', updatedAt: '2026-11-20T12:00:00.000Z', workoutPlace: '本店', workoutPart: 'legs', workoutExercises: [{ name: 'レッグプレス', weight: 120, reps: 10, sets: 3 }, { name: 'レッグカール', weight: 40, reps: 12, sets: 3 }] }); setRecs(r); });
+  ai.mode = 'slow';
+  const callsBefore = ai.calls.length;
+  await pick(page, 'store', 'shioda'); await pick(page, 'part', 'legs'); await pick(page, 'minutes', '75');
+  await page.evaluate(() => { WorkoutUI.render(); WorkoutUI.onDataChanged(); }); // 待機中の画面更新
+  await page.waitForTimeout(1800);
+  const legsReq = ai.calls.slice(callsBefore).find(c => c.kind === 'workout_plan' && c.store === 'shioda' && c.part === 'legs');
+  check('画面が更新されてもAIへの作成依頼が取り消されない（75分・プロンプト付き）', legsReq && legsReq.body.minutes === 75 && legsReq.body.brief === rules);
+  const legsCard = await page.locator('#wcPlanCard').innerText();
+  check('75分を選んだら仮メニューも約75分ぶん作る', /約7[0-9]分/.test(legsCard), (legsCard.match(/約\d+分/) || [''])[0]);
+  check('仮メニューでも重量を空欄にせず前回値を入れる', /レッグプレス\s*120kg/.test(legsCard) && /レッグカール\s*40kg/.test(legsCard));
+  check('作成中は経過秒数を表示', /作成中…\d+秒|作成中…/.test(legsCard));
+  ai.mode = 'ok';
   await context.close();
 }
 

@@ -9,7 +9,7 @@
   const readSettings = () => sets();
   const $ = id => document.getElementById(id);
   const h = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const AI_PLAN_TIMEOUT = 60000, AI_CHAT_TIMEOUT = 45000;
+  const AI_PLAN_TIMEOUT = 90000, AI_CHAT_TIMEOUT = 60000;
   const ui = { store: '', part: '', minutes: 0, request: '', plan: null, aiState: {}, chatLog: [], finishing: false, renderedFor: '', restUntil: 0, evidence: null };
   let timer = null, mirrorTimer = null;
 
@@ -69,15 +69,19 @@
     const d = currentDefaults();
     ui.store = d.store; ui.part = d.part; ui.minutes = d.minutes;
     const cached = !ui.request && cachedPlan(d.c, d.a, d.store, d.part, d.minutes);
-    ui.plan = cached || E.planSession({ store: d.store, part: d.part, minutes: d.minutes, request: ui.request, prefs: d.c.prefs, analysis: d.a, today: today(), level: d.c.prefs.level });
-    clearTimeout(resolvePlan.t);
-    Object.keys(ui.aiState).forEach(k => { if (ui.aiState[k].state === 'queued') delete ui.aiState[k]; }); // 取り消された予約を消す
-    if (ui.plan.source === 'local') { // 保存済みでもアプリ設計のままならAI最適化の対象
-      const target = ui.plan, key = planKey(target.store, target.part) + ':' + target.minutes;
+    ui.plan = cached || E.planSession({ store: d.store, part: d.part, minutes: d.minutes, request: ui.request, prefs: d.c.prefs, analysis: d.a, today: today(), level: d.c.prefs.level, otherStoreWeights: !!d.c.brief });
+    const key = planKey(ui.plan.store, ui.plan.part) + ':' + ui.plan.minutes;
+    // 別の選択に変わった時だけ予約を取り消す（同じ選択の再描画では取り消さない）
+    if (ui.queuedKey && ui.queuedKey !== key) { clearTimeout(resolvePlan.t); if (ui.aiState[ui.queuedKey] && ui.aiState[ui.queuedKey].state === 'queued') delete ui.aiState[ui.queuedKey]; ui.queuedKey = ''; }
+    if (ui.plan.source === 'local') { // 保存済みでもアプリ設計のままならAI作成の対象
       if (!canAutoAi()) { if (!ui.aiState[key]) ui.aiState[key] = { state: cloudUser ? 'consent' : 'login' }; }
       else if (!ui.aiState[key]) {
-        ui.aiState[key] = { state: 'queued' };
-        resolvePlan.t = setTimeout(() => { if (ui.aiState[key] && ui.aiState[key].state === 'queued') delete ui.aiState[key]; if (ui.plan === target) maybeAiPlan(false); }, 1200); // 選択が落ち着いてからAIへ（連続タップで送信しない）
+        ui.aiState[key] = { state: 'queued' }; ui.queuedKey = key;
+        resolvePlan.t = setTimeout(() => {
+          ui.queuedKey = '';
+          if (ui.aiState[key] && ui.aiState[key].state === 'queued') delete ui.aiState[key];
+          const cur = ui.plan; if (cur && planKey(cur.store, cur.part) + ':' + cur.minutes === key && cur.source === 'local') maybeAiPlan(false, cur);
+        }, 1200); // 選択が落ち着いてからAIへ（連続タップで送信しない）
       }
     }
     return ui.plan;
@@ -105,6 +109,7 @@
     if (userInitiated && !ensureAiConsent()) return;
     ui.aiState[key] = { state: 'loading', startedAt: Date.now() };
     renderPlanStatus();
+    clearInterval(ui.statusTimer); ui.statusTimer = setInterval(() => { if (!ui.aiState[key] || ui.aiState[key].state !== 'loading') { clearInterval(ui.statusTimer); return; } renderPlanStatus(); }, 1000);
     const s = readSettings(), c = coach(s), a = analysis();
     try {
       const body = await aiPost({ kind: 'workout_plan', store: target.store, part: target.part, minutes: target.minutes, level: target.level, request: ui.request, healthNotes: s.healthNotes || '', context: E.aiContext(a, target.store, target.part, c.prefs), brief: c.brief, baseline: target.exercises.map(x => ({ name: x.name, weight: x.weight, reps: x.reps, repsTarget: x.repsTarget, sets: x.sets, restSec: x.restSec, rir: x.rir, reason: x.reason })) }, AI_PLAN_TIMEOUT);
@@ -268,7 +273,7 @@
     const st = ui.aiState[planKey(ui.plan.store, ui.plan.part) + ':' + ui.plan.minutes] || {};
     if (coach().brief) {
       if (ui.plan.source !== 'local') return '';
-      if (st.state === 'queued' || st.state === 'loading') return 'プロンプトに従ってAIが作成中です（このままでも開始できます）。';
+      if (st.state === 'queued' || st.state === 'loading') { const sec = st.startedAt ? Math.round((Date.now() - st.startedAt) / 1000) : 0; return `プロンプトに従ってAIが作成中…${sec ? sec + '秒' : ''}（最大90秒。このままでも開始できます）`; }
       if (st.state === 'error') return `AIに接続できませんでした（${h(st.message)}）。表示中は仮メニューです。 <button type="button" class="wc-link" data-act="ai">もう一度作る</button>`;
       if (st.state === 'consent') return '<button type="button" class="wc-link" data-act="ai">プロンプトに従ってAIで作る</button>';
       if (st.state === 'login') return '設定からログインすると、プロンプトに従ってAIが作ります。';

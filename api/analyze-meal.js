@@ -229,7 +229,8 @@ async function workoutAi(env, body) {
 1. 出力は指定のJSON形式にする（種目名・重量kg・回数・セット数・休憩秒・残り回数・理由）。
 2. 重量と回数は、プロンプトの規則と、提供した履歴の実績・前回値から決める。どちらにも根拠がない種目だけweightをnullにする。
 3. 強い痛み（6/10以上）がある部位の種目は入れない。
-4. warningsは本当に必要なものだけ最大2件・各40字以内。reasonは各40字以内。アプリの仕組みや設備確認の話は書かない。
+4. 指定された時間（分）をほぼ使い切る種目数・セット数・休憩にする（プロンプトに別の指定があればそちらに従う）。
+5. warningsは本当に必要なものだけ最大2件・各40字以内。reasonは各40字以内。アプリの仕組みや設備確認の話は書かない。
 本人のコーチ設定（プロンプト）：
 <<<
 ${brief}
@@ -241,7 +242,7 @@ ${brief}
     : `今日のメニューを設計してください。店舗：${store}／部位：${part}／時間：${minutes}分／レベル：${String(body.level || 'intermediate')}\n今日の痛み・希望：${String(body.request || '記載なし').slice(0, 300)}\n既往・注意：${String(body.healthNotes || '設定なし').slice(0, 250)}\n\n履歴要約（全履歴から集計）：${cleanJson(body.context)}${brief ? '' : `\n\nアプリの基準案（参考。必要なら変更してよい）：${cleanJson(body.baseline, 6000)}`}`;
   const { response, data, model } = await openAIResponse(env, {
     store: false,
-    reasoning: { effort: isChat ? 'low' : 'medium' },
+    reasoning: { effort: isChat || brief ? 'low' : 'medium' }, // プロンプト利用時は待ち時間を短くする
     instructions,
     input: [{ role: 'user', content: [{ type: 'input_text', text: input }] }],
     text: { format: { type: 'json_schema', name: isChat ? 'workout_chat' : 'workout_plan', strict: true, schema: isChat ? workoutChatSchema : workoutPlanSchema } },

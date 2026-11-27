@@ -413,14 +413,21 @@
       const n = baseSets;
       const cost = n * (45 + rest) + 60;
       if (chosen.length >= 2 && used + cost > budget) continue;
-      if (chosen.length >= (part === 'fullbody' ? 6 : 5)) break;
+      if (chosen.length >= (part === 'fullbody' ? 8 : 7)) break;
       chosen.push({ ...x, rest, n }); used += cost;
+    }
+    // 指定時間を使い切る：時間が余れば主要種目からセットを足す（1種目5セットまで）
+    const maxSets = Math.max(baseSets, Math.min(5, baseSets + 2));
+    for (let guard = 0; guard < 40; guard++) {
+      const cand = chosen.filter(c => c.n < maxSets && c.pen < 3).sort((a, b) => (a.e.kind === 'compound' ? 0 : 1) - (b.e.kind === 'compound' ? 0 : 1) || a.n - b.n)[0];
+      if (!cand || used + 45 + cand.rest > budget) break;
+      cand.n++; used += 45 + cand.rest;
     }
     const painSites = Object.entries(pain).filter(([site, v]) => v >= 3 && (part === 'fullbody' ? true : pool.some(e => (PAIN_MOVES[site] || []).some(m => e.moves.includes(m)))));
     painSites.forEach(([k, v]) => warnings.push(`${k}の痛み${v}/10：関連する種目は重量を下げるか除外しています。痛みが強くなる場合は中止してください。`));
     if (!chosen.length) warnings.push('この店舗で選べる種目がありません。恒久設定の「ない器具」を確認してください。');
 
-    const exercises = chosen.map(({ e, stat, pen, rest, n }) => prescribe(e, stat, { store, level, rir: base.rir + (fatigue >= 4 ? 1 : 0), sets: n, rest, pen, analysis }));
+    const exercises = chosen.map(({ e, stat, pen, rest, n }) => prescribe(e, stat, { store, level, rir: base.rir + (fatigue >= 4 ? 1 : 0), sets: n, rest, pen, analysis, otherStoreWeights: !!o.otherStoreWeights }));
     const totalSets = exercises.reduce((a, x) => a + x.sets, 0);
     const estMinutes = Math.round((used / 60) + 5);
     return {
@@ -442,6 +449,13 @@
       const other = Object.values(ctx.analysis.byKey).filter(s => s.name === entry.name && s.store !== ctx.store && s.last.top && s.last.top.weight).sort((a, b) => a.daysSince - b.daysSince)[0];
       ex.reference = other ? `${storeLabel(other.store)}では${other.last.top.weight}kg×${other.last.top.reps}回（器具が違うため参考のみ）` : '';
       ex.unconfirmed = !known;
+      if (ctx.otherStoreWeights && other && ctx.pen < 3) {
+        // プロンプト利用時の仮メニュー：空欄にせず、他の記録の前回値を入れる（本人が開始時に修正可能）
+        ex.weight = other.last.top.weight; ex.reps = Math.max(ex.repsTarget[0], Math.min(ex.repsTarget[1], other.last.top.reps));
+        ex.loadType = other.last.loadType || 'total'; ex.reference = ''; ex.unconfirmed = false;
+        ex.reason = `${storeLabel(other.store)}の前回値（${other.last.date.slice(5).replace('-', '/')} ${other.last.top.weight}kg×${other.last.top.reps}回）を入れています。`;
+        return ex;
+      }
       ex.reason = stat ? `${storeLabel(ctx.store)}での重量記録がないため、1セット目で確認重量を決めます（目標：残り${ex.rir}回で${ex.repsTarget[0]}〜${ex.repsTarget[1]}回）。` : `${storeLabel(ctx.store)}での実施記録がない種目です。軽めから確認し、残り${ex.rir}回で${ex.repsTarget[0]}〜${ex.repsTarget[1]}回になる重量を探してください。`;
       ex.evidence.push('rir-scale');
       return ex;
