@@ -226,7 +226,10 @@ test('v23.1 confirmed 11/17: per-set progression and designed warm-ups (warm-ups
   assert.deepEqual(get('レッグカール').sets.filter(x => x.type === 'main').map(x => [x.weight, x.reps]), [[80, 15], [80, 13], [70, 15]]);
   assert.deepEqual(get('レッグプレス').sets.filter(x => x.type === 'warmup').map(x => [x.weight, x.reps]), [[100, 8], [145, 4]]);
   for (const n of ['レッグプレス', 'レッグカール', 'レッグエクステンション', 'アブダクション']) assert.equal(get(n).isNew, false, n);
-  assert.deepEqual(p.exercises.map(e => e.name), ['レッグプレス', 'レッグカール', 'レッグエクステンション', 'アブダクション']); // 11/17の種目構成を土台にする
+  const base = ['レッグプレス', 'レッグカール', 'レッグエクステンション', 'アブダクション'];
+  assert.deepEqual(p.exercises.map(e => e.name).filter(n => base.includes(n)), base); // 11/17の種目構成を土台にする
+  p.exercises.filter(e => !base.includes(e.name)).forEach(e => assert.match(e.reason, /予定時間に余裕があるため追加/, e.name)); // 追加は時間の余裕がある時だけ・理由つき
+  assert.ok(p.estMinutes <= 75);
   assert.equal(E.canonicalName('カーフ'), 'カーフプレス');
   const s = E.newSession(p, TODAY, '2026-11-27T10:00:00Z'); s.exercises.forEach(e => e.sets.forEach(x => { x.done = true; }));
   const sum = E.summarizeSession(s, 118);

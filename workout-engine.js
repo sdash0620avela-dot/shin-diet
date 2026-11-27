@@ -613,6 +613,22 @@
       if (!cand) { if (exercises.length > 3) { exercises.pop(); secs = estimateSeconds(exercises); continue; } break; }
       const idx = cand.sets.map(s => s.type).lastIndexOf('main'); cand.sets.splice(idx, 1); secs = estimateSeconds(exercises);
     }
+    // 時間が大きく余る時は、その部位で本人が実施したことのある他の種目（新しい順）→標準構成の順に追加する（セットの水増しはしない）
+    if (budget - secs > 15 * 60) {
+      const inPlan = new Set(exercises.map(e => canonicalName(e.name)));
+      const pastNames = [...analysis.sessions].reverse().filter(x => x.part === part).flatMap(x => x.exercises.filter(e => e.sets.length).map(e => e.name));
+      const cands = [...new Set([...pastNames, ...DEFAULT_TEMPLATES[part]].map(canonicalName))].filter(n => !inPlan.has(n) && !exerciseExcluded(n, ctx) && painHit(n, pain) < 6 && (!ctx.missing.has(n)));
+      for (const n of cands) {
+        if (budget - secs <= 15 * 60) break;
+        const ref = latestFor(analysis, store, n), lx = ref.exposure, entry = exactEntry(n) || guessEntry(n);
+        const mains = lx ? progressMain(lx.main, n, ref.stat, { hold: fatigue >= 4 }).sets : Array.from({ length: 3 }, () => ({ type: 'main', weight: null, reps: entry ? entry.reps[0] : 12 }));
+        const ex = { id: uid(), name: n, part: (entry || {}).part || part, equip: equipOf(n), restSec: restFor(store, n), isNew: !hasHistory(analysis, n), atStore: (analysis.storeExercises[store] || []).includes(n) || EQUIP[equipOf(n)].shared,
+          sets: [...designWarmups(n, mains, lx, exercises), ...mains], last: lx ? formatSets(lx.sets) : '', lastDate: lx ? lx.date : '',
+          reason: `予定時間に余裕があるため追加。${lx ? `基準：${lx.date.slice(5).replace('-', '/')}の${formatSets(lx.main)}（最新の実績）。` : '記録がない種目です。準備セットで重量を確認してください。'}` };
+        if (budget - secs - estimateSeconds([ex]) < -5 * 60) continue;
+        exercises.push(ex); secs = estimateSeconds(exercises);
+      }
+    }
     if (!base && exercises.length && budget - secs > 10 * 60) { // 記録がない標準構成の時だけ時間に合わせて足す（根拠なく増やさない）
       for (const e of exercises.filter(x => kindOf(x.name) === 'compound' && x.sets.some(s => s.type === 'main'))) {
         if (budget - secs < 4 * 60) break;
