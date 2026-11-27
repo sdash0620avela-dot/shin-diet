@@ -69,7 +69,8 @@ test('learning: actual 60kg (planned 50kg) is used for the next plan, not the pl
   s.status = 'finished'; s.finishedAt = '2026-11-27T11:00:00.000Z';
   const next = E.planSession({ store: 'honten', part: 'chest', records: [{ date: '2026-11-27', workoutSessions: [s] }], today: '2026-11-28', minutes: 60 });
   const cp = next.exercises.find(e => e.name === 'チェストプレス');
-  assert.ok(cp.sets.every(x => x.weight === 60), JSON.stringify(cp.sets));
+  assert.ok(cp.sets.filter(x => x.type === 'main').every(x => x.weight === 60), JSON.stringify(cp.sets));
+  assert.ok(cp.sets.some(x => x.type === 'warmup'), '主力種目には準備セットを設計する');
 });
 
 test('unchecked sets are not counted as actual results', () => {
@@ -95,7 +96,7 @@ test('rating "インクラインケーブルフライの方が効く" is stored 
 
 test('next part follows rotation 胸→背中→肩→脚→腕 from the last trained part', () => {
   assert.equal(E.recommendPart(E.analyze(confirmed, TODAY), {}, TODAY), 'legs');
-  assert.equal(E.recommendPart(E.analyze(confirmed.slice(0, 1), '2026-11-25'), {}, '2026-11-25'), 'back');
+  assert.equal(E.recommendPart(E.analyze(confirmed.slice(1, 2), '2026-11-25'), {}, '2026-11-25'), 'back');
 });
 
 test('comparison uses the same weight; calories use MET formula minus resting', () => {
@@ -133,7 +134,9 @@ test('AI output validation: excluded/missing removed, absurd weights corrected, 
     { name: 'シーテッドロー', sets: [{ type: 'warmup', weight: 45, reps: 8 }, { type: 'main', weight: 200, reps: 12 }], restSec: 135, reason: 'x', isNew: false, newReason: '' }
   ] }, local, a, {}, {}, []);
   assert.deepEqual(v.exercises.map(e => e.name), ['シーテッドロー']);
-  assert.equal(v.exercises[0].sets[1].weight, 67.5);
+  const main = v.exercises[0].sets.filter(x => x.type === 'main');
+  assert.deepEqual(main.map(x => x.weight), [67.5, 67.5, 60]); // 最新実績（11/25 67.5×12・67.5×11・60×13）基準に戻す
+  assert.ok(v.fixes.some(f => /説明できない/.test(f)));
   assert.equal(E.validatePlan({ exercises: [] }, local, a), null);
 });
 
@@ -194,4 +197,52 @@ test('worker reports billing problems without retrying; model switchable by env 
 test('pasted previous-coach menu import still works (names kept as written)', () => {
   const { entries } = E.parseImport('【塩田店】背中\n- ラットプルダウン・ワイド：60kg×12回×3set\n- アシスト懸垂 補助20kg 8回 3セット\nルール：前回全セット12回できたら2.5kg上げる', '');
   assert.deepEqual(entries.map(e => [e.store, e.name, e.weight, e.reps, e.sets]), [['shioda', 'ラットプルダウン・ワイド', 60, 12, 3], ['shioda', 'アシスト懸垂', 20, 8, 3]]);
+});
+
+test('v23.1 investigation: newest 11/17 record wins over 9/1 even when stored without store or with name variants', () => {
+  const sess = (date, store, ex) => ({ date, workoutSessions: [{ id: date, status: 'finished', store, part: 'legs', startedAt: date + 'T09:00:00Z', finishedAt: date + 'T10:00:00Z', exercises: ex }] });
+  const M = (w, r) => ({ type: 'main', weight: w, reps: r, done: true });
+  const sep = sess('2026-09-01', 'shioda', [{ name: 'レッグプレス', sets: [M(190, 10), M(190, 9)] }, { name: 'レッグカール', sets: [M(60, 12)] }]);
+  const variants = {
+    noStore: { date: '2026-11-17', workoutPlace: '', workoutPart: 'legs', workoutExercises: [{ name: 'レッグプレス', weight: 170, reps: 15, sets: 3 }, { name: 'レッグカール', weight: 80, reps: 15, sets: 3 }] },
+    nameVariant: sess('2026-11-17', 'shioda', [{ name: 'レッグプレス（塩田）', sets: [M(170, 15), M(170, 12), M(150, 15)] }, { name: 'レッグカール ', sets: [M(80, 15), M(80, 12), M(70, 15)] }]),
+    textOnly: { date: '2026-11-17', workoutPlace: '塩田店', strength: '脚 レッグプレス170kg×15、170kg×12、150kg×15 レッグカール80kg×15、80kg×12、70kg×15' },
+    confirmed: toRecord(CONFIRMED_SESSIONS[0])
+  };
+  for (const [k, rec] of Object.entries(variants)) {
+    const p = E.planSession({ store: 'shioda', part: 'legs', records: [sep, rec], today: TODAY });
+    const lp = p.exercises.find(e => e.name === 'レッグプレス'), lc = p.exercises.find(e => e.name === 'レッグカール');
+    assert.match(lp.reason, /基準：11\/17/, k);
+    assert.ok(lp.sets.filter(x => x.type === 'main').every(x => x.weight <= 175), `${k}: ${E.formatSets(lp.sets)}`);
+    assert.ok(lc.sets.filter(x => x.type === 'main').every(x => x.weight >= 70), `${k}: レッグカールを根拠なく下げない ${E.formatSets(lc.sets)}`);
+    assert.ok(!lp.isNew && !lc.isNew, k);
+  }
+});
+
+test('v23.1 confirmed 11/17: per-set progression and designed warm-ups (warm-ups never counted as main)', () => {
+  const p = E.planSession({ store: 'shioda', part: 'legs', records: [toRecord(CONFIRMED_SESSIONS[0])], today: TODAY, minutes: 75 });
+  const get = n => p.exercises.find(e => e.name === n);
+  assert.deepEqual(get('レッグプレス').sets.filter(x => x.type === 'main').map(x => [x.weight, x.reps]), [[170, 15], [170, 13], [150, 15]]);
+  assert.deepEqual(get('レッグカール').sets.filter(x => x.type === 'main').map(x => [x.weight, x.reps]), [[80, 15], [80, 13], [70, 15]]);
+  assert.deepEqual(get('レッグプレス').sets.filter(x => x.type === 'warmup').map(x => [x.weight, x.reps]), [[100, 8], [145, 4]]);
+  for (const n of ['レッグプレス', 'レッグカール', 'レッグエクステンション', 'アブダクション']) assert.equal(get(n).isNew, false, n);
+  assert.deepEqual(p.exercises.map(e => e.name), ['レッグプレス', 'レッグカール', 'レッグエクステンション', 'アブダクション']); // 11/17の種目構成を土台にする
+  assert.equal(E.canonicalName('カーフ'), 'カーフプレス');
+  const s = E.newSession(p, TODAY, '2026-11-27T10:00:00Z'); s.exercises.forEach(e => e.sets.forEach(x => { x.done = true; }));
+  const sum = E.summarizeSession(s, 118);
+  assert.equal(sum.warmupSets, p.exercises.reduce((a, e) => a + e.sets.filter(x => x.type === 'warmup').length, 0));
+  assert.ok(sum.warmupSets >= 3);
+});
+
+test('v23.1 AI weight not explained by the latest record (e.g. 190kg) is replaced; AI isNew flag is ignored', () => {
+  const a = E.analyze([toRecord(CONFIRMED_SESSIONS[0])], TODAY);
+  const local = E.planSession({ store: 'shioda', part: 'legs', analysis: a, today: TODAY });
+  const v = E.validatePlan({ summary: '', warnings: [], exercises: [
+    { name: 'レッグプレス', sets: [{ type: 'main', weight: 190, reps: 10 }], restSec: 135, reason: '9/1の実績', isNew: true, newReason: '' },
+    { name: 'レッグカール', sets: [{ type: 'main', weight: 60, reps: 15 }], restSec: 105, reason: '', isNew: true, newReason: '' }] }, local, a, {}, {}, []);
+  const lp = v.exercises.find(e => e.name === 'レッグプレス'), lc = v.exercises.find(e => e.name === 'レッグカール');
+  assert.ok(lp.sets.filter(x => x.type === 'main').every(x => x.weight <= 170));
+  assert.ok(lc.sets.filter(x => x.type === 'main').every(x => x.weight >= 70));
+  assert.equal(lp.isNew, false); assert.equal(lc.isNew, false);
+  assert.equal(v.fixes.length, 2);
 });

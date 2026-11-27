@@ -797,10 +797,10 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
 });
 
 test('v23.0 is the workout-only AI Life Navi app', () => {
-  assert.match(html,/<title>AI Life Navi v23\.0 筋トレ専用AIコーチ<\/title>/);
-  assert.match(html,/const APP_VERSION='23\.0'/);
-  assert.match(serviceWorker,/ai-life-navi-v23-0/);
-  assert.match(serviceWorker,/version:'23\.0'/);
+  assert.match(html,/<title>AI Life Navi v23\.1 筋トレ専用AIコーチ<\/title>/);
+  assert.match(html,/const APP_VERSION='23\.1'/);
+  assert.match(serviceWorker,/ai-life-navi-v23-1/);
+  assert.match(serviceWorker,/version:'23\.1'/);
   assert.match(serviceWorker,/\.\/history-seed\.js/);
   assert.match(manifest,/"name": "AI Life Navi"/);
   assert.match(html,/\$\('appTitle'\)\.textContent='AI Life Navi'/);
@@ -874,7 +874,7 @@ test('v21.1 recalculates nutrition from corrected meal text', () => {
 test('v23.0 bottom navigation is ホーム・筋トレ・履歴・AIコーチ・設定 and diet screens are hidden (data kept)', () => {
   const nav = html.slice(html.indexOf('<nav class="tabs">'), html.indexOf('</nav>'));
   assert.deepEqual([...nav.matchAll(/show\('(\w+)',this\)/g)].map(m => m[1]), ['home', 'train', 'history', 'aicoach', 'settings']);
-  assert.match(html,/body\.lv #home > :not\(#trainHomeCard\):not\(#offlineNotice\)\{display:none!important\}/);
+  assert.match(html,/body\.lv #home > :not\(#trainHomeCard\):not\(#offlineNotice\):not\(#trainRoot\)\{display:none!important\}/);
   assert.match(html,/<section id="record" class="page">/); // 体重・体組成の記録画面は残す（データ保護）
   assert.match(html,/<section id="history" class="page">/);
   assert.match(html,/<section id="aicoach" class="page">/);

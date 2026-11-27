@@ -159,14 +159,14 @@
   /* ---------- セッション ---------- */
   function startSession() {
     if (ui.starting) return; ui.starting = true; setTimeout(() => { ui.starting = false; }, 1500); // 連打防止
-    if (readActive()) { openTab('train'); return; }
+    if (readActive()) return;
     const plan = ui.plan || resolvePlan();
     if (!plan.exercises.length) { toast('種目がありません。種目を追加してください。'); return; }
     const session = E.newSession(plan, today(), appNowIso(), { fatigue: ui.fatigue, pain: ui.pain });
     saveActive(session, true);
     writeCoach(c => { c.lastStore = plan.store; c.active = session; });
-    ui.result = null; ui.finishing = false;
-    openTab('train');
+    ui.result = null; ui.finishing = false; ui.editMode = false;
+    renderAll(false); // 同じ画面のまま、完了チェックが使える状態にする
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
   function mutate(fn, rerender = false) {
@@ -174,6 +174,21 @@
     fn(s); saveActive(s);
     if (rerender) renderAll(true); else renderProgress(s);
     return s;
+  }
+  const blankSet = (live, type, weight, reps) => live ? { id: Math.random().toString(36).slice(2), type, plannedWeight: null, plannedReps: null, weight, reps, done: false, doneAt: null, rir: null, memo: '', side: '' } : { type, weight, reps };
+  function savePlanEdit() {
+    const a = analysis(), p = ui.plan; if (!p) return;
+    p.edited = true; p.basedOnSessions = a.totalSessions; p.basedOnLastDate = a.lastSession ? a.lastSession.date : null;
+    clearTimeout(savePlanEdit.t); savePlanEdit.t = setTimeout(() => writeCoach(c => { c.plans[planKey(p.store, p.part)] = JSON.parse(JSON.stringify(p)); }), 800);
+  }
+  // 開始前は計画を、開始後は実施中セッションを同じ操作で編集する
+  function edit(fn, rerender = true) {
+    const active = readActive();
+    if (active) return mutate(s => fn(s, true), rerender);
+    if (!ui.plan) return null;
+    fn(ui.plan, false); savePlanEdit();
+    if (rerender) renderAll(true);
+    return ui.plan;
   }
   function persistFinished(session) {
     const all = recs(), existing = all.find(r => r.date === session.date) || { date: session.date };
@@ -272,87 +287,72 @@
     if (keepScroll !== false) keepInputs(go); else go();
   }
 
-  /* ---------- ホーム ---------- */
-  function selectorsHtml(compact) {
+  /* ---------- ホーム（今日の部位と前回情報） ---------- */
+  function selectorsHtml() {
     const a = analysis(), rec = E.recommendPart(a, coach().profile, today());
-    return `<div class="lv-seg" role="group" aria-label="店舗">${Object.values(E.STORES).map(s => `<button type="button" class="${s.id === ui.store ? 'on' : ''}" data-act="store" data-v="${s.id}" aria-pressed="${s.id === ui.store}">${s.label}</button>`).join('')}</div>
+    return `<div class="lv-card"><div class="lv-seg" role="group" aria-label="店舗">${Object.values(E.STORES).map(s => `<button type="button" class="${s.id === ui.store ? 'on' : ''}" data-act="store" data-v="${s.id}" aria-pressed="${s.id === ui.store}">${s.label}</button>`).join('')}</div>
       <div class="lv-row-label">部位</div><div class="lv-chips five">${Object.entries(E.PARTS).map(([k, v]) => `<button type="button" class="${k === ui.part ? 'on' : ''}" data-act="part" data-v="${k}">${v}${k === rec ? '<small>次の予定</small>' : ''}</button>`).join('')}</div>
       <div class="lv-row-label">予定時間</div><div class="lv-chips four">${[45, 60, 75, 90].map(m => `<button type="button" class="${m === ui.minutes ? 'on' : ''}" data-act="minutes" data-v="${m}">${m}分</button>`).join('')}</div>
-      ${compact ? '' : `<div class="lv-row-label">疲労度</div><div class="lv-chips five">${[1, 2, 3, 4, 5].map(n => `<button type="button" class="${n === ui.fatigue ? 'on' : ''}" data-act="fatigue" data-v="${n}">${n}</button>`).join('')}</div>
-      <div class="lv-row-label">痛み・体調（任意）</div><input id="lvPainInput" placeholder="例：右肩2/10、寝不足" value="${h(ui.pain)}">`}`;
-  }
-  function planPreviewHtml(p, full) {
-    if (!p) return '';
-    return `<div class="lv-plan-head">${sourceBadge(p)}<span class="lv-muted">${h(p.summary)}</span></div>
-      <div class="lv-status" data-lv-status role="status" aria-live="polite">${statusText()}</div>
-      ${(p.warnings || []).length ? `<details class="lv-note"><summary>注意 ${p.warnings.length}件</summary>${p.warnings.map(w => `<div>${h(w)}</div>`).join('')}</details>` : ''}
-      ${(p.notes || []).length ? `<div class="lv-note">${p.notes.map(n => h(n)).join('<br>')}</div>` : ''}
-      <ol class="lv-preview">${p.exercises.map((e, i) => {
-        const mains = e.sets.filter(s => s.type === 'main'), warms = e.sets.filter(s => s.type === 'warmup');
-        return `<li><div class="lv-pv-name">${h(e.name)}${e.isNew ? '<span class="lv-tag">新種目</span>' : ''}${!e.atStore && !e.isNew ? '<span class="lv-tag">この店舗で未実施</span>' : ''}</div>
-          <div class="lv-pv-sets">${warms.length ? `<span class="lv-muted">準備${warms.length}</span> ` : ''}${mains.map(s => `${wLabel(s.weight, e.equip)}×${s.reps}`).join(' / ')}</div>
-          ${full ? `${e.last ? `<div class="lv-muted small">前回：${h(e.last)}</div>` : ''}<details class="small"><summary>理由</summary>${h(e.reason)}${e.newReason ? '<br>' + h(e.newReason) : ''}</details>
-          <div class="lv-mini-actions"><button type="button" data-act="pup" data-i="${i}" aria-label="上へ">↑</button><button type="button" data-act="pdown" data-i="${i}" aria-label="下へ">↓</button><button type="button" data-act="pdel" data-i="${i}">削除</button></div>` : ''}</li>`;
-      }).join('')}</ol>`;
+      <div class="lv-row-label">疲労度</div><div class="lv-chips five">${[1, 2, 3, 4, 5].map(n => `<button type="button" class="${n === ui.fatigue ? 'on' : ''}" data-act="fatigue" data-v="${n}">${n}</button>`).join('')}</div>
+      <div class="lv-row-label">痛み・体調（任意）</div><input id="lvPainInput" placeholder="例：右肩2/10、寝不足" value="${h(ui.pain)}"></div>`;
   }
   function renderHome() {
     const box = $('trainHomeCard'); if (!box || !E) return;
     const active = readActive();
-    if (active) {
-      const done = active.exercises.reduce((a, e) => a + e.sets.filter(x => x.done).length, 0), total = active.exercises.reduce((a, e) => a + e.sets.length, 0);
-      box.innerHTML = `<div class="lv-eyebrow">筋トレ実施中</div><div class="lv-title">${h(E.storeLabel(active.store))}・${h(E.PARTS[active.part] || '')}</div><div class="lv-muted">開始 ${fmtTime(active.startedAt)}｜${done}/${total}セット完了｜入力は保存されています</div><button type="button" class="lv-primary" data-act="resume">筋トレを再開</button>`;
-      return;
-    }
+    if (active) { box.innerHTML = `<div class="lv-eyebrow">筋トレ実施中</div><div class="lv-title">${h(E.storeLabel(active.store))}・${h(E.PARTS[active.part] || '')}</div><div class="lv-muted">開始 ${fmtTime(active.startedAt)}｜下の表で完了チェックしてください</div>`; return; }
     if (!ui.plan) resolvePlan();
     const a = analysis(), lastPart = [...a.sessions].reverse().find(s => s.part === ui.part);
-    box.innerHTML = `<div class="lv-eyebrow">今日のトレーニング</div>
-      <div class="lv-title">${h(E.PARTS[ui.part])}トレ</div>
-      <div class="lv-muted">${lastPart ? `前回：${md(lastPart.date)}｜${h(E.storeLabel(lastPart.store))}${lastPart.minutes ? `｜${lastPart.minutes}分` : ''}` : 'この部位の記録はまだありません'}</div>
-      ${selectorsHtml(false)}
-      <button type="button" class="lv-primary" data-act="start">今日の筋トレを開始</button>
-      <div class="lv-card-inner">${planPreviewHtml(ui.plan, false)}<button type="button" class="lv-link" data-act="toTrain">メニューを確認・編集</button></div>`;
+    box.innerHTML = `<div class="lv-eyebrow">今日のトレーニング</div><div class="lv-title">${h(E.PARTS[ui.part])}トレ</div>
+      <div class="lv-muted">${lastPart ? `前回：${md(lastPart.date)}｜${h(lastPart.store ? E.storeLabel(lastPart.store) : '店舗未記録')}${lastPart.minutes ? `｜${lastPart.minutes}分` : ''}` : 'この部位の記録はまだありません'}</div>`;
   }
 
-  /* ---------- 筋トレ ---------- */
+  /* ---------- 共通のセット単位コンポーネント（開始前＝確認・編集、開始後＝実行） ---------- */
+  function exerciseCard(e, ei, live) {
+    const all = live && e.sets.length && e.sets.every(x => x.done), collapsed = live && (e.collapsed ?? all) && !ui.editMode;
+    let w = 0, m = 0;
+    const head = `<div class="lv-ex-head"><button type="button" class="lv-ex-title" data-act="toggleex">${['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫'][ei] || ei + 1} ${h(e.name)}${all ? ' ✓' : ''}</button><span class="lv-muted small">${h(E.EQUIP[e.equip] ? E.EQUIP[e.equip].label : '')}</span></div>`;
+    if (collapsed) return `<section class="lv-ex done" data-ei="${ei}">${head}<div class="lv-muted small">${e.sets.filter(x => x.done).map(x => `${wLabel(x.weight, e.equip)}×${x.reps}`).join('、')}</div></section>`;
+    return `<section class="lv-ex ${all ? 'done' : ''}" data-ei="${ei}">${head}
+      <div class="lv-last">前回実績：${e.last ? h(e.last) : (e.isNew ? '記録なし（新種目）' : '—')}</div>
+      <div class="lv-muted small">レスト：<button type="button" class="lv-link" data-act="restedit">${e.restSec}秒</button>${e.atStore === false && !e.isNew ? '｜この店舗では未実施' : ''}</div>
+      ${e.reason ? `<details class="small lv-why"><summary>根拠</summary>${h(e.reason)}${e.newReason ? '<br>' + h(e.newReason) : ''}</details>` : ''}
+      <table class="lv-sets"><thead><tr><th>区分</th><th>重量kg</th><th>回数</th><th>完了</th></tr></thead><tbody>
+      ${e.sets.map((x, si) => { const label = x.type === 'warmup' ? `準備${++w}` : `本${++m}`; return `<tr class="${x.done ? 'done' : ''}" data-si="${si}">
+        <td><button type="button" class="lv-type ${x.type}" data-act="settype" ${ui.editMode ? '' : 'tabindex="-1"'}>${label}${x.side || ''}</button></td>
+        <td><input type="number" inputmode="decimal" step="0.5" min="0" data-f="weight" value="${x.weight ?? ''}" placeholder="${e.equip === 'bodyweight' ? '自重' : '—'}" aria-label="${label}の重量"></td>
+        <td><input type="number" inputmode="numeric" step="1" min="0" data-f="reps" value="${x.reps ?? ''}" aria-label="${label}の回数"></td>
+        <td><button type="button" class="lv-check" data-act="done" aria-pressed="${!!x.done}" ${live ? '' : 'disabled aria-disabled="true" title="開始後にチェックできます"'} aria-label="${label}を完了">${x.done ? '✓' : ''}</button></td></tr>
+        ${live && e.showDetail ? `<tr class="lv-detail" data-si="${si}"><td></td><td><input type="number" inputmode="numeric" min="0" max="5" data-f="rir" value="${x.rir ?? ''}" placeholder="RIR"></td><td colspan="2"><input data-f="memo" value="${h(x.memo || '')}" placeholder="痛み・メモ"></td></tr>` : ''}`; }).join('')}
+      </tbody></table>
+      ${ui.editMode ? `<div class="lv-mini-actions"><button type="button" data-act="addwarm">＋準備</button><button type="button" data-act="addmain">＋本セット</button><button type="button" data-act="delset">−最後のセット</button>${live ? `<button type="button" data-act="detail">${e.showDetail ? 'RIR・メモを閉じる' : 'RIR・メモ'}</button>` : ''}</div>
+      <div class="lv-mini-actions"><button type="button" data-act="up">↑ 上へ</button><button type="button" data-act="down">↓ 下へ</button><button type="button" data-act="lr">${e.lr ? '左右別：オン' : '左右別'}</button><button type="button" data-act="rename">種目を変更</button><button type="button" data-act="delex">削除</button></div>` : ''}
+    </section>`;
+  }
   function renderTrain() {
     const root = $('trainRoot'); if (!root) return;
     const active = readActive();
     clearInterval(tick);
-    if (active) { root.innerHTML = sessionHtml(active); tick = setInterval(() => { renderElapsed(active); renderRest(); }, 1000); renderElapsed(active); renderRest(); return; }
-    if (ui.result) { root.innerHTML = resultHtml(ui.result); return; }
-    if (!ui.plan) resolvePlan();
-    root.innerHTML = `<div class="lv-card">${selectorsHtml(true)}</div>
-      <div class="lv-card">${planPreviewHtml(ui.plan, true)}${addExerciseHtml(ui.part)}</div>
-      <div class="lv-bar"><button type="button" class="lv-primary" data-act="start">この内容で開始</button></div>`;
-  }
-  function sessionHtml(s) {
-    const done = s.exercises.reduce((a, e) => a + e.sets.filter(x => x.done).length, 0), total = s.exercises.reduce((a, e) => a + e.sets.length, 0);
-    return `<div class="lv-live-head" id="lvLiveHead"><div class="lv-live-top"><b>${h(E.storeLabel(s.store))}・${h(E.PARTS[s.part] || '')}</b><span id="lvCount">${done}/${total}</span></div>
-        <div class="lv-muted small">開始 ${fmtTime(s.startedAt)}｜経過 <span id="lvElapsed">0分</span>｜<span id="lvSaved">自動保存済み</span></div>
-        <div class="lv-progress"><div id="lvBar" style="width:${total ? Math.round(done / total * 100) : 0}%"></div></div></div>
-      ${s.exercises.map((e, ei) => {
-        const all = e.sets.length && e.sets.every(x => x.done), collapsed = e.collapsed ?? all;
-        let w = 0, m = 0;
-        return `<section class="lv-ex ${all ? 'done' : ''}" data-ei="${ei}">
-          <div class="lv-ex-head"><button type="button" class="lv-ex-title" data-act="toggleex">${['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫'][ei] || ei + 1} ${h(e.name)}${all ? ' ✓' : ''}</button><span class="lv-muted small">${h(E.EQUIP[e.equip] ? E.EQUIP[e.equip].label : '')}</span></div>
-          ${collapsed ? `<div class="lv-muted small">${e.sets.filter(x => x.done).map(x => `${wLabel(x.weight, e.equip)}×${x.reps}`).join('、')}</div>` : `
-          ${e.last ? `<div class="lv-last">前回実績：${h(e.last)}</div>` : ''}
-          <div class="lv-muted small">休憩：<button type="button" class="lv-link" data-act="restedit">${e.restSec}秒</button>${e.isNew ? '｜新種目' : ''}</div>
-          <table class="lv-sets"><thead><tr><th>区分</th><th>重量kg</th><th>回数</th><th>完了</th></tr></thead><tbody>
-          ${e.sets.map((x, si) => { const label = x.type === 'warmup' ? `準備${++w}` : `本${++m}`; return `<tr class="${x.done ? 'done' : ''}" data-si="${si}">
-            <td><button type="button" class="lv-type ${x.type}" data-act="settype">${label}${x.side ? x.side : ''}</button></td>
-            <td><input type="number" inputmode="decimal" step="0.5" min="0" data-f="weight" value="${x.weight ?? ''}" placeholder="${e.equip === 'bodyweight' ? '自重' : '—'}" aria-label="${label}の重量"></td>
-            <td><input type="number" inputmode="numeric" step="1" min="0" data-f="reps" value="${x.reps ?? ''}" aria-label="${label}の回数"></td>
-            <td><button type="button" class="lv-check" data-act="done" aria-pressed="${x.done}" aria-label="${label}を完了">${x.done ? '✓' : ''}</button></td></tr>
-            ${e.showDetail ? `<tr class="lv-detail" data-si="${si}"><td></td><td><input type="number" inputmode="numeric" min="0" max="5" data-f="rir" value="${x.rir ?? ''}" placeholder="RIR"></td><td colspan="2"><input data-f="memo" value="${h(x.memo)}" placeholder="痛み・メモ"></td></tr>` : ''}`; }).join('')}
-          </tbody></table>
-          <div class="lv-mini-actions"><button type="button" data-act="addwarm">＋準備</button><button type="button" data-act="addmain">＋本セット</button><button type="button" data-act="delset">−最後のセット</button><button type="button" data-act="detail">${e.showDetail ? 'RIR・メモを閉じる' : 'RIR・メモ'}</button></div>
-          <div class="lv-mini-actions"><button type="button" data-act="up">↑</button><button type="button" data-act="down">↓</button><button type="button" data-act="lr">${e.lr ? '左右別：オン' : '左右別'}</button><button type="button" data-act="rename">変更</button><button type="button" data-act="delex">削除</button></div>`}
-        </section>`;
-      }).join('')}
-      <div class="lv-card">${addExerciseHtml(s.part)}</div>
-      ${ui.finishing ? finishHtml(s) : ''}
-      <div class="lv-bar"><div id="lvRest" class="lv-rest"></div><button type="button" class="lv-primary ${ui.finishing ? 'sub' : ''}" data-act="finish">${ui.finishing ? '入力に戻る' : '終了する'}</button></div>`;
+    if (!active && ui.result) { root.innerHTML = resultHtml(ui.result); return; }
+    if (!active && !ui.plan) resolvePlan();
+    const p = active || ui.plan;
+    const done = active ? active.exercises.reduce((a, e) => a + e.sets.filter(x => x.done).length, 0) : 0, total = p.exercises.reduce((a, e) => a + e.sets.length, 0);
+    const warmN = p.exercises.reduce((a, e) => a + e.sets.filter(x => x.type === 'warmup').length, 0);
+    const head = active
+      ? `<div class="lv-live-head" id="lvLiveHead"><div class="lv-live-top"><b>${h(E.storeLabel(active.store))}・${h(E.PARTS[active.part] || '')}</b><span id="lvCount">${done}/${total}</span></div>
+          <div class="lv-muted small">開始 ${fmtTime(active.startedAt)}｜経過 <span id="lvElapsed">0分</span>｜<span id="lvSaved">自動保存済み</span></div>
+          <div class="lv-progress"><div id="lvBar" style="width:${total ? Math.round(done / total * 100) : 0}%"></div></div></div>`
+      : `${selectorsHtml()}<div class="lv-card lv-plan-card"><div class="lv-plan-head">${sourceBadge(p)}<span class="lv-muted">${h(p.summary)}（準備${warmN}・本${total - warmN}）</span></div>
+          <div class="lv-status" data-lv-status role="status" aria-live="polite">${statusText()}</div>
+          ${(p.warnings || []).length ? `<details class="lv-note"><summary>注意 ${p.warnings.length}件</summary>${p.warnings.map(w => `<div>${h(w)}</div>`).join('')}</details>` : ''}
+          ${(p.notes || []).length || (p.fixes || []).length ? `<details class="lv-note"><summary>メニュー作成の補足</summary>${[...(p.notes || []), ...(p.fixes || [])].map(n => `<div>${h(n)}</div>`).join('')}</details>` : ''}
+          <p class="lv-muted small">開始前に重量・回数を直せます。完了チェックは開始後に使えます。</p></div>`;
+    const editBtn = `<div class="lv-edit-toggle"><button type="button" class="lv-mini" data-act="editmode" aria-pressed="${!!ui.editMode}">${ui.editMode ? '編集を終える' : '編集（並べ替え・削除・セット追加）'}</button></div>`;
+    root.innerHTML = `${head}${editBtn}
+      ${p.exercises.map((e, ei) => exerciseCard(e, ei, !!active)).join('')}
+      ${ui.editMode ? `<div class="lv-card">${addExerciseHtml(p.part)}</div>` : ''}
+      ${active && ui.finishing ? finishHtml(active) : ''}
+      <div class="lv-bar">${active ? `<div id="lvRest" class="lv-rest"></div><button type="button" class="lv-primary ${ui.finishing ? 'sub' : ''}" data-act="finish">${ui.finishing ? '入力に戻る' : '終了する'}</button>` : `<button type="button" class="lv-primary" data-act="start">この内容で筋トレを開始</button>`}</div>`;
+    if (active) { tick = setInterval(() => { renderElapsed(active); renderRest(); }, 1000); renderElapsed(active); renderRest(); renderSaveState(active); }
   }
   function finishHtml(s) {
     const incomplete = s.exercises.reduce((a, e) => a + e.sets.filter(x => !x.done).length, 0);
@@ -405,7 +405,7 @@
     const owner = isOwner(), registered = Seed.CONFIRMED_SESSIONS.every(c => recs().some(r => (r.workoutSessions || []).some(x => x.id === c.id)));
     const exNames = [...new Set(Object.values(a.byKey).filter(s => s.exposures.some(x => x.top)).map(s => s.key))];
     if (!ui.graphEx && exNames.length) ui.graphEx = exNames[0];
-    root.innerHTML = `${owner && !registered ? `<div class="lv-card"><b>ChatGPTで確定した実績（11/24 胸・11/25 背中・11/26 肩）</b><p class="lv-muted small">まだ登録されていません。重複しないように登録します（登録前に端末内へバックアップを作成）。</p><button type="button" class="lv-primary" data-act="seed">確定実績を登録する</button></div>` : ''}
+    root.innerHTML = `${owner && !registered ? `<div class="lv-card"><b>ChatGPTで確定した実績（11/17 脚・11/24 胸・11/25 背中・11/26 肩）</b><p class="lv-muted small">まだ登録されていません。重複しないように登録します（登録前に端末内へバックアップを作成）。</p><button type="button" class="lv-primary" data-act="seed">確定実績を登録する</button></div>` : ''}
       <div class="lv-card"><div class="lv-filters">
         <select data-hf="store"><option value="">全店舗</option>${Object.values(E.STORES).map(s => `<option value="${s.id}" ${f.store === s.id ? 'selected' : ''}>${s.label}</option>`).join('')}</select>
         <select data-hf="part"><option value="">全部位</option>${Object.entries(E.PARTS).map(([k, v]) => `<option value="${k}" ${f.part === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
@@ -461,9 +461,10 @@
       let rec = all.find(r => r.date === c.date);
       const exists = rec && (rec.workoutSessions || []).some(x => x.id === c.id || (x.status === 'finished' && x.store === c.store && x.part === c.part));
       if (exists) { skipped++; return; }
-      const session = { id: c.id, schema: 2, source: 'confirmed', date: c.date, store: c.store, part: c.part, status: 'finished', startedAt: new Date(c.startedAt).toISOString(), finishedAt: new Date(c.finishedAt).toISOString(), updatedAt: appNowIso(), fatigue: c.fatigue, pain: c.pain, feedback: { note: c.note },
+      const iso = v => v ? new Date(v).toISOString() : null;
+      const session = { id: c.id, schema: 2, source: 'confirmed', date: c.date, store: c.store, part: c.part, status: 'finished', startedAt: iso(c.startedAt), finishedAt: iso(c.finishedAt), updatedAt: appNowIso(), fatigue: c.fatigue, pain: c.pain, feedback: { note: c.note },
         exercises: c.exercises.map(e => ({ id: Math.random().toString(36).slice(2), name: e.name, part: (E.guessEntry(e.name) || {}).part || c.part, equip: E.equipOf(e.name), restSec: E.REST[c.store][E.kindOf(e.name)], note: e.note || '',
-          sets: e.sets.map(x => ({ id: Math.random().toString(36).slice(2), type: x.type, plannedWeight: x.weight, plannedReps: x.reps, weight: x.weight, reps: x.reps, done: true, doneAt: new Date(c.finishedAt).toISOString(), rir: null, memo: '', side: '' })) })) };
+          sets: e.sets.map(x => ({ id: Math.random().toString(36).slice(2), type: x.type, plannedWeight: x.weight, plannedReps: x.reps, weight: x.weight, reps: x.reps, done: true, doneAt: iso(c.finishedAt), rir: null, memo: '', side: '' })) })) };
       session.summary = E.summarizeSession(session, (analysis().body || {}).weight || null);
       if (!rec) { rec = { date: c.date }; all.push(rec); }
       const fields = E.sessionRecordFields(session);
@@ -622,8 +623,7 @@
       case 'minutes': ui.minutes = +v; replan(); break;
       case 'fatigue': ui.fatigue = ui.fatigue === +v ? null : +v; replan(); break;
       case 'start': ui.pain = ($('lvPainInput') || {}).value ?? ui.pain; startSession(); break;
-      case 'resume': case 'toTrain': openTab('train'); break;
-      case 'tohome': ui.result = null; ui.plan = null; openTab('home'); break;
+      case 'tohome': ui.result = null; ui.plan = null; renderAll(false); window.scrollTo({ top: 0 }); break;
       case 'airetry': aiPlan(true, ui.plan, ui.planKey); break;
       case 'pup': case 'pdown': case 'pdel': {
         const p = JSON.parse(JSON.stringify(ui.plan)), i = +btn.dataset.i;
@@ -641,17 +641,18 @@
         if (s.exercises[ei].sets.every(t => t.done)) { exEl.classList.add('done'); }
         break;
       }
-      case 'settype': mutate(st => { const x = st.exercises[ei].sets[si]; x.type = x.type === 'warmup' ? 'main' : 'warmup'; }, true); break;
-      case 'addwarm': mutate(st => { const e = st.exercises[ei]; const first = e.sets.find(x => x.type === 'main'); const at = e.sets.filter(x => x.type === 'warmup').length; e.sets.splice(at, 0, { id: Math.random().toString(36).slice(2), type: 'warmup', plannedWeight: null, plannedReps: null, weight: first && first.weight ? Math.round(first.weight * 0.5) : null, reps: 10, done: false, doneAt: null, rir: null, memo: '', side: '' }); }, true); break;
-      case 'addmain': mutate(st => { const e = st.exercises[ei]; const last = [...e.sets].reverse().find(x => x.type === 'main') || {}; e.sets.push({ id: Math.random().toString(36).slice(2), type: 'main', plannedWeight: null, plannedReps: null, weight: last.weight ?? null, reps: last.reps ?? 10, done: false, doneAt: null, rir: null, memo: '', side: '' }); }, true); break;
-      case 'delset': mutate(st => { const e = st.exercises[ei]; const idx = [...e.sets.keys()].reverse().find(i => !e.sets[i].done); if (idx !== undefined) e.sets.splice(idx, 1); else toast('完了済みのセットは削除できません（チェックを外してから削除）'); }, true); break;
-      case 'detail': mutate(st => { st.exercises[ei].showDetail = !st.exercises[ei].showDetail; }, true); break;
-      case 'toggleex': mutate(st => { const e = st.exercises[ei]; const all = e.sets.length && e.sets.every(x => x.done); e.collapsed = !(e.collapsed ?? all); }, true); break;
-      case 'up': case 'down': mutate(st => { const j = act === 'up' ? ei - 1 : ei + 1; if (j < 0 || j >= st.exercises.length) return; [st.exercises[ei], st.exercises[j]] = [st.exercises[j], st.exercises[ei]]; }, true); break;
-      case 'delex': { const s = readActive(); if (s && s.exercises[ei].sets.some(x => x.done) && !confirm('完了済みのセットがある種目です。削除するとこの種目の記録も消えます。削除しますか？')) break; mutate(st => { st.exercises.splice(ei, 1); }, true); break; }
-      case 'rename': { const s = readActive(); const name = s && prompt('種目名を変更（別の種目に変える場合も入力）', s.exercises[ei].name); if (name && name.trim()) mutate(st => { const e = st.exercises[ei]; e.name = name.trim().slice(0, 40); e.equip = E.equipOf(e.name); }, true); break; }
-      case 'lr': mutate(st => { const e = st.exercises[ei]; e.lr = !e.lr; if (e.lr) e.sets = e.sets.flatMap(x => x.side ? [x] : [{ ...x, side: '左' }, { ...x, id: Math.random().toString(36).slice(2), side: '右', done: false, doneAt: null }]); else e.sets = e.sets.filter(x => x.side !== '右' || x.done).map(x => ({ ...x, side: x.done ? x.side : '' })); }, true); break;
-      case 'restedit': { const s = readActive(); const sec = s && prompt('この種目の休憩（秒）', s.exercises[ei].restSec); if (sec && +sec > 0) mutate(st => { st.exercises[ei].restSec = Math.min(600, Math.round(+sec)); }, true); break; }
+      case 'editmode': ui.editMode = !ui.editMode; renderAll(); break;
+      case 'settype': edit((t) => { const x = t.exercises[ei].sets[si]; x.type = x.type === 'warmup' ? 'main' : 'warmup'; }); break;
+      case 'addwarm': edit((t, live) => { const e = t.exercises[ei]; const first = e.sets.find(x => x.type === 'main'); const at = e.sets.filter(x => x.type === 'warmup').length; e.sets.splice(at, 0, blankSet(live, 'warmup', first && first.weight ? Math.round(first.weight * 0.6 / 5) * 5 || null : null, 10)); }); break;
+      case 'addmain': edit((t, live) => { const e = t.exercises[ei]; const last = [...e.sets].reverse().find(x => x.type === 'main') || {}; e.sets.push(blankSet(live, 'main', last.weight ?? null, last.reps ?? 10)); }); break;
+      case 'delset': edit((t) => { const e = t.exercises[ei]; const idx = [...e.sets.keys()].reverse().find(i => !e.sets[i].done); if (idx !== undefined) e.sets.splice(idx, 1); else toast('完了済みのセットは削除できません（チェックを外してから削除）'); }); break;
+      case 'detail': edit((t) => { t.exercises[ei].showDetail = !t.exercises[ei].showDetail; }); break;
+      case 'toggleex': if (readActive()) mutate(st => { const e = st.exercises[ei]; const all = e.sets.length && e.sets.every(x => x.done); e.collapsed = !(e.collapsed ?? all); }, true); break;
+      case 'up': case 'down': edit((t) => { const j = act === 'up' ? ei - 1 : ei + 1; if (j < 0 || j >= t.exercises.length) return; [t.exercises[ei], t.exercises[j]] = [t.exercises[j], t.exercises[ei]]; }); break;
+      case 'delex': { const s = readActive(); if (s && s.exercises[ei].sets.some(x => x.done) && !confirm('完了済みのセットがある種目です。削除するとこの種目の記録も消えます。削除しますか？')) break; edit((t) => { t.exercises.splice(ei, 1); }); break; }
+      case 'rename': { const cur = (readActive() || ui.plan).exercises[ei]; const name = prompt('種目名を変更（別の種目に変える場合も入力）', cur.name); if (name && name.trim()) edit((t) => { const e = t.exercises[ei]; e.name = name.trim().slice(0, 40); e.equip = E.equipOf(e.name); }); break; }
+      case 'lr': edit((t, live) => { const e = t.exercises[ei]; e.lr = !e.lr; if (e.lr) e.sets = e.sets.flatMap(x => x.side ? [x] : [{ ...x, side: '左' }, { ...x, id: Math.random().toString(36).slice(2), side: '右', done: false, doneAt: null }]); else e.sets = e.sets.filter(x => x.side !== '右' || x.done).map(x => ({ ...x, side: x.done ? x.side : '' })); }); break;
+      case 'restedit': { const cur = (readActive() || ui.plan).exercises[ei]; const sec = prompt('この種目のレスト（秒）', cur.restSec); if (sec && +sec > 0) edit((t) => { t.exercises[ei].restSec = Math.min(600, Math.round(+sec)); }); break; }
       case 'restpause': { const r = readRest(); if (!r) break; if (r.pausedLeft != null) { r.endAt = Date.now() + r.pausedLeft * 1000; r.pausedLeft = null; } else r.pausedLeft = restLeft(r); localStorage.setItem(restKey(), JSON.stringify(r)); renderRest(); break; }
       case 'restplus': { const r = readRest(); if (!r) break; if (r.pausedLeft != null) r.pausedLeft += 30; else r.endAt += 30000; localStorage.setItem(restKey(), JSON.stringify(r)); renderRest(); break; }
       case 'restskip': stopRest(); break;
@@ -675,13 +676,13 @@
   function addExercise() {
     const typed = (($('lvAddName') || {}).value || '').trim().slice(0, 40), name = typed || ($('lvAddSel') || {}).value;
     if (!name) return;
-    const active = readActive(), store = active ? active.store : ui.store, a = analysis(), stat = a.byKey[E.weightKey(store, name)];
+    const active = readActive(), store = active ? active.store : ui.store, a = analysis(), ref = E.latestFor(a, store, name), stat = ref.exposure ? { last: ref.exposure } : null;
     const lastMain = stat ? stat.last.main : [];
     const entry = E.exactEntry(name) || E.guessEntry(name);
     const ex = { name, part: entry ? entry.part : ui.part, equip: E.equipOf(name), restSec: E.REST[store][E.kindOf(name)], reason: stat ? `前回：${E.formatSets(stat.last.sets)}` : '追加した種目。準備セットで重量を確認してください。', last: stat ? E.formatSets(stat.last.sets) : '', isNew: !stat,
       sets: lastMain.length ? lastMain.map(s => ({ type: 'main', weight: s.weight, reps: s.reps })) : [{ type: 'warmup', weight: null, reps: 10 }, ...[0, 1, 2].map(() => ({ type: 'main', weight: null, reps: entry ? entry.reps[0] : 10 }))] };
     if (active) mutate(s => { s.exercises.push(E.sessionExercise(ex)); }, true);
-    else { const p = JSON.parse(JSON.stringify(ui.plan)); p.exercises.push({ ...ex, id: Math.random().toString(36).slice(2), atStore: true }); p.source = p.source === 'local' ? 'chat' : p.source; ui.plan = fitToTime(p, 999); ui.plan.minutes = p.minutes; ui.plan.basedOnSessions = a.totalSessions; ui.plan.basedOnLastDate = a.lastSession ? a.lastSession.date : null; writeCoach(c => { c.plans[planKey(ui.plan.store, ui.plan.part)] = ui.plan; }); renderAll(); }
+    else edit(t => { t.exercises.push({ ...ex, id: Math.random().toString(36).slice(2), atStore: true }); });
     toast(`「${name}」を追加しました`);
   }
   function onInput(ev) {
@@ -691,16 +692,17 @@
     if (t.id === 'lvGraphEx') { ui.graphEx = t.value; renderHistory(); return; }
     if (!t.dataset || !t.dataset.f) return;
     const exEl = t.closest('[data-ei]'), setEl = t.closest('tr[data-si]'); if (!exEl || !setEl) return;
-    mutate(s => { const x = s.exercises[+exEl.dataset.ei].sets[+setEl.dataset.si]; const f = t.dataset.f; x[f] = f === 'memo' ? t.value : (t.value === '' ? null : +t.value); });
+    edit(s => { const x = s.exercises[+exEl.dataset.ei].sets[+setEl.dataset.si]; const f = t.dataset.f; x[f] = f === 'memo' ? t.value : (t.value === '' ? null : +t.value); }, false);
   }
 
   /* ---------- 公開API・起動 ---------- */
   window.WorkoutUI = {
     open() { openTab(readActive() ? 'train' : 'home'); },
     render: () => renderAll(), renderHome, renderTrain, renderHistory, renderCoach, renderSettings,
-    onShow(id) { if (id === 'home') renderHome(); if (id === 'train') renderTrain(); if (id === 'history') renderHistory(); if (id === 'aicoach') renderCoach(); if (id === 'settings') renderSettings(); },
+    onShow(id) {
+      if (id === 'home' || id === 'train') { const root = $('trainRoot'), target = $(id); if (root && target && root.parentElement !== target) target.appendChild(root); renderHome(); renderTrain(); return; } if (id === 'history') renderHistory(); if (id === 'aicoach') renderCoach(); if (id === 'settings') renderSettings(); },
     onDataChanged() {
-      if (!ui.autoOpened && readActive()) { ui.autoOpened = true; openTab('train'); return; }
+      if (!ui.autoOpened && readActive()) { ui.autoOpened = true; renderAll(false); return; }
       const focused = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
       if (focused || ui.renderedFor === signature()) return;
       if (!readActive() && !ui.result) ui.plan = null;
@@ -714,6 +716,7 @@
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') renderRest(); }); // 復帰時は実時刻から残りを再計算
   window.addEventListener('online', () => { const s = readActive(); if (s) saveActive(s, true); });
   window.addEventListener('pagehide', () => { const s = readActive(); if (s) { clearTimeout(mirrorTimer); writeCoach(c => { c.active = s; }); } });
-  renderHome();
-  if (readActive()) { ui.autoOpened = true; setTimeout(() => { if (readActive()) openTab('train'); }, 0); }
+  { const root = $('trainRoot'), home = $('home'); if (root && home) home.appendChild(root); } // 起動時はホームに同じ画面を表示
+  renderHome(); renderTrain();
+  if (readActive()) ui.autoOpened = true;
 })();

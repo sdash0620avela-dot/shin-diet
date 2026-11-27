@@ -5,6 +5,14 @@
   const W = (w, r) => S('warmup', w, r), M = (w, r) => S('main', w, r);
   const ex = (name, sets, extra = {}) => ({ name, sets, ...extra });
   const CONFIRMED_SESSIONS = [
+    { id: 'confirmed-2026-11-17-shioda-legs', date: '2026-11-17', store: 'shioda', part: 'legs', startedAt: null, finishedAt: null,
+      expect: { minutes: null, totalSets: 12, warmupSets: 0, mainSets: 12, totalReps: 177 }, fatigue: null, pain: '', note: '本人確認済みの本セットのみ。準備セット・時間・疲労度・痛み・RIRは未提供のため未記録。',
+      exercises: [
+        ex('レッグプレス', [M(170, 15), M(170, 12), M(150, 15)]),
+        ex('レッグカール', [M(80, 15), M(80, 12), M(70, 15)]),
+        ex('レッグエクステンション', [M(80, 14), M(90, 13), M(70, 15)]),
+        ex('アブダクション', [M(100, 18), M(100, 15), M(90, 18)])
+      ] },
     { id: 'confirmed-2026-11-24-honten-chest', date: '2026-11-24', store: 'honten', part: 'chest', startedAt: '2026-11-24T15:43:00+09:00', finishedAt: '2026-11-24T16:48:00+09:00',
       expect: { minutes: 65, totalSets: 24, warmupSets: 7, mainSets: 17, totalReps: 324 }, fatigue: null, pain: '', note: 'ベンチインクライン・ケーブルフライの方が通常のケーブルフライより効く。痛み・疲労度・RIRは未申告。',
       exercises: [

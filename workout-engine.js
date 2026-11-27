@@ -64,7 +64,7 @@
     C('フェイスプル', 'shoulders', 'cable', 'isolation', [10, 15], { moves: ['raise'] }),
     // 脚
     C('レッグプレス', 'legs', 'plate', 'compound', [12, 15], { moves: ['knee', 'lowback'], station: 'legpress' }),
-    C('カーフプレス', 'legs', 'plate', 'isolation', [12, 20], { moves: ['calf'], station: 'legpress' }),
+    C('カーフプレス', 'legs', 'plate', 'isolation', [12, 20], { aliases: ['カーフ', 'レッグプレスカーフ', 'カーフプレス（レッグプレス）'], moves: ['calf'], station: 'legpress' }),
     C('レッグエクステンション', 'legs', 'machine', 'isolation', [12, 15], { moves: ['knee'] }),
     C('レッグカール', 'legs', 'machine', 'isolation', [12, 15], { aliases: ['シーテッドレッグカール', 'ライイングレッグカール'], moves: ['hamstring'] }),
     C('アダクション', 'legs', 'machine', 'isolation', [12, 20], { aliases: ['アダクター', 'ヒップアダクション'], moves: ['hip'] }),
@@ -145,7 +145,7 @@
   function storeLabel(id) { return STORES[id] ? STORES[id].label : (id || '店舗不明'); }
 
   // 種目名は「完全一致（正式名・別名）」だけを同一種目とみなす。似た名前の別機器を勝手に統合しない（spec 3・16）
-  function exactEntry(name) { const k = clean(name); if (!k) return null; return CATALOG.find(e => clean(e.name) === k || e.aliases.some(a => clean(a) === k)) || null; }
+  function exactEntry(name) { const k = clean(String(name ?? '').normalize('NFKC')); if (!k) return null; return CATALOG.find(e => clean(e.name) === k || e.aliases.some(a => clean(a) === k)) || null; }
   // 部位・器具の推定だけに使う部分一致（重量の統合には使わない）
   function guessEntry(name) {
     const k = clean(name); if (!k) return null;
@@ -155,7 +155,13 @@
     return hit ? hit[1] : null;
   }
   const catalogEntry = exactEntry;
-  function canonicalName(name) { const e = exactEntry(name); return e ? e.name : String(name || '').trim(); }
+  // 表記揺れの正規化：全角半角・空白・末尾の店舗名やメーカー名の括弧書きをそろえる（「ワイド」「プレート式」など機器を区別する語は残す）
+  function normName(name) {
+    let v = String(name ?? '').normalize('NFKC').replace(/[\s　]+/g, '').trim();
+    v = v.replace(/[(（]([^()（）]*)[)）]$/, (m, inner) => /本店|塩田|店舗|lifefitness|ライフフィットネス|テクノジム|technogym|マトリックス|matrix|マシン$/i.test(inner.replace(/\s/g, '')) ? '' : m);
+    return v;
+  }
+  function canonicalName(name) { const n = normName(name); const e = exactEntry(n); return e ? e.name : n; }
   function equipOf(name) {
     const e = exactEntry(name); if (e) return e.equip;
     const v = String(name || '');
@@ -211,7 +217,12 @@
     while ((m = re.exec(value))) {
       const entry = guessEntry(m[1]); if (!entry) continue;
       const count = Math.max(1, Math.min(10, +(m[4] || m[5] || 1)));
-      exercises.push({ name: entry.name, rawName: m[1], rating: '', legacy: true, fromText: true, sets: Array.from({ length: count }, () => ({ weight: +m[2], reps: +m[3] })) });
+      const sets = Array.from({ length: count }, () => ({ weight: +m[2], reps: +m[3] }));
+      // 続けて「、170kg×12、150kg×15」と書かれたセットも同じ種目として読む
+      const tail = /^\s*[、,／/]\s*(\d{1,3}(?:\.\d)?)\s*(?:kg|キロ)?\s*[×x*]\s*(\d{1,2})\s*回?/i;
+      let rest = value.slice(re.lastIndex), t;
+      while ((t = rest.match(tail))) { sets.push({ weight: +t[1], reps: +t[2] }); rest = rest.slice(t[0].length); re.lastIndex += t[0].length; }
+      exercises.push({ name: entry.name, rawName: m[1], rating: '', legacy: true, fromText: true, sets });
     }
     const hm = value.match(/(\d+(?:\.\d+)?)\s*時間/), mm = value.match(/(\d{1,3})\s*分/);
     const minutes = hm ? Math.round(+hm[1] * 60) : mm ? +mm[1] : null;
@@ -334,6 +345,7 @@
     const now = dayIndex(todayDate || new Date().toISOString().slice(0, 10));
     const byKey = {};
     sessions.forEach(s => s.exercises.forEach(e => {
+      if (!e.sets.length) return; // 完了セットがない種目は「実施した実績」として数えない（以前の実績を隠さない）
       const key = weightKey(s.store, e.name);
       const mains = mainSets(e.sets);
       const top = mains.reduce((best, x) => { const v = e1rm(x.weight, x.reps); return v && (!best || v > best.e1rm) ? { ...x, e1rm: v } : best; }, null);
@@ -499,6 +511,35 @@
     return list;
   }
 
+  // 履歴がある種目か（店舗・表記揺れを問わず、同じ種目名の実績が1回でもあるか）
+  function hasHistory(analysis, name) { const n = canonicalName(name); return Object.values(analysis.byKey).some(s => s.name === n && s.exposures.some(x => x.sets.length)); }
+  // 重量の基準にする「最新の実績」：同じ店舗（ダンベル・自重は共通）と店舗未記録の実績のうち最も新しいもの
+  function latestFor(analysis, store, name) {
+    const n = canonicalName(name), eq = equipOf(name), shared = EQUIP[eq] && EQUIP[eq].shared;
+    const own = analysis.byKey[weightKey(store, name)], unknown = shared ? null : analysis.byKey[weightKey('', name)];
+    // 本セットのある最新の実績（準備セットだけの日は基準にしない）
+    const lastMain = st => st ? [...st.exposures].reverse().find(x => x.main.length) || null : null;
+    const cands = [[own, lastMain(own)], [unknown, lastMain(unknown)]].filter(([, x]) => x).sort((a, b) => b[1].date.localeCompare(a[1].date));
+    const [pick, exposure] = cands[0] || [own || null, null];
+    let note = '';
+    if (pick && pick === unknown && exposure) note = `${exposure.date.slice(5).replace('-', '/')}の記録は店舗が未記録のため、${storeLabel(store)}の実績として扱っています（履歴で店舗を指定できます）。`;
+    const newerElsewhere = Object.values(analysis.byKey).filter(st => st.name === n && st !== own && st !== unknown && lastMain(st) && (!exposure || lastMain(st).date > exposure.date)).sort((a, b) => lastMain(b).date.localeCompare(lastMain(a).date))[0];
+    if (newerElsewhere) note += ` より新しい${lastMain(newerElsewhere).date.slice(5).replace('-', '/')}の${storeLabel(newerElsewhere.store)}の実績は、機器が違うため重量に使っていません。`;
+    return { stat: pick, exposure, note: note.trim() };
+  }
+  // 準備セットの設計（spec 6-4）：前回の準備セットを優先。なければ主力（複合種目・その部位の最初の2種目）にだけ、本セットの重さに応じて入れる
+  function designWarmups(name, mains, lastEx, before) {
+    const prev = lastEx ? (lastEx.sets || []).filter(s => s.type === 'warmup').map(s => ({ type: 'warmup', weight: s.weight, reps: s.reps })) : [];
+    if (prev.length) return prev;
+    const top = Math.max(0, ...mains.map(s => +s.weight || 0));
+    const eq = equipOf(name), kind = kindOf(name), primary = kind === 'compound' || before.length < 2;
+    if (!primary || eq === 'bodyweight') return [];
+    const step = eq === 'dumbbell' ? 2 : 5, rd = v => Math.max(step, Math.round(v / step) * step);
+    if (!top) return [{ type: 'warmup', weight: null, reps: 10 }];
+    if (kind === 'compound' && top >= 60) return [{ type: 'warmup', weight: rd(top * 0.6), reps: 8 }, { type: 'warmup', weight: rd(top * 0.85), reps: 4 }];
+    return [{ type: 'warmup', weight: rd(top * 0.6), reps: 10 }];
+  }
+
   function planSession(opts) {
     const o = opts || {};
     const store = normalizeStore(o.store) || 'honten', part = PARTS[o.part] ? o.part : 'chest';
@@ -530,33 +571,35 @@
       names = names.filter(n => { const r = ratingFor(n, ratings, 'priority'); return !(r && r.value === 'low') && (ratingFor(n, ratings, 'effect') || {}).value !== 'low'; });
     }
 
+    const exercisesSoFar = [];
     const exercises = names.map(name => {
-      const key = weightKey(store, name), stat = analysis.byKey[key];
-      const lastEx = stat ? stat.last : null;
+      const key = weightKey(store, name), ref = latestFor(analysis, store, name), stat = ref.stat;
+      const lastEx = ref.exposure;
       const hurt = painHit(name, pain), caution = ratingFor(name, ratings, 'pain');
-      const ex = { id: uid(), name, part: (exactEntry(name) || guessEntry(name) || {}).part || part, equip: equipOf(name), restSec: restFor(store, name), reason: '', isNew: false, atStore: (analysis.storeExercises[store] || []).includes(name) || EQUIP[equipOf(name)].shared, sets: [], last: lastEx ? formatSets(lastEx.sets) : '', lastDate: lastEx ? lastEx.date : '' };
+      const ex = { id: uid(), name, part: (exactEntry(name) || guessEntry(name) || {}).part || part, equip: equipOf(name), restSec: restFor(store, name), reason: '', isNew: !hasHistory(analysis, name), atStore: (analysis.storeExercises[store] || []).includes(name) || EQUIP[equipOf(name)].shared, sets: [], last: lastEx ? formatSets(lastEx.sets) : '', lastDate: lastEx ? lastEx.date : '', refNote: ref.note };
       if (hurt >= 6) return null;
       if (lastEx && lastEx.main.length) {
         const hold = hurt >= 3 || fatigue >= 4 || lastEx.rating === 'hard';
         const pr = progressMain(lastEx.main, name, stat, { hold, holdReason: hurt >= 3 ? '痛みの申告があるため重量・回数は維持' : fatigue >= 4 ? '疲労度が高いため維持' : '前回きつかったため維持' });
         let mains = pr.sets;
         if (fatigue >= 4 && mains.length >= 3) mains = mains.slice(0, -1);
-        // 準備セット：本人が前回入れた準備セットを引き継ぐ（機械的に追加しない）
-        const warm = (lastEx.sets || []).filter(s => s.type === 'warmup').map(s => ({ type: 'warmup', weight: s.weight, reps: s.reps }));
+        // 準備セット：本人が前回入れた準備セットを引き継ぐ。前回の記録に準備がなければ主力種目だけ設計する
+        const warm = designWarmups(name, mains, lastEx, exercisesSoFar);
         ex.sets = [...warm, ...mains];
-        ex.reason = `前回（${lastEx.date.slice(5).replace('-', '/')}${EQUIP[ex.equip].shared ? '' : '・' + storeLabel(lastEx.store)}）${formatSets(lastEx.main)}。${pr.note}`;
+        ex.reason = `基準：${lastEx.date.slice(5).replace('-', '/')}${EQUIP[ex.equip].shared ? '' : '・' + (lastEx.store ? storeLabel(lastEx.store) : '店舗未記録')}の${formatSets(lastEx.main)}（最新の実績）。${pr.note}${ref.note ? ' ' + ref.note : ''}`;
       } else {
         // 同じ重量キーの実績なし：他店舗の同名種目は参考表示のみ（マシンは換算しない）
         const other = Object.values(analysis.byKey).filter(s => s.name === name && s.key !== key && s.last.top).sort((a, b) => a.daysSince - b.daysSince)[0];
         const entry = exactEntry(name) || guessEntry(name);
         const reps = entry ? entry.reps[0] : 10;
         const count = kindOf(name) === 'compound' ? 3 : 3;
-        ex.sets = [...(kindOf(name) === 'compound' ? [{ type: 'warmup', weight: null, reps: 10 }] : []), ...Array.from({ length: count }, () => ({ type: 'main', weight: null, reps }))];
-        ex.isNew = !stat && !other;
+        const mainsNew = Array.from({ length: count }, () => ({ type: 'main', weight: null, reps }));
+        ex.sets = [...designWarmups(name, mainsNew, null, exercisesSoFar), ...mainsNew];
         ex.reason = other ? `${storeLabel(other.store)}では${other.last.top.weight}kg×${other.last.top.reps}回（${EQUIP[ex.equip].label}は店舗・機器別のため換算しません）。1セット目で重量を決めてください。` : `記録がない種目です。準備セットで重量を確認してから本セットへ。`;
       }
       if (hurt >= 3) ex.reason += ` ${Object.keys(pain).join('・')}の痛み申告あり。痛みが強くなる・鋭い痛み・しびれが出たら中止。`;
       else if (caution) ex.reason += ` 注意：${caution.note}`;
+      exercisesSoFar.push(ex);
       return ex;
     }).filter(Boolean);
     if (fatigue >= 4) warnings.push(`疲労度${fatigue}/5：重量・回数は維持し、3セット以上の種目は1セット減らしています。`);
@@ -589,7 +632,7 @@
   }
 
   /* ---------- AI出力の検証（spec 14） ---------- */
-  function validatePlan(ai, localPlan, analysis, prefs, profile, ratings) {
+  function validatePlan(ai, localPlan, analysis, prefs, profile, ratings, opts) {
     if (!ai || !Array.isArray(ai.exercises) || !ai.exercises.length) return null;
     const store = localPlan.store, eqp = storeEquipment(store, prefs), p = prefsNormalized(prefs), prof = profileNormalized(profile), rt = ratingsNormalized(ratings);
     const ctx = { excluded: new Set([...(prof.excluded || []), ...p.avoid].map(canonicalName)), missing: new Set(eqp.missing.map(canonicalName)), ratings: rt };
@@ -598,18 +641,26 @@
       const name = String(raw.name || '').trim().slice(0, 40);
       if (!name) return null;
       if (exerciseExcluded(name, ctx)) { fixes.push(`${name}は除外・設備なしのため外しました`); return null; }
-      const stat = analysis.byKey[weightKey(store, name)];
-      const sets = (Array.isArray(raw.sets) ? raw.sets : []).slice(0, 12).map(s => {
+      const refL = latestFor(analysis, store, name), stat = refL.stat && refL.exposure ? { ...refL.stat, last: refL.exposure } : refL.stat;
+      let sets = (Array.isArray(raw.sets) ? raw.sets : []).slice(0, 12).map(s => {
         let weight = num(s.weight); if (weight !== null && (weight < 0 || weight > 500)) weight = null;
         let reps = firstInt(s.reps); if (!reps || reps < 1 || reps > 60) reps = 10;
         return { type: s.type === 'warmup' ? 'warmup' : 'main', weight, reps };
       });
       if (!sets.some(s => s.type === 'main')) { fixes.push(`${name}：本セットがないため修正`); sets.push({ type: 'main', weight: null, reps: 10 }); }
       // 同じ重量キーの最高記録を大きく超える重量は、本人の実績の範囲に戻す（痛みを無視した更新を防ぐ）
-      if (stat && stat.best && stat.best.weight) sets.forEach(s => { if (s.weight !== null && s.weight > stat.best.weight * 1.2 + 2.5) { fixes.push(`${name}：${s.weight}kgは実績から離れすぎのため${stat.best.weight}kgに修正`); s.weight = stat.best.weight; } });
+      const local = (localPlan.exercises || []).find(e => canonicalName(e.name) === canonicalName(name));
+      if (local && stat && stat.last && stat.last.main.length) {
+        // 最新の実績に根拠がない増減は採用しない：本セットの重量は「最新実績から1段階以内の増量／痛み・疲労がない限り減量なし」
+        const latestTop = Math.max(...stat.last.main.map(x => +x.weight || 0)), step = stepFor(name, stat, latestTop) || 2.5;
+        const localMain = local.sets.filter(x => x.type === 'main'), aiMain = sets.filter(x => x.type === 'main');
+        const unexplained = aiMain.some(x => x.weight !== null && (x.weight > latestTop + step + 0.01 || x.weight < Math.min(...localMain.map(y => +y.weight || Infinity)) * 0.9 - 0.01));
+        if (unexplained && !opts?.allowChange) { fixes.push(`${name}：AIの重量は最新実績（${stat.last.date.slice(5).replace('-', '/')} ${formatSets(stat.last.main)}）から説明できないため、最新実績を基準にした重量にしました`); sets = local.sets.map(x => ({ ...x })); }
+        else if (local.sets.filter(x => x.type === 'warmup').length > sets.filter(x => x.type === 'warmup').length) sets = [...local.sets.filter(x => x.type === 'warmup').map(x => ({ ...x })), ...sets.filter(x => x.type === 'main')];
+      }
       const lastEx = stat ? stat.last : null;
       return { id: uid(), name, part: (exactEntry(name) || guessEntry(name) || {}).part || localPlan.part, equip: equipOf(name), restSec: Math.max(30, Math.min(300, firstInt(raw.restSec) || restFor(store, name))),
-        reason: String(raw.reason || '').slice(0, 200), isNew: !!raw.isNew || (!stat && !Object.values(analysis.byKey).some(s => s.name === canonicalName(name))), newReason: String(raw.newReason || '').slice(0, 200),
+        reason: String(raw.reason || '').slice(0, 200), isNew: !hasHistory(analysis, name), newReason: String(raw.newReason || '').slice(0, 200),
         atStore: (analysis.storeExercises[store] || []).includes(canonicalName(name)) || EQUIP[equipOf(name)].shared, sets, last: lastEx ? formatSets(lastEx.sets) : '', lastDate: lastEx ? lastEx.date : '' };
     }).filter(Boolean);
     if (!exercises.length) return null;
@@ -626,7 +677,8 @@
     const stats = relevant.sort((a, b) => a.daysSince - b.daysSince).slice(0, 30).map(s => ({
       exercise: s.name, weightMode: EQUIP[s.equip] ? EQUIP[s.equip].label : s.equip, store: s.key.startsWith('*|') ? '共通' : storeLabel(s.store), sessions: s.count, daysSince: s.daysSince,
       best: s.best ? `${s.best.weight}×${s.best.reps}（${s.best.date}）` : null, first: s.first && s.first.top ? `${s.first.date} ${s.first.top.weight}×${s.first.top.reps}` : null,
-      growthPctPerWeek: s.growthPctPerWeek, recent: s.recent.map(x => ({ date: x.date, sets: formatSets(x.sets), rating: x.rating || undefined }))
+      growthPctPerWeek: s.growthPctPerWeek, latest: { date: s.last.date, store: s.last.store ? storeLabel(s.last.store) : '店舗未記録', sets: formatSets(s.last.sets) },
+      older: s.recent.slice(0, -1).map(x => ({ date: x.date, sets: formatSets(x.sets) }))
     }));
     const partHistory = analysis.sessions.filter(s => s.part === part).slice(-5).map(s => ({ date: s.date, store: storeLabel(s.store), minutes: s.minutes, fatigue: s.fatigue, exercises: s.exercises.map(e => `${e.name}：${formatSets(e.sets)}`) }));
     const recentSessions = analysis.sessions.slice(-6).map(s => ({ date: s.date, store: storeLabel(s.store), part: PART_LABELS[s.part] || s.part }));
@@ -755,8 +807,8 @@
     return session.exercises.map(e => {
       const cur = e.sets.filter(s => s.done && s.type !== 'warmup' && firstInt(s.reps)).map(s => ({ weight: num(s.weight), reps: firstInt(s.reps) }));
       if (!cur.length) return null;
-      const stat = analysisBefore.byKey[weightKey(session.store, e.name)];
-      const prev = stat ? stat.last.main : [];
+      const ref = latestFor(analysisBefore, session.store, e.name);
+      const prev = ref.exposure ? ref.exposure.main : [];
       const fmt = s => `${s.weight ?? '自重'}×${s.reps}`;
       const best = (list, w) => list.filter(s => s.weight === w).reduce((b, s) => !b || s.reps > b.reps ? s : b, null);
       if (!prev.length) { const top = cur.reduce((b, s) => !b || (s.weight || 0) > (b.weight || 0) ? s : b, null); return { exercise: e.name, prev: '—', now: fmt(top), result: '初回' }; }
@@ -782,7 +834,7 @@
   // 日別記録の既存項目（旧形式）にも要約を書く（旧画面・ホーム集計との互換）
   function sessionRecordFields(session) {
     const done = session.exercises.map(e => ({ e, sets: e.sets.filter(s => s.done) })).filter(x => x.sets.length);
-    const minutes = Math.max(1, Math.round((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / 60000) || 0);
+    const minutes = session.finishedAt && session.startedAt ? Math.max(1, Math.round((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / 60000)) : null; // 時間不明は不明のまま
     const planned = session.exercises.reduce((a, e) => a + e.sets.length, 0), completed = done.reduce((a, x) => a + x.sets.length, 0);
     const workoutExercises = done.map(({ e, sets }) => {
       const mains = sets.filter(s => s.type !== 'warmup'), pool = mains.length ? mains : sets;
@@ -810,7 +862,7 @@
     return { id: uid(), version: 2, store, part, minutes, source: 'import', createdAt: new Date().toISOString(), summary: `${storeLabel(store)}・${PARTS[part]}｜${exercises.length}種目・${total}セット（貼り付け）`, warnings: [], notes: [], exercises };
   }
 
-  const api = { STORES, PARTS, PART_LABELS, ROTATION, EQUIP, CATALOG, DEFAULT_PROFILE, DEFAULT_RATINGS, STORE_EQUIPMENT, REST, normalizeStore, storeLabel, catalogEntry, exactEntry, guessEntry, canonicalName, equipOf, kindOf, inferPart, weightKey,
+  const api = { normName, hasHistory, latestFor, designWarmups, STORES, PARTS, PART_LABELS, ROTATION, EQUIP, CATALOG, DEFAULT_PROFILE, DEFAULT_RATINGS, STORE_EQUIPMENT, REST, normalizeStore, storeLabel, catalogEntry, exactEntry, guessEntry, canonicalName, equipOf, kindOf, inferPart, weightKey,
     parsePain, parseFreeText, parseImport, planFromImport, extractSessions, analyze, recommendPart, prefsNormalized, profileNormalized, ratingsNormalized, storeEquipment, planSession, progressMain, orderForFlow, estimateSeconds,
     validatePlan, aiContext, localChat, applyPreferenceChanges, applyRatings, newSession, sessionExercise, summarizeSession, compareSession, localReview, caloriesFor, sessionRecordFields, planText, formatSets, e1rm };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WorkoutEngine = api;
