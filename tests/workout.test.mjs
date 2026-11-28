@@ -103,7 +103,9 @@ test('comparison uses the same weight; calories use MET formula minus resting', 
   const before = E.analyze(confirmed, TODAY);
   const s = { store: 'shioda', exercises: [{ name: 'DBサイドレイズ', sets: [{ type: 'main', weight: 12, reps: 17, done: true }] }, { name: 'Hammer Strengthラテラルレイズ', sets: [{ type: 'main', weight: 40, reps: 14, done: true }] }, { name: 'フェイスプル', sets: [{ type: 'main', weight: 55, reps: 9, done: true }] }] };
   const rows = E.compareSession(s, before);
-  assert.deepEqual(rows.map(r => [r.exercise, r.prev, r.now, r.result]), [['DBサイドレイズ', '12×17', '12×17', '維持'], ['Hammer Strengthラテラルレイズ', '40×14', '40×14', '維持'], ['フェイスプル', '55×10', '55×9', '低下']]);
+  assert.deepEqual(rows.map(r => [r.exercise, r.result]), [['DBサイドレイズ', '前回未満'], ['Hammer Strengthラテラルレイズ', '前回未満'], ['フェイスプル', '前回未満']]);
+  assert.match(rows[2].detail, /55kgで前回10回 → 今回9回/);
+  assert.ok(!rows.some(r => r.result === '低下'));
   const k = E.caloriesFor(53, 118.4, 20, 100);
   assert.equal(k.met, 4.5);
   assert.equal(k.extra, Math.round(4.5 * 3.5 * 118.4 / 200 * 53 - 3.5 * 118.4 / 200 * 53));
@@ -280,4 +282,45 @@ test('v23.4 deleted exercises never come back (edited plan is not auto-refilled;
   assert.equal(again.exercises.length, edited.exercises.length);
   const longer = E.fitPlanToTime({ ...edited, minutes: 75 }, 120, a, { profile: E.DEFAULT_PROFILE });
   assert.ok(!longer.exercises.some(e => e.name === victim.name), '時間を変えても削除した種目は戻さない');
+});
+
+const mk = (w, r, pw = w, pr = r) => ({ type: 'main', weight: w, reps: r, plannedWeight: pw, plannedReps: pr, done: true });
+test('user report: 100kg×10 after 90kg×13 is 更新（重量）, never 低下', () => {
+  const before = E.analyze(confirmed, TODAY);
+  const s = { store: 'shioda', exercises: [{ name: 'レッグエクステンション', reason: '', sets: [mk(80, 12), mk(90, 10), mk(100, 10), mk(80, 15)] }] };
+  const [r] = E.compareSession(s, before);
+  assert.equal(r.result, '更新');
+  assert.equal(r.prev, '80×14、90×13、70×15');
+  assert.equal(r.planned, '80×12、90×10、100×10、80×15');
+  assert.match(r.detail, /重量更新：前回最大90×13 → 今回100×10/);
+  assert.match(r.note, /100kgに挑戦する予定.*回数を抑えています/);
+});
+test('following the app plan that targets fewer reps is 予定どおり with its reason; missing it is 予定未達', () => {
+  const before = E.analyze(confirmed, TODAY);
+  const ex = (reps) => ({ name: 'レッグプレス', reason: '基準：11/17の170×15（最新の実績）。丁寧なフォームで可動域を確保するため回数を抑える', sets: [mk(170, reps, 170, 12), mk(170, 12), mk(150, 15)] });
+  const [ok] = E.compareSession({ store: 'shioda', exercises: [ex(12)] }, before);
+  assert.equal(ok.result, '予定どおり');
+  assert.match(ok.note, /回数を抑えた予定.*丁寧なフォーム/);
+  const [miss] = E.compareSession({ store: 'shioda', exercises: [ex(10)] }, before);
+  assert.equal(miss.result, '予定未達');
+  const text = E.localReview({ pain: '' }, [ok, miss]);
+  assert.match(text, /予定どおり：レッグプレス/);
+  assert.doesNotMatch(text, /低下/);
+});
+test('AI plan that cuts reps without a heavier set is rejected; heavier-day plan keeps its intent', () => {
+  const recs = confirmed;
+  const a = E.analyze(recs, TODAY);
+  const local = E.planSession({ store: 'shioda', part: 'legs', analysis: a, today: TODAY, minutes: 60 });
+  const lp = local.exercises.find(e => e.name === 'レッグプレス');
+  const cut = E.validatePlan({ exercises: [{ name: 'レッグプレス', sets: lp.sets.map(x => x.type === 'main' ? { ...x, reps: Math.max(1, x.reps - 4) } : x) }] }, local, a, {}, null, null);
+  assert.deepEqual(cut.exercises[0].sets.map(x => x.reps), lp.sets.map(x => x.reps));
+  assert.match(cut.fixes.join(), /理由なく回数を下げていた/);
+  const heavy = E.validatePlan({ exercises: [{ name: 'レッグエクステンション', reason: '95kgに挑戦', sets: [{ type: 'main', weight: 80, reps: 12 }, { type: 'main', weight: 90, reps: 10 }, { type: 'main', weight: 95, reps: 10 }] }] }, local, a, {}, null, null);
+  assert.equal(heavy.exercises[0].sets.find(x => x.weight === 95).reps, 10);
+  assert.match(heavy.exercises[0].reason, /95kgに挑戦する予定.*回数を抑えています/);
+});
+test('sessions with 0 completed sets are excluded from history', () => {
+  const recs = [...confirmed, { date: '2026-11-27', workoutSessions: [{ id: 'z', status: 'finished', store: 'shioda', part: 'legs', exercises: [{ name: 'レッグプレス', sets: [{ type: 'main', weight: 170, reps: 15, done: false }] }] }] }];
+  const a = E.analyze(recs, TODAY);
+  assert.ok(!a.sessions.some(s => s.date === '2026-11-27'));
 });

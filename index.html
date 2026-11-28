@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI Life Navi v23.4 筋トレ専用AIコーチ</title>
+<title>AI Life Navi v23.5 筋トレ専用AIコーチ</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -346,7 +346,7 @@ tr.done .lv-check{background:var(--good);color:#fff;border-color:var(--good)}tr.
 .lv-rest{display:none;align-items:center;gap:6px;margin-bottom:8px}.lv-rest.on{display:flex}.lv-rest-time{font-size:20px;font-weight:800;color:var(--accent);margin-right:auto;font-variant-numeric:tabular-nums}
 .lv-rest button{width:auto;margin:0;padding:8px 12px;font-size:13px;background:var(--fill);color:var(--ink);box-shadow:none;border-radius:10px}
 .lv-stats{list-style:none;padding:0;margin:8px 0;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:14px}
-.lv-table{width:100%;border-collapse:collapse;font-size:14px}.lv-table th,.lv-table td{border-bottom:1px solid var(--line);padding:7px 4px;text-align:left}.r-更新{color:var(--good);font-weight:800}.r-低下{color:var(--bad);font-weight:800}.r-維持{font-weight:700}
+.lv-table{width:100%;border-collapse:collapse;font-size:14px}.lv-table th,.lv-table td{border-bottom:1px solid var(--line);padding:7px 4px;text-align:left}.r-更新{color:var(--good);font-weight:800}.r-予定どおり{color:var(--good);font-weight:700}.r-予定未達,.r-前回未満{color:var(--warn,#b26a00);font-weight:700}.r-維持{font-weight:700}.lv-cmp{border-bottom:1px solid var(--line);padding:9px 0}.lv-cmp-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.lv-cmp-badge{white-space:nowrap}.lv-cmp-row{display:flex;gap:10px;font-size:14px}.lv-cmp-row span:first-child{flex:0 0 5.5em;color:var(--muted)}.lv-cmp-row span:last-child{overflow-wrap:anywhere}
 .lv-pre{white-space:pre-wrap;line-height:1.65;margin:0}
 .lv-filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}.lv-filters input{grid-column:1/-1}.lv-filters select,.lv-filters input{padding:10px;font-size:15px}
 .lv-hist{border-top:1px solid var(--line)}.lv-hist-head{width:100%;margin:0;padding:12px 2px;background:none;box-shadow:none;color:var(--ink);text-align:left;font-size:15px;font-weight:600;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}.lv-hist-body{padding:0 0 12px;display:grid;gap:8px}
@@ -373,7 +373,7 @@ tr.done .lv-check{background:var(--good);color:#fff;border-color:var(--good)}tr.
 <div id="updateNotice" class="updateNotice" role="status" aria-live="polite"><span>新しい版を利用できます</span><button type="button" onclick="location.reload()">更新する</button></div>
 
 <header class="app-header">
-  <div class="version-pill">v23.4 筋トレ専用AIコーチ</div>
+  <div class="version-pill">v23.5 筋トレ専用AIコーチ</div>
   <h1 id="appTitle">AI Diet</h1>
   <p id="appSubhead" class="subhead">自分の目標に合わせて記録・評価</p>
 </header>
@@ -833,7 +833,7 @@ if('serviceWorker' in navigator){
   }).catch(()=>{});
 }
 const $=id=>document.getElementById(id);
-const APP_VERSION='23.4';
+const APP_VERSION='23.5';
 const APP_PUBLIC_URL='https://sdash0620avela-dot.github.io/shin-diet/';
 const AI_CONSENT_VERSION='1';
 async function fetchWithTimeout(url,options={},timeoutMs=60000){

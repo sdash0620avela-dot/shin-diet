@@ -229,7 +229,7 @@ async function workoutAi(env, body) {
     input = `店舗：${store}／部位：${part}／時間：${minutes}分／${dayState}\n本人の発言：${message}\n\n${body.active ? '実施中のメニュー（doneSets>0の種目は完了済み。変更・消去しない）' : '次回のメニュー'}：${cleanJson(body.plan, 9000)}\n\n履歴・本人データ：${cleanJson(body.context)}\n\n回答は結論から2〜4文。記録に基づき、事実と推定を区別。メニュー変更が必要ならproposalに変更後の全種目（完了済み種目も含め、そのまま残す）を入れる。変更不要ならnull。種目の効き方・痛み・好み・設備の発言はratingsへ（観点ごと）。恒久的な希望はpreferenceChangesへ。過去に伝えた内容を聞き返さない。`;
     schema = workoutChatSchema; name = 'workout_chat';
   } else if (kind === 'workout_review') {
-    input = `筋トレ終了後の評価をしてください。集計はアプリが計算済み（再計算しない）：${cleanJson(body.summary, 3000)}\n前回比較（同店舗・同機器、ダンベルは共通）：${cleanJson(body.comparison, 4000)}\n今回の全セット：${cleanJson(body.session, 8000)}\n履歴・本人データ：${cleanJson(body.context, 12000)}\n\nevaluationは200字以内。単純な最高重量だけでなく、同重量での回数増加、複数セットの安定性、痛み、運動密度、減量中の維持を評価。種目順や疲労の違いがあれば考慮。nextTargetsは種目ごとの次回の具体的な重量×回数（セット単位で簡潔に）。`;
+    input = `筋トレ終了後の評価をしてください。集計はアプリが計算済み（再計算しない）：${cleanJson(body.summary, 3000)}\n前回比較（同店舗・同機器、ダンベルは共通）：${cleanJson(body.comparison, 4000)}\n今回の全セット：${cleanJson(body.session, 8000)}\n履歴・本人データ：${cleanJson(body.context, 12000)}\n\nevaluationは200字以内。comparisonのresult（更新・維持・予定どおり・予定未達・前回未満・初回）とnoteはアプリが予定と実績から判定済みなので、それに矛盾する評価をしない。前回より重い重量を扱えた種目を「低下」と書かない。アプリの予定どおりに実施した種目を否定しない。単純な最高重量だけでなく、同重量での回数増加、複数セットの安定性、痛み、運動密度、減量中の維持を評価。種目順や疲労の違いがあれば考慮。nextTargetsは種目ごとの次回の具体的な重量×回数（セット単位で簡潔に）。`;
     schema = workoutReviewSchema; name = 'workout_review'; maxTokens = 4000;
   } else {
     input = `今日のメニューを設計してください。店舗：${store}／部位：${part}／時間：${minutes}分／${dayState}\n既往・注意：${String(body.healthNotes || '').slice(0, 300) || 'profile参照'}\n\n履歴・本人データ（全履歴から抽出・構造化）：${cleanJson(body.context)}\n\nアプリが前回実績から作った基準案（参考）：${cleanJson(body.baseline, 7000)}`;

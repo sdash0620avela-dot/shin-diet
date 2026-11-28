@@ -385,8 +385,10 @@
       <li>推定活動消費：<b>${k ? `約${k.extra}kcal` : '体重が未登録のため計算できません'}</b></li></ul>
       ${k ? `<details class="small"><summary>計算方法（推定値）</summary>${h(k.formula)}。総消費${k.total}kcal − 安静時${k.resting}kcal。体重${k.bodyWeight}kg（最新の記録）。METsは実測値ではありません。朝の有酸素は含みません。</details>` : ''}
       ${m.incompleteSets ? `<div class="lv-muted small">未完了${m.incompleteSets}セットは実績に含めていません。</div>` : ''}</div>
-      <div class="lv-card"><h3>前回との比較</h3><table class="lv-table"><thead><tr><th>種目</th><th>前回</th><th>今回</th><th>評価</th></tr></thead><tbody>${(s.comparison || []).map(c => `<tr><td>${h(c.exercise)}</td><td>${h(c.prev)}</td><td>${h(c.now)}</td><td class="r-${c.result}">${h(c.result)}</td></tr>`).join('')}</tbody></table>
-      <p class="lv-muted small">比較は同じ店舗・同じ機器（ダンベルは店舗共通）の、共通する最大重量の回数です。</p></div>
+      <div class="lv-card"><h3>前回との比較</h3>${(s.comparison || []).map(c => `<div class="lv-cmp" data-result="${h(c.result)}"><div class="lv-cmp-head"><b>${h(c.exercise)}</b><span class="lv-cmp-badge r-${h(c.result)}">${h(c.result)}</span></div>
+        <div class="lv-cmp-row"><span>前回${c.prevDate ? '（' + md(c.prevDate) + '）' : ''}</span><span>${h(c.prev)}</span></div>${c.planned ? `<div class="lv-cmp-row"><span>予定</span><span>${h(c.planned)}</span></div>` : ''}<div class="lv-cmp-row"><span>今回</span><span>${h(c.now)}</span></div>
+        ${c.detail ? `<div class="small">${h(c.detail)}</div>` : ''}${c.note ? `<div class="small lv-muted">予定の意図：${h(c.note)}</div>` : ''}</div>`).join('')}
+      <p class="lv-muted small">前回は同じ店舗・同じ機器（ダンベルは店舗共通）の最新実績。前回より重い重量を扱えたら「更新」、アプリの予定を達成したら「予定どおり」と表示します。</p></div>
       <div class="lv-card"><h3>AI評価</h3><p class="lv-pre">${h(r.review)}</p><p class="lv-muted small">${r.reviewSource === 'ai' ? 'AIコーチの評価' : 'プログラムによる評価（AIの評価は取得でき次第表示）'}</p></div>
       ${targets ? `<div class="lv-card"><h3>次回目標</h3><table class="lv-table"><tbody>${targets}</tbody></table></div>` : ''}
       <div class="lv-bar"><button type="button" class="lv-primary" data-act="tohome">次回のメニューを見る</button></div>`;
@@ -508,8 +510,8 @@
     if (!prevSame) return `${md(last.date)}の${E.PART_LABELS[last.part] || ''}は初めての記録のため、比較できる前回がありません。`;
     const before = E.analyze(recs().filter(r => r.date < last.date), today(), coach().prefs);
     const rows = E.compareSession({ store: last.store, exercises: last.exercises.map(e => ({ name: e.name, sets: e.sets.map(s => ({ ...s, done: true })) })) }, before);
-    const up = rows.filter(r => r.result === '更新'), same = rows.filter(r => r.result === '維持'), down = rows.filter(r => r.result === '低下');
-    return `結論：${md(last.date)}（${E.storeLabel(last.store)}・${E.PART_LABELS[last.part]}）は前回（${md(prevSame.date)}）と比べて、更新${up.length}・維持${same.length}・低下${down.length}種目です。\n` + rows.map(r => `${r.exercise}：${r.prev}→${r.now}（${r.result}）`).join('\n') + '\n※マシンは同店舗・同機器、ダンベルは店舗共通で比較しています。';
+    const cnt = k => rows.filter(r => r.result === k).length, kinds = ['更新', '維持', '予定どおり', '予定未達', '前回未満', '初回'].filter(k => cnt(k));
+    return `結論：${md(last.date)}（${E.storeLabel(last.store)}・${E.PART_LABELS[last.part]}）は前回（${md(prevSame.date)}）と比べて、${kinds.map(k => `${k}${cnt(k)}`).join('・')}種目です。\n` + rows.map(r => `${r.exercise}：${r.result}｜${r.detail}`).join('\n') + '\n※マシンは同店舗・同機器、ダンベルは店舗共通で比較しています。';
   }
   async function sendChat(text) {
     const raw = String(text ?? (($('lvChatInput') || {}).value || '')).trim(); if (!raw) return;

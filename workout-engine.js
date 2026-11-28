@@ -293,7 +293,7 @@
     (Array.isArray(records) ? records : []).filter(r => r && r.date && !r._deleted).forEach(r => {
       const finished = Array.isArray(r.workoutSessions) ? r.workoutSessions.filter(s => s && s.status === 'finished') : [];
       if (finished.length) {
-        finished.forEach(s => sessions.push({
+        finished.map(s => ({
           id: s.id, date: r.date, store: storeOf(s.store), part: s.part || '', source: 'session', startedAt: s.startedAt, finishedAt: s.finishedAt,
           rating: s.feedback && s.feedback.overall || '', fatigue: num(s.fatigue ?? r.fatigue),
           pain: parsePain(`${s.pain || ''} ${s.feedback && s.feedback.pain || ''} ${s.feedback && s.feedback.note || ''}`), painText: s.pain || (s.feedback && s.feedback.pain) || '',
@@ -301,8 +301,8 @@
           exercises: (s.exercises || []).map(e => ({
             name: canonicalName(e.name), rawName: e.name, equip: e.equip || equipOf(e.name), rating: e.rating || '',
             sets: (e.sets || []).filter(x => x && x.done).map(x => ({ type: x.type === 'warmup' ? 'warmup' : 'main', weight: num(x.weight), reps: firstInt(x.reps), rir: num(x.rir) })).filter(x => x.reps)
-          })).filter(e => e.name)
-        }));
+          })).filter(e => e.name && e.sets.length)
+        })).filter(x => x.exercises.length).forEach(x => sessions.push(x)); // 完了セット0のセッションは履歴・分析に含めない
         return;
       }
       let items = r.workoutExercises;
@@ -702,12 +702,16 @@
         const latestTop = Math.max(...stat.last.main.map(x => +x.weight || 0)), step = stepFor(name, stat, latestTop) || 2.5;
         const localMain = local.sets.filter(x => x.type === 'main'), aiMain = sets.filter(x => x.type === 'main');
         const unexplained = aiMain.some(x => x.weight !== null && (x.weight > latestTop + step + 0.01 || x.weight < Math.min(...localMain.map(y => +y.weight || Infinity)) * 0.9 - 0.01));
+        // 回数の引き下げ：重い重量に挑戦する日でもないのに、基準案より2回以上少ない回数は根拠なしとして採用しない
+        const heavier = aiMain.some(x => (x.weight || 0) > latestTop + 0.01);
+        const cutReps = !heavier && aiMain.some(x => { const b = localMain.filter(y => y.weight === x.weight).reduce((m, y) => Math.max(m, y.reps || 0), 0); return b && x.reps < b - 1; });
         if (unexplained && !opts?.allowChange) { fixes.push(`${name}：AIの重量は最新実績（${stat.last.date.slice(5).replace('-', '/')} ${formatSets(stat.last.main)}）から説明できないため、最新実績を基準にした重量にしました`); sets = local.sets.map(x => ({ ...x })); }
+        else if (cutReps && !opts?.allowChange) { fixes.push(`${name}：AIが理由なく回数を下げていたため、最新実績（${stat.last.date.slice(5).replace('-', '/')} ${formatSets(stat.last.main)}）を基準にした回数にしました`); sets = local.sets.map(x => ({ ...x })); }
         else if (local.sets.filter(x => x.type === 'warmup').length > sets.filter(x => x.type === 'warmup').length) sets = [...local.sets.filter(x => x.type === 'warmup').map(x => ({ ...x })), ...sets.filter(x => x.type === 'main')];
       }
       const lastEx = stat ? stat.last : null;
       return { id: uid(), name, part: (exactEntry(name) || guessEntry(name) || {}).part || localPlan.part, equip: equipOf(name), restSec: Math.max(30, Math.min(300, firstInt(raw.restSec) || restFor(store, name))),
-        reason: String(raw.reason || '').slice(0, 200), isNew: !hasHistory(analysis, name), newReason: String(raw.newReason || '').slice(0, 200),
+        reason: (() => { const r = String(raw.reason || '').slice(0, 200), it = lastEx ? planIntent(lastEx.main, sets.filter(x => x.type === 'main'), r) : ''; return it && !r.includes(it) ? `${it} ${r}`.trim() : r; })(), isNew: !hasHistory(analysis, name), newReason: String(raw.newReason || '').slice(0, 200),
         atStore: (analysis.storeExercises[store] || []).includes(canonicalName(name)) || EQUIP[equipOf(name)].shared, sets, last: lastEx ? formatSets(lastEx.sets) : '', lastDate: lastEx ? lastEx.date : '' };
     }).filter(Boolean);
     if (!exercises.length) return null;
@@ -850,30 +854,67 @@
     };
   }
   // 前回比較：同じ重量キー（マシンは同店舗、ダンベルは共通）で、共通する最大重量の回数を比べる
+  /* ---------- 前回との比較（spec：アプリが決めた予定を基準に、正確・公平に評価） ----------
+   * 1) 前回より重い重量を扱えた → 更新（重量）
+   * 2) 前回と同じ最大重量で回数が増えた → 更新（回数）／同じ → 維持
+   * 3) 前回を下回っても、アプリの予定（重量×回数）を達成していれば「予定どおり」＋予定の意図を表示
+   * 4) 予定もある・前回も下回り・予定も未達 → 「予定未達」（「低下」とは書かない）
+   * 5) 予定がない（手入力の種目など）で前回を下回る → 「前回未満」 */
+  const fmtSet = s => `${s.weight ?? '自重'}×${s.reps}`;
+  const topOf = list => list.reduce((b, s) => !b || (s.weight || 0) > (b.weight || 0) || ((s.weight || 0) === (b.weight || 0) && s.reps > b.reps) ? s : b, null);
+  const bestAt = (list, w) => list.filter(s => s.weight === w).reduce((b, s) => !b || s.reps > b.reps ? s : b, null);
+  // 予定（本セット）が前回実績と比べてどういう意図か。下げる・据え置く場合は理由を必ず文章にする
+  function planIntent(prevMain, plannedMain, reason) {
+    const prev = (prevMain || []).filter(s => s && s.reps), plan = (plannedMain || []).filter(s => s && s.reps);
+    if (!prev.length || !plan.length) return '';
+    const pt = topOf(prev), qt = topOf(plan), pw = pt.weight || 0, qw = qt.weight || 0;
+    const lowered = plan.filter(q => { const b = bestAt(prev, q.weight); return b && q.reps < b.reps; });
+    const why = String(reason || '').replace(/^基準：[^。]*。/, '').trim();
+    if (qw > pw) return `前回の最大${fmtSet(pt)}より重い${qw}kgに挑戦する予定。${lowered.length ? `その分、${lowered.map(fmtSet).join('・')}は回数を抑えています（重量を上げる日のため）。` : ''}`;
+    if (qw < pw) return `前回の最大${pw}kgより軽い${qw}kgの予定。理由：${why || '記録された理由なし（前回の重量で行ってかまいません）'}`;
+    if (lowered.length) return `前回より回数を抑えた予定（${lowered.map(fmtSet).join('・')}）。理由：${why || '記録された理由なし（前回の回数を目標にしてかまいません）'}`;
+    return '';
+  }
   function compareSession(session, analysisBefore) {
     return session.exercises.map(e => {
-      const cur = e.sets.filter(s => s.done && s.type !== 'warmup' && firstInt(s.reps)).map(s => ({ weight: num(s.weight), reps: firstInt(s.reps) }));
+      const done = e.sets.filter(s => s.done && s.type !== 'warmup' && firstInt(s.reps));
+      const cur = done.map(s => ({ weight: num(s.weight), reps: firstInt(s.reps) }));
       if (!cur.length) return null;
       const ref = latestFor(analysisBefore, session.store, e.name);
       const prev = ref.exposure ? ref.exposure.main : [];
-      const fmt = s => `${s.weight ?? '自重'}×${s.reps}`;
-      const best = (list, w) => list.filter(s => s.weight === w).reduce((b, s) => !b || s.reps > b.reps ? s : b, null);
-      if (!prev.length) { const top = cur.reduce((b, s) => !b || (s.weight || 0) > (b.weight || 0) ? s : b, null); return { exercise: e.name, prev: '—', now: fmt(top), result: '初回' }; }
-      const common = [...new Set(cur.map(s => s.weight))].filter(w => prev.some(p => p.weight === w)).sort((a, b) => (b || 0) - (a || 0));
-      if (common.length) {
-        const w = common[0], a = best(prev, w), b = best(cur, w);
-        return { exercise: e.name, prev: fmt(a), now: fmt(b), result: b.reps > a.reps ? '更新' : b.reps === a.reps ? '維持' : '低下' };
+      const plannedSets = e.sets.filter(s => s.type !== 'warmup' && firstInt(s.plannedReps)).map(s => ({ weight: num(s.plannedWeight), reps: firstInt(s.plannedReps) }));
+      const planned = plannedSets.length ? plannedSets.map(fmtSet).join('、') : '';
+      const ct = topOf(cur), row = { exercise: e.name, prev: prev.length ? prev.map(fmtSet).join('、') : '—', planned, now: cur.map(fmtSet).join('、'), prevDate: ref.exposure ? ref.exposure.date : '', note: '' };
+      if (!prev.length) return { ...row, result: '初回', detail: `最大${fmtSet(ct)}` };
+      const pt = topOf(prev), pw = pt.weight || 0, cw = ct.weight || 0;
+      // 予定の達成：予定のある本セットを、予定の重量以上・予定の回数以上で完了
+      const withPlan = done.filter(s => firstInt(s.plannedReps));
+      const metPlan = withPlan.length > 0 && withPlan.length >= plannedSets.length && withPlan.every(s => (num(s.weight) ?? 0) >= (num(s.plannedWeight) ?? 0) && firstInt(s.reps) >= firstInt(s.plannedReps));
+      const intent = planIntent(prev, plannedSets, e.reason);
+      if (cw > pw) return { ...row, result: '更新', detail: `重量更新：前回最大${fmtSet(pt)} → 今回${fmtSet(ct)}`, note: intent };
+      if (cw === pw) {
+        const a = bestAt(prev, pw), b = bestAt(cur, cw);
+        if (b.reps > a.reps) return { ...row, result: '更新', detail: `回数更新：${pw}kgで${a.reps}回 → ${b.reps}回`, note: intent };
+        if (b.reps === a.reps) return { ...row, result: '維持', detail: `${pw}kgで前回と同じ${b.reps}回`, note: intent };
+        const lower = `${pw}kgで前回${a.reps}回 → 今回${b.reps}回`;
+        if (metPlan) return { ...row, result: '予定どおり', detail: `予定の重量・回数を達成（${lower}）`, note: intent || '予定どおりに実施しました。' };
+        return { ...row, result: plannedSets.length ? '予定未達' : '前回未満', detail: lower, note: intent };
       }
-      const pt = prev.reduce((b, s) => !b || (s.weight || 0) > (b.weight || 0) ? s : b, null), ct = cur.reduce((b, s) => !b || (s.weight || 0) > (b.weight || 0) ? s : b, null);
-      return { exercise: e.name, prev: fmt(pt), now: fmt(ct), result: (ct.weight || 0) > (pt.weight || 0) ? '更新' : (ct.weight || 0) < (pt.weight || 0) ? '低下' : ct.reps >= pt.reps ? '維持' : '低下' };
+      const lower = `今回の最大${fmtSet(ct)}（前回の最大${fmtSet(pt)}）`;
+      if (metPlan) return { ...row, result: '予定どおり', detail: `予定の重量・回数を達成。${lower}`, note: intent || '予定どおりに実施しました。' };
+      return { ...row, result: plannedSets.length ? '予定未達' : '前回未満', detail: lower, note: intent };
     }).filter(Boolean);
   }
   function localReview(summary, comparison) {
-    const up = comparison.filter(r => r.result === '更新'), same = comparison.filter(r => r.result === '維持'), down = comparison.filter(r => r.result === '低下');
+    const by = k => comparison.filter(r => r.result === k);
+    const up = by('更新'), same = by('維持'), plan = by('予定どおり'), miss = by('予定未達'), under = by('前回未満'), first = by('初回');
     const lines = [];
-    if (up.length) lines.push(`更新：${up.map(r => `${r.exercise}（${r.prev}→${r.now}）`).join('、')}`);
+    if (up.length) lines.push(`更新：${up.map(r => `${r.exercise}（${r.detail.replace(/^(重量|回数)更新：/, '')}）`).join('、')}`);
     if (same.length) lines.push(`維持：${same.map(r => r.exercise).join('、')}。減量中に維持できているのも成果です。`);
-    if (down.length) lines.push(`低下：${down.map(r => `${r.exercise}（${r.prev}→${r.now}）`).join('、')}。種目順や疲労の影響も考えられます。`);
+    if (plan.length) lines.push(`予定どおり：${plan.map(r => r.exercise).join('、')}。アプリの予定を達成しています。`);
+    if (miss.length) lines.push(`予定に届かなかった種目：${miss.map(r => `${r.exercise}（${r.detail}）`).join('、')}。種目順や疲労の影響も考えられます。次回の予定は今回の実績を基準に作ります。`);
+    if (under.length) lines.push(`前回より少なかった種目：${under.map(r => `${r.exercise}（${r.detail}）`).join('、')}。`);
+    if (first.length) lines.push(`初回：${first.map(r => r.exercise).join('、')}（次回から比較します）。`);
     if (!summary.pain) lines.push('痛みは未申告のため、次回の重量更新は当日の体調を確認して判断します。');
     return lines.join('\n');
   }
@@ -911,6 +952,6 @@
 
   const api = { ENGINE_VERSION, fitPlanToTime, normName, hasHistory, latestFor, designWarmups, STORES, PARTS, PART_LABELS, ROTATION, EQUIP, CATALOG, DEFAULT_PROFILE, DEFAULT_RATINGS, STORE_EQUIPMENT, REST, normalizeStore, storeLabel, catalogEntry, exactEntry, guessEntry, canonicalName, equipOf, kindOf, inferPart, weightKey,
     parsePain, parseFreeText, parseImport, planFromImport, extractSessions, analyze, recommendPart, prefsNormalized, profileNormalized, ratingsNormalized, storeEquipment, planSession, progressMain, orderForFlow, estimateSeconds,
-    validatePlan, aiContext, localChat, applyPreferenceChanges, applyRatings, newSession, sessionExercise, summarizeSession, compareSession, localReview, caloriesFor, sessionRecordFields, planText, formatSets, e1rm };
+    validatePlan, aiContext, localChat, applyPreferenceChanges, applyRatings, newSession, sessionExercise, summarizeSession, compareSession, localReview, planIntent, caloriesFor, sessionRecordFields, planText, formatSets, e1rm };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WorkoutEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
