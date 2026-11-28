@@ -553,6 +553,9 @@
     const prefs = prefsNormalized(c.prefs), profile = profileNormalized(c.profile), ratings = ratingsNormalized(c.ratings), eqp = storeEquipment(store, c.prefs);
     const ctx = { excluded: new Set([...(profile.excluded || []), ...prefs.avoid].map(canonicalName)), missing: new Set(eqp.missing.map(canonicalName)), ratings };
     const exercises = (plan.exercises || []).map(e => ({ ...e, sets: e.sets.map(x => ({ ...x })) }));
+    // 本人が編集したメニューは、時間を変えない限り自動で増減しない（削除した種目を戻さない）
+    if (plan.edited && plan.minutes === minutes) return { ...plan, exercises };
+    const removed = new Set((plan.removed || []).map(canonicalName));
     const budget = minutes * 60;
     let secs = estimateSeconds(exercises);
     for (let g = 0; g < 60 && secs > budget + 60; g++) {
@@ -571,7 +574,7 @@
       const pastSet = new Set(past.map(canonicalName));
       const cands = [...new Set([...past, ...DEFAULT_TEMPLATES[part], ...catalog].map(canonicalName))]
         .filter(n => pastSet.has(n) || !((exactEntry(n) || guessEntry(n) || {}).moves || []).some(m => avoidMoves.has(m)))
-        .filter(n => !inPlan.has(n) && !exerciseExcluded(n, ctx) && painHit(n, c.pain || {}) < 6 && !(ratingFor(n, ratings, 'priority') || {}).value?.match(/low|exclude/) && (ratingFor(n, ratings, 'effect') || {}).value !== 'low');
+        .filter(n => !inPlan.has(n) && !removed.has(n) && !exerciseExcluded(n, ctx) && painHit(n, c.pain || {}) < 6 && !(ratingFor(n, ratings, 'priority') || {}).value?.match(/low|exclude/) && (ratingFor(n, ratings, 'effect') || {}).value !== 'low');
       for (const n of cands) {
         if (budget - secs <= 8 * 60) break;
         const ref = latestFor(analysis, store, n), lx = ref.exposure, entry = exactEntry(n) || guessEntry(n);
@@ -586,7 +589,7 @@
     const ordered = orderForFlow(exercises, store, c.prefs);
     const total = ordered.reduce((a, e) => a + e.sets.length, 0), main = ordered.reduce((a, e) => a + e.sets.filter(x => x.type === 'main').length, 0);
     const est = Math.round(estimateSeconds(ordered) / 60);
-    return { ...plan, minutes, exercises: ordered, estMinutes: est, summary: `${storeLabel(store)}・${PARTS[part]}｜${ordered.length}種目・${total}セット（本${main}）｜約${est}分` };
+    return { ...plan, minutes, removed: [...removed], exercises: ordered, estMinutes: est, summary: `${storeLabel(store)}・${PARTS[part]}｜${ordered.length}種目・${total}セット（本${main}）｜約${est}分` };
   }
 
   function planSession(opts) {

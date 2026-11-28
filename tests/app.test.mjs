@@ -797,10 +797,10 @@ test('v20.3 reduces simple photo recording to one confirmed save', () => {
 });
 
 test('v23.0 is the workout-only AI Life Navi app', () => {
-  assert.match(html,/<title>AI Life Navi v23\.3 筋トレ専用AIコーチ<\/title>/);
-  assert.match(html,/const APP_VERSION='23\.3'/);
-  assert.match(serviceWorker,/ai-life-navi-v23-3/);
-  assert.match(serviceWorker,/version:'23\.3'/);
+  assert.match(html,/<title>AI Life Navi v23\.4 筋トレ専用AIコーチ<\/title>/);
+  assert.match(html,/const APP_VERSION='23\.4'/);
+  assert.match(serviceWorker,/ai-life-navi-v23-4/);
+  assert.match(serviceWorker,/version:'23\.4'/);
   assert.match(serviceWorker,/\.\/history-seed\.js/);
   assert.match(manifest,/"name": "AI Life Navi"/);
   assert.match(html,/\$\('appTitle'\)\.textContent='AI Life Navi'/);

@@ -268,3 +268,16 @@ test('v23.3 longer time adds different exercises, never just more sets of the sa
   assert.ok(longer.exercises.length > ai.exercises.length);
   ai.exercises.forEach(e => assert.equal(longer.exercises.find(x => x.name === e.name).sets.length, e.sets.length));
 });
+
+test('v23.4 deleted exercises never come back (edited plan is not auto-refilled; removals remembered when time changes)', () => {
+  const rec = toRecord(CONFIRMED_SESSIONS[0]);
+  const a = E.analyze([rec], '2026-11-28');
+  const p = E.planSession({ store: 'shioda', part: 'legs', analysis: a, today: '2026-11-28', minutes: 90, profile: E.DEFAULT_PROFILE });
+  const victim = p.exercises.find(e => e.name === 'ブルガリアンスクワット') || p.exercises[p.exercises.length - 1];
+  const edited = { ...p, edited: true, exercises: p.exercises.filter(e => e !== victim), removed: [victim.name] };
+  const again = E.fitPlanToTime(edited, 90, a, { profile: E.DEFAULT_PROFILE });
+  assert.ok(!again.exercises.some(e => e.name === victim.name), '同じ時間なら編集したメニューをそのまま使う');
+  assert.equal(again.exercises.length, edited.exercises.length);
+  const longer = E.fitPlanToTime({ ...edited, minutes: 75 }, 120, a, { profile: E.DEFAULT_PROFILE });
+  assert.ok(!longer.exercises.some(e => e.name === victim.name), '時間を変えても削除した種目は戻さない');
+});

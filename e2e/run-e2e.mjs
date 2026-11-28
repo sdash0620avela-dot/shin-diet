@@ -132,6 +132,21 @@ const seeded = seedCloud();
   const byTime = [];
   for (const m of [45, 60, 75, 90]) { await page.click(`#trainRoot [data-act="minutes"][data-v="${m}"]`); const pl = await page.evaluate(() => WorkoutUI._ui.plan); byTime.push([pl.exercises.length, Math.max(...pl.exercises.map(e => e.sets.filter(s => s.type === 'main').length)), pl.estMinutes]); }
   check('予定時間を延ばすと種目が増え、1種目のセット数は増えない（45/60/75/90分）', byTime.every((x, i) => i === 0 || (x[0] >= byTime[i - 1][0] && x[1] <= Math.max(3, byTime[0][1]))) && byTime[3][0] > byTime[0][0], byTime.map(x => `${x[0]}種目・最大${x[1]}セット・約${x[2]}分`).join(' / '));
+  // 編集モードで削除した種目が、同期・再描画・再読み込みで戻ってこない
+  await page.click('#trainRoot [data-act="minutes"][data-v="90"]');
+  await page.click('#trainRoot [data-act="editmode"]');
+  const victim = await page.locator('#trainRoot .lv-ex').last().locator('.lv-ex-title').innerText();
+  await page.locator('#trainRoot .lv-ex').last().locator('[data-act="delex"]').click();
+  const victim2 = await page.locator('#trainRoot .lv-ex').last().locator('.lv-ex-title').innerText();
+  await page.locator('#trainRoot .lv-ex').last().locator('[data-act="delex"]').click();
+  await page.evaluate(() => syncNow(true)); await page.waitForTimeout(1200);
+  await page.evaluate(() => { WorkoutUI._ui.plan = null; WorkoutUI.onDataChanged(); WorkoutUI.render(); });
+  const namesAfter = await page.locator('#trainRoot .lv-ex-title').allInnerTexts();
+  await page.reload(); await ready(page);
+  const namesReload = await page.locator('#trainRoot .lv-ex-title').allInnerTexts();
+  const gone = n => !namesAfter.some(x => x.includes(n.replace(/^\S+\s/, ''))) && !namesReload.some(x => x.includes(n.replace(/^\S+\s/, '')));
+  check('編集モードで削除した種目は、同期・再描画・再読み込み後も戻らない', gone(victim) && gone(victim2), `${victim} / ${victim2} → ${namesReload.length}種目`);
+  if (await page.locator('#trainRoot [data-act="editmode"][aria-pressed="true"]').count()) await page.click('#trainRoot [data-act="editmode"]');
   await page.click('#trainRoot [data-act="minutes"][data-v="60"]');
   // メニュー生成 10パターン
   for (const store of ['honten', 'shioda']) for (const part of ['chest', 'back', 'shoulders', 'legs', 'arms']) {

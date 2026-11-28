@@ -167,17 +167,19 @@
     return s;
   }
   const blankSet = (live, type, weight, reps) => live ? { id: Math.random().toString(36).slice(2), type, plannedWeight: null, plannedReps: null, weight, reps, done: false, doneAt: null, rir: null, memo: '', side: '' } : { type, weight, reps };
-  function savePlanEdit() {
+  function savePlanEdit(immediate) {
     const a = analysis(), p = ui.plan; if (!p) return;
     p.edited = true; p.basedOnSessions = a.totalSessions; p.basedOnLastDate = a.lastSession ? a.lastSession.date : null;
-    clearTimeout(savePlanEdit.t); savePlanEdit.t = setTimeout(() => writeCoach(c => { c.plans[planKey(p.store, p.part)] = JSON.parse(JSON.stringify(p)); }), 800);
+    const write = () => writeCoach(c => { c.plans[planKey(p.store, p.part)] = JSON.parse(JSON.stringify(p)); });
+    clearTimeout(savePlanEdit.t);
+    if (immediate) write(); else savePlanEdit.t = setTimeout(write, 800); // 削除・並べ替えは即保存、数値入力は少し待って保存
   }
   // 開始前は計画を、開始後は実施中セッションを同じ操作で編集する
   function edit(fn, rerender = true) {
     const active = readActive();
     if (active) return mutate(s => fn(s, true), rerender);
     if (!ui.plan) return null;
-    fn(ui.plan, false); savePlanEdit();
+    fn(ui.plan, false); savePlanEdit(rerender);
     if (rerender) renderAll(true);
     return ui.plan;
   }
@@ -395,10 +397,10 @@
     const root = $('historyRoot'); if (!root) return;
     const a = analysis(), f = ui.hist, now = Date.parse(today());
     const list = [...a.sessions].reverse().filter(s => (!f.store || s.store === f.store) && (!f.part || s.part === f.part) && (!f.q || s.exercises.some(e => e.name.includes(f.q) || (e.rawName || '').includes(f.q))) && (f.period === 'all' || now - Date.parse(s.date) <= +f.period * 86400000));
-    const owner = isOwner(), registered = Seed.CONFIRMED_SESSIONS.every(c => recs().some(r => (r.workoutSessions || []).some(x => x.id === c.id)));
+    const registered = Seed.CONFIRMED_SESSIONS.every(c => recs().some(r => (r.workoutSessions || []).some(x => x.id === c.id)));
     const exNames = [...new Set(Object.values(a.byKey).filter(s => s.exposures.some(x => x.top)).map(s => s.key))];
     if (!ui.graphEx && exNames.length) ui.graphEx = exNames[0];
-    root.innerHTML = `${owner && !registered ? `<div class="lv-card"><b>ChatGPTで確定した実績（11/17 脚・11/24 胸・11/25 背中・11/26 肩）</b><p class="lv-muted small">まだ登録されていません。重複しないように登録します（登録前に端末内へバックアップを作成）。</p><button type="button" class="lv-primary" data-act="seed">確定実績を登録する</button></div>` : ''}
+    root.innerHTML = `${!registered ? `<div class="lv-card"><b>ChatGPTで確定した実績（11/17 脚・11/24 胸・11/25 背中・11/26 肩）</b><p class="lv-muted small">まだ登録されていません。重複しないように登録します（登録前に端末内へバックアップを作成）。</p><button type="button" class="lv-primary" data-act="seed">確定実績を登録する</button></div>` : ''}
       <div class="lv-card"><div class="lv-filters">
         <select data-hf="store"><option value="">全店舗</option>${Object.values(E.STORES).map(s => `<option value="${s.id}" ${f.store === s.id ? 'selected' : ''}>${s.label}</option>`).join('')}</select>
         <select data-hf="part"><option value="">全部位</option>${Object.entries(E.PARTS).map(([k, v]) => `<option value="${k}" ${f.part === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
@@ -650,7 +652,7 @@
       case 'detail': edit((t) => { t.exercises[ei].showDetail = !t.exercises[ei].showDetail; }); break;
       case 'toggleex': if (readActive()) mutate(st => { const e = st.exercises[ei]; const all = e.sets.length && e.sets.every(x => x.done); e.collapsed = !(e.collapsed ?? all); }, true); break;
       case 'up': case 'down': edit((t) => { const j = act === 'up' ? ei - 1 : ei + 1; if (j < 0 || j >= t.exercises.length) return; [t.exercises[ei], t.exercises[j]] = [t.exercises[j], t.exercises[ei]]; }); break;
-      case 'delex': { const s = readActive(); if (s && s.exercises[ei].sets.some(x => x.done) && !confirm('完了済みのセットがある種目です。削除するとこの種目の記録も消えます。削除しますか？')) break; edit((t) => { t.exercises.splice(ei, 1); }); break; }
+      case 'delex': { const s = readActive(); if (s && s.exercises[ei].sets.some(x => x.done) && !confirm('完了済みのセットがある種目です。削除するとこの種目の記録も消えます。削除しますか？')) break; edit((t, live) => { const [gone] = t.exercises.splice(ei, 1); if (!live && gone) t.removed = [...new Set([...(t.removed || []), gone.name])]; }); break; }
       case 'rename': { const cur = (readActive() || ui.plan).exercises[ei]; const name = prompt('種目名を変更（別の種目に変える場合も入力）', cur.name); if (name && name.trim()) edit((t) => { const e = t.exercises[ei]; e.name = name.trim().slice(0, 40); e.equip = E.equipOf(e.name); }); break; }
       case 'lr': edit((t, live) => { const e = t.exercises[ei]; e.lr = !e.lr; if (e.lr) e.sets = e.sets.flatMap(x => x.side ? [x] : [{ ...x, side: '左' }, { ...x, id: Math.random().toString(36).slice(2), side: '右', done: false, doneAt: null }]); else e.sets = e.sets.filter(x => x.side !== '右' || x.done).map(x => ({ ...x, side: x.done ? x.side : '' })); }); break;
       case 'restedit': { const cur = (readActive() || ui.plan).exercises[ei]; const sec = prompt('この種目のレスト（秒）', cur.restSec); if (sec && +sec > 0) edit((t) => { t.exercises[ei].restSec = Math.min(600, Math.round(+sec)); }); break; }
